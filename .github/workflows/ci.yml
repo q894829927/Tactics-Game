@@ -1,0 +1,26 @@
+name: Tactics CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Validate types, rules and production build
+        run: npm run verify
+      - name: Check subdirectory asset base
+        run: |
+          grep -q '/games/tactics/assets/' dist/index.html
+          test -f dist/index.html
