@@ -102,6 +102,7 @@ overlay.addEventListener("click", event => { if (event.target === overlay) setSe
 button("reset-view").addEventListener("click", () => { board.resetCamera(); setSettings(false); });
 
 let phaseTimeout: number | undefined;
+let enemyTurnTimeout: number | undefined;
 let endingTurn = false;
 function showPhase(title: string, english: string, duration = 1250): void {
   const banner = get("phase-banner");
@@ -121,7 +122,8 @@ button("settings-end-turn").addEventListener("click", () => {
   setSettings(false);
   board.hideCommandMenu();
   showPhase("第 " + battle.round + " 回合 · 敌方行动", "ENEMY PHASE", 850);
-  window.setTimeout(() => {
+  enemyTurnTimeout = window.setTimeout(() => {
+    enemyTurnTimeout = undefined;
     battle.endTurn();
     endingTurn = false;
     if (battle.result === "playing") {
@@ -131,6 +133,9 @@ button("settings-end-turn").addEventListener("click", () => {
 });
 button("restart-button").addEventListener("click", () => {
   if (!window.confirm("重新开始关卡？当前进度将丢失。")) return;
+  window.clearTimeout(enemyTurnTimeout);
+  enemyTurnTimeout = undefined;
+  endingTurn = false;
   battle.restart();
   board.resetCamera();
   setSettings(false);
