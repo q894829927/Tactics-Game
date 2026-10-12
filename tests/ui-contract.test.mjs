@@ -21,7 +21,11 @@ test("mockup primary controls and footer have functional elements", () => {
   ]) {
     assert.ok(html.includes('id="' + id + '"'), id);
   }
-  assert.match(html, /v0\.1\.0/);
+  assert.match(html, /id="game-version"/);
+  assert.doesNotMatch(html, /v\\d+\\.\\d+\\.\\d+(?:\\.\\d+)?/);
+  const main = readFileSync(new URL("../src/main.ts", import.meta.url), "utf8");
+  assert.match(main, /import \\{ GAME_VERSION \\} from "\\.\\/version\\.ts"/);
+  assert.match(main, /get\\("game-version"\\)\\.textContent = GAME_VERSION/);
   assert.doesNotMatch(html, /单机原型/);
 });
 

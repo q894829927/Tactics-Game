@@ -1,5 +1,6 @@
 import { Battle, type Unit } from "./engine/battle.ts";
 import { BoardView } from "./scene/BoardView.ts";
+import { GAME_VERSION } from "./version.ts";
 import "./style.css";
 
 const get = (id: string): HTMLElement => {
@@ -8,6 +9,7 @@ const get = (id: string): HTMLElement => {
   return element;
 };
 const button = (id: string): HTMLButtonElement => get(id) as HTMLButtonElement;
+get("game-version").textContent = GAME_VERSION;
 const battle = new Battle();
 const board = new BoardView(battle, get("game"));
 
