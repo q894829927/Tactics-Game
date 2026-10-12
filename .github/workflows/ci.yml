@@ -23,6 +23,7 @@ jobs:
       - name: Verify independent ECS deployment scripts and CI approval policy
         run: |
           bash -n scripts/install-ecs.sh
+          bash -n scripts/resume-ecs.sh
           bash -n scripts/deploy-ecs.sh
           python3 -m py_compile scripts/check-publish.py
           python3 -m unittest discover -s tests -p 'test_*.py' -v
