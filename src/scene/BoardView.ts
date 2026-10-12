@@ -296,14 +296,16 @@ export class BoardView {
     if (e.button !== 0 && e.button !== 1) return;
     if ((e.target as HTMLElement).closest(".unit-command-menu")) return;
     this.drag = { x: e.clientX, y: e.clientY, offsetX: this.offsetX, offsetY: this.offsetY, moved: false };
-    this.viewport.setPointerCapture(e.pointerId);
   }
   private moveDrag(e: PointerEvent): void {
     if (!this.drag) return;
     const dx = e.clientX - this.drag.x;
     const dy = e.clientY - this.drag.y;
     if (!this.drag.moved && Math.hypot(dx, dy) < 7) return;
-    this.drag.moved = true;
+    if (!this.drag.moved) {
+      this.drag.moved = true;
+      this.viewport.setPointerCapture(e.pointerId);
+    }
     this.offsetX = this.drag.offsetX + dx;
     this.offsetY = this.drag.offsetY + dy;
     this.applyCamera();
@@ -312,6 +314,8 @@ export class BoardView {
     if (!this.drag) return;
     this.suppressClick = this.drag.moved;
     this.drag = null;
+    // A completed drag may not dispatch click in all browsers.
+    window.setTimeout(() => { this.suppressClick = false; }, 0);
     if (this.viewport.hasPointerCapture(e.pointerId)) this.viewport.releasePointerCapture(e.pointerId);
   }
   private zoomAt(value: number, px: number, py: number): void {
