@@ -20,6 +20,14 @@ jobs:
         run: npm install --no-audit --no-fund
       - name: Validate types, rules and production build
         run: npm run verify
+      - name: Verify independent ECS deployment scripts and CI approval policy
+        run: |
+          bash -n scripts/install-ecs.sh
+          bash -n scripts/deploy-ecs.sh
+          python3 -m py_compile scripts/check-publish.py
+          python3 -m unittest discover -s tests -p 'test_*.py' -v
+          grep -q 'OnUnitInactiveSec=5min' ops/tactics-game-deploy.timer
+          grep -q '/opt/tactics-game/bin/deploy.sh' ops/tactics-game-deploy.service
       - name: Check subdirectory asset base
         run: |
           grep -q '/games/tactics/assets/' dist/index.html
