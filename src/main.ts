@@ -1,21 +1,6 @@
-import Phaser from "phaser";
 import { Battle } from "./engine/battle.ts";
-import { TacticsScene } from "./scene/TacticsScene.ts";
+import { BoardView } from "./scene/BoardView.ts";
 import "./style.css";
-
-const battle = new Battle();
-const scene = new TacticsScene(battle);
-
-new Phaser.Game({
-  type: Phaser.AUTO,
-  parent: "game",
-  width: 760,
-  height: 680,
-  backgroundColor: "#0c151e",
-  scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
-  render: { antialias: true },
-  scene: [scene],
-});
 
 const get = (id: string): HTMLElement => {
   const el = document.getElementById(id);
@@ -23,8 +8,10 @@ const get = (id: string): HTMLElement => {
   return el;
 };
 const button = (id: string): HTMLButtonElement => get(id) as HTMLButtonElement;
+const battle = new Battle();
+const board = new BoardView(battle, get("game"));
 function refresh(): void {
-  scene.refresh();
+  board.refresh();
   get("round-display").textContent = battle.result === "playing"
     ? "第 " + battle.round + " 回合 · 我方行动"
     : battle.result === "victory" ? "任务完成" : "任务失败";
