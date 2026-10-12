@@ -10,6 +10,29 @@
 
 **不要求本地构建或本地测试。** 一次性安装仍需在拥有 SSH 终端的 ECS 上执行。当前 ChatGPT 的 GitHub 连接可以提交代码/确认 GitHub CI，但不能直接 SSH 到 ECS，故无法替用户在 ECS 执行以下命令。
 
+## 已遇到：Nginx 规则存在，但 systemd 没装完（2026-10-13）
+
+实际 ECS 观测到：
+
+- `/etc/nginx/conf.d/rift.conf` 已引用 `/etc/nginx/snippets/tactics-game-routes.conf`，`nginx -t` 成功，`/games/tactics/` 返回 HTTP 200。
+- `/var/www/tactics-game/current` 是**真实目录（非软链接）**，`releases` 存在，`/opt/tactics-game/repo` 已存在。
+- `tactics-game-deploy.timer` 与 `tactics-game-deploy.service` 均不存在。
+- 再执行 `install-ecs.sh` 会安全停止：`Tactics Nginx snippet exists; do not install twice`。
+
+**这是部分安装状态，不应删除 Nginx 配置或原有游戏文件。** 为此增加了专用续装脚本 `scripts/resume-ecs.sh`，严格检测上述状态后操作。该脚本先验证三个站点、GitHub 正式 `main` 源码对应的构建 CI 成功，然后把当前真实游戏目录移到带时间戳的 `releases/legacy-before-recovery-...` 中保存，再建立 `current` 软链接，发布云端构建版本并通过原有 HTTP 内容校验，最后安装独立 timer。若失败则尝试恢复原真实目录和停止新服务。**不会编辑或重载 Nginx。**
+
+```bash
+cd /root/Tactics-Game
+git pull --ff-only origin main
+bash -n scripts/resume-ecs.sh
+bash scripts/resume-ecs.sh
+systemctl list-timers --all | grep -E 'tactics-game-deploy|game-portal-deploy|rift-deploy'
+journalctl -u tactics-game-deploy.service -n 80 --no-pager
+readlink -f /var/www/tactics-game/current
+```
+
+> `resume-ecs.sh` 仅适用于上述精确状态。若出现新的目录状态或组件已安装，脚本会主动拒绝，而不是强制覆盖；请把输出用于排查。首次安装成功后不用再次运行任何安装脚本。
+
 ## 一次性安装：在 ECS 上运行
 
 确认你已在阿里云 ECS 的 root Shell 中：
