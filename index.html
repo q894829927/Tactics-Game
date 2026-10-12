@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="description" content="原创奇幻战棋：10×8 地图，4 名友军挑战 6 名敌军。"/>
+  <meta name="theme-color" content="#0b131c"/>
+  <title>未命名战棋 · 战术原型</title>
+</head>
+<body>
+  <div id="app">
+    <header class="site-header">
+      <div class="brand"><span class="brand-mark">♜</span><div><small>TACTICAL CHRONICLES · PROTOTYPE 01</small><h1>未命名战棋 <span>/ 战场试炼</span></h1></div></div>
+      <div class="top-actions"><span class="version">v0.1.0 · 单机原型</span><a href="/" class="back-link">← 游戏大厅</a></div>
+    </header>
+    <main class="game-layout">
+      <section class="board-column" aria-label="战术战场">
+        <div class="board-title"><span>赤旗要塞 · 撤离走廊</span><span id="round-display">第 1 回合 · 我方行动</span></div>
+        <div id="game" aria-label="10×8 战棋地图：点击蓝方棋子和目标方格"></div>
+        <div class="board-foot"><span><i class="legend ally"></i>我方 <i class="legend enemy"></i>敌军 <i class="legend move"></i>移动范围 <i class="legend target"></i>攻击范围</span><span>原型 · 非正式美术</span></div>
+      </section>
+      <aside class="panel" aria-label="战术指挥面板">
+        <div class="panel-head"><span class="kicker">FIELD COMMAND</span><h2>战术指挥</h2><p>先移动，再攻击；或直接攻击。点击友军切换操作单位。</p></div>
+        <div class="mission"><div class="mission-top"><span>关卡目标</span><span class="mission-tag">单关卡</span></div><strong>击败赤旗统领</strong><p>优先占据树林和丘陵，利用地形减伤；远程单位需要留意反击射程。</p></div>
+        <div class="selection"><span class="kicker">SELECTED UNIT</span><strong id="selection-name">尚未选择单位</strong><div id="selection-stats" class="selection-stats">点击地图上的蓝方单位查看属性。</div><div id="selection-hint" class="selection-hint">友军：4 / 敌军：6</div></div>
+        <div class="commands"><button id="wait-button" disabled>单位待机</button><button id="end-button" class="primary">结束我方回合 →</button><button id="restart-button">重新开始关卡</button></div>
+        <div id="result-banner" class="result-banner" hidden role="status"></div>
+        <div class="combat-log"><div class="log-head"><span class="kicker">BATTLE LOG</span><span>最近记录</span></div><ol id="log-list" aria-live="polite"></ol></div>
+      </aside>
+    </main>
+    <footer class="site-footer"><span>独立原创战棋 · TypeScript + Phaser</span><span>战斗机制与数值仍在原型验证阶段</span></footer>
+  </div>
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>
