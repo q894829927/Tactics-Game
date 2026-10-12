@@ -1,0 +1,18 @@
+[Unit]
+Description=Deploy verified Tactics-Game static site to ECS
+Wants=network-online.target
+After=network-online.target
+ConditionPathExists=/etc/nginx/snippets/tactics-game-routes.conf
+
+[Service]
+Type=oneshot
+User=root
+EnvironmentFile=-/etc/default/tactics-game-deploy
+ExecStart=/opt/tactics-game/bin/deploy.sh
+TimeoutStartSec=240
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true

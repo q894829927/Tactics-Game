@@ -1,0 +1,11 @@
+[Unit]
+Description=Poll GitHub Actions-built tactics site every five minutes
+
+[Timer]
+OnBootSec=2min
+OnUnitInactiveSec=5min
+AccuracySec=30s
+Unit=tactics-game-deploy.service
+
+[Install]
+WantedBy=timers.target
