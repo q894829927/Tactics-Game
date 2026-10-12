@@ -27,7 +27,7 @@ jobs:
           bash -n scripts/deploy-ecs.sh
           python3 -m py_compile scripts/check-publish.py
           python3 -m unittest discover -s tests -p 'test_*.py' -v
-          grep -q 'OnUnitInactiveSec=5min' ops/tactics-game-deploy.timer
+          grep -q 'OnUnitInactiveSec=3min' ops/tactics-game-deploy.timer
           grep -q '/opt/tactics-game/bin/deploy.sh' ops/tactics-game-deploy.service
       - name: Check subdirectory asset base
         run: |
