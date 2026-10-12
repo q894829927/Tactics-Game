@@ -5,8 +5,6 @@ import "./style.css";
 
 const battle = new Battle();
 const scene = new TacticsScene(battle);
-// The FIT-scaled battle canvas needs device-pixel backing resolution to avoid soft text.
-const displayResolution = Math.min(Math.max(window.devicePixelRatio || 1, 1), 2);
 
 new Phaser.Game({
   type: Phaser.AUTO,
@@ -14,7 +12,6 @@ new Phaser.Game({
   width: 760,
   height: 680,
   backgroundColor: "#0c151e",
-  resolution: displayResolution,
   scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
   render: { antialias: true },
   scene: [scene],
