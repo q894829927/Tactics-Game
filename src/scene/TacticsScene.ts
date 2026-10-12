@@ -4,7 +4,9 @@ import { Battle, MAP_HEIGHT, MAP_WIDTH, key, type Unit } from "../engine/battle.
 const SIZE = 70;
 const OX = 30;
 const OY = 54;
-const FONT = 'system-ui, "Noto Sans SC", "Microsoft YaHei"';
+const FONT = '"Microsoft YaHei", "PingFang SC", "Noto Sans SC", system-ui, sans-serif';
+// Text objects are textures; render them at higher resolution before the board is FIT-scaled.
+const TEXT_RESOLUTION = 2;
 const TERRAIN: Record<string, number> = {
   ".": 0x243a40,
   F: 0x34534b,
@@ -42,7 +44,7 @@ export class TacticsScene extends Phaser.Scene {
     this.drawn = [];
     const g = this.add.graphics();
     this.drawn.push(g);
-    this.addLabel(30, 12, "THE RED BANNER · BORDER OUTPOST", 13, "#bbad8f");
+    this.addLabel(30, 12, "THE RED BANNER · BORDER OUTPOST", 15, "#bbad8f");
     const sel = this.battle.selected;
     const reachable = sel && !sel.moved && !sel.spent ? this.battle.reachable(sel) : new Map();
     const targets = new Set(sel && !sel.spent ? this.battle.targets(sel).map(key) : []);
@@ -60,7 +62,7 @@ export class TacticsScene extends Phaser.Scene {
         g.lineStyle(1, 0x66818b, .16);
         g.strokeRect(px, py, SIZE - 2, SIZE - 2);
         if (t !== ".") {
-          this.addLabel(px + 7, py + 5, LABEL[t] ?? "", t === "#" ? 13 : 14,
+          this.addLabel(px + 7, py + 5, LABEL[t] ?? "", t === "#" ? 15 : 16,
             t === "#" ? "#637481" : "#b8bd95");
         }
         if (reachable.has(key({ x, y })) && !this.battle.occupant(x, y)) {
@@ -79,8 +81,8 @@ export class TacticsScene extends Phaser.Scene {
     }
     for (const u of this.battle.units) if (u.hp > 0) this.drawUnit(g, u);
 
-    this.addLabel(30, 622, "选择友军 → 移动 / 点击红方攻击 → 待机 / 结束回合", 13, "#a7b5b8");
-    this.addLabel(700, 622, "10 × 8", 12, "#b2a17d");
+    this.addLabel(30, 622, "选择友军 → 移动 / 点击红方攻击 → 待机 / 结束回合", 15, "#a7b5b8");
+    this.addLabel(700, 622, "10 × 8", 14, "#b2a17d");
     if (this.battle.result !== "playing") {
       g.fillStyle(0x070d15, .72);
       g.fillRoundedRect(139, 232, 480, 150, 14);
@@ -112,13 +114,14 @@ export class TacticsScene extends Phaser.Scene {
     g.fillRoundedRect(cx - 24, cy + 22, 48, 7, 2);
     g.fillStyle(ally ? 0x72d3b8 : 0xef957a, 1);
     g.fillRoundedRect(cx - 23, cy + 23, 46 * u.hp / u.maxHp, 5, 2);
-    this.addLabel(cx, cy + 31, u.name, 10, "#ffffff", true);
+    this.addLabel(cx, cy + 31, u.name, 12, "#ffffff", true);
   }
   private addLabel(x: number, y: number, text: string, size: number,
     color: string, center = false): void {
     const label = this.add.text(x, y, text, {
       fontFamily: FONT, fontSize: String(size) + "px", color,
       fontStyle: "600",
+      resolution: TEXT_RESOLUTION,
     });
     if (center) label.setOrigin(.5, 0);
     this.drawn.push(label);
