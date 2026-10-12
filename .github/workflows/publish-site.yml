@@ -1,0 +1,69 @@
+name: Publish Tactics static site
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: publish-tactics-static-site
+  cancel-in-progress: false
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+      - name: Set up Node 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Verify rule tests and build
+        run: npm run verify
+      - name: Ensure main still matches this commit
+        id: latest
+        shell: bash
+        run: |
+          set -euo pipefail
+          latest="$(git ls-remote origin refs/heads/main | cut -f1)"
+          if [[ "$latest" == "$GITHUB_SHA" ]]; then
+            echo "publish=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "main moved to $latest; do not publish a stale build."
+            echo "publish=false" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Publish verified static files to site branch
+        if: steps.latest.outputs.publish == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          publish_dir="$RUNNER_TEMP/tactics-site-worktree"
+          if git ls-remote --exit-code origin refs/heads/site >/dev/null; then
+            git fetch origin refs/heads/site
+            git worktree add --detach "$publish_dir" FETCH_HEAD
+            git -C "$publish_dir" switch -C site
+          else
+            git worktree add --detach "$publish_dir" HEAD
+            git -C "$publish_dir" switch --orphan site
+          fi
+          find "$publish_dir" -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf -- {} +
+          cp -a dist/. "$publish_dir/"
+          printf '%s\n' "$GITHUB_SHA" > "$publish_dir/.source-sha"
+          git -C "$publish_dir" config user.name "github-actions[bot]"
+          git -C "$publish_dir" config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git -C "$publish_dir" add -A
+          if git -C "$publish_dir" diff --cached --quiet; then
+            echo "Site branch already contains this version"
+          else
+            git -C "$publish_dir" commit -m "deploy: tactics static site from $GITHUB_SHA"
+            git -C "$publish_dir" push origin HEAD:refs/heads/site
+          fi
