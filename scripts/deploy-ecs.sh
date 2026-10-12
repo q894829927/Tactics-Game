@@ -146,7 +146,8 @@ PY
   die "Could not locate built game JavaScript"
 http_matches "$asset" "$release/${asset#/games/tactics/}" || die "Tactics JS failed"
 http_contains / 'id="rift-enter"' || die "Existing Game-Portal homepage broke"
-http_contains /games/rift/ 'RIFT' || die "Existing Rift page broke"
+http_contains /games/rift/ '异界共振' || http_contains /games/rift/ 'Rift' ||
+  die "Existing Rift page broke"
 http_contains /health '"status":"ok"' || die "Existing Rift service health failed"
 
 switched=0
