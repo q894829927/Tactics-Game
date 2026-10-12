@@ -1,4 +1,5 @@
 import { Battle, MAP_HEIGHT, MAP_WIDTH, key, type Unit } from "../engine/battle.ts";
+import { clampCameraOffset } from "./cameraBounds.ts";
 
 const TILE = 92;
 const MIN_ZOOM = 0.6;
@@ -338,8 +339,10 @@ export class BoardView {
     if (!vw || !vh) return;
     const w = MAP_WIDTH * TILE * this.zoom;
     const h = MAP_HEIGHT * TILE * this.zoom;
-    this.offsetX = w <= vw ? (vw - w) / 2 : Math.min(0, Math.max(vw - w, this.offsetX));
-    this.offsetY = h <= vh ? (vh - h) / 2 : Math.min(0, Math.max(vh - h, this.offsetY));
+    // Once the map fits, allow dragging it anywhere *within* the viewport.
+    // resetCamera() is still responsible for the initial centered position.
+    this.offsetX = clampCameraOffset(this.offsetX, w, vw);
+    this.offsetY = clampCameraOffset(this.offsetY, h, vh);
     this.stage.style.transform = `translate3d(${this.offsetX}px,${this.offsetY}px,0) scale(${this.zoom})`;
     this.onZoomChange?.(this.zoomPercent);
     const left = Math.max(0, -this.offsetX / this.zoom / (MAP_WIDTH * TILE));
