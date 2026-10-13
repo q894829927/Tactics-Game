@@ -48,7 +48,7 @@ test("board routes right drag and right release separately from left inspection"
   const html = readFileSync(new URL("../index.html", import.meta.url), "utf8");
   assert.match(board, /e\.button !== 2/);
   assert.match(board, /drag\.button === 2 && !drag\.moved/);
-  assert.match(board, /if \(tile\) this\.onRightCellClick\(tile\.x, tile\.y\)/);
+  assert.match(board, /this\.onRightCellClick\(tile\?\.x \?\? -1, tile\?\.y \?\? -1\)/);
   assert.match(board, /viewport\.addEventListener\("contextmenu", event => event\.preventDefault\(\)\)/);
   assert.doesNotMatch(board, /this\.menuVisible = !actor\.spent/);
   assert.match(board, /this\.menuVisible = false;/);
