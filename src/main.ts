@@ -118,6 +118,10 @@ function renderSelection(): void {
       : "左键查看地形或选择单位；右键点击友军打开指令。";
   button("settings-end-turn").disabled =
     battle.result !== "playing" || battle.phase !== "player" || endingTurn || board.isAnimating;
+  mobileEndTurn.disabled=button("settings-end-turn").disabled;
+  mobileCommands.disabled=!(battle.selected?.team==="ally" && !battle.selected.spent &&
+    battle.phase==="player" && battle.result==="playing" && !endingTurn && !board.isAnimating);
+  mobileBack.disabled=battle.phase!=="player" || endingTurn || board.isAnimating;
 }
 
 function refresh(): void {
@@ -143,6 +147,28 @@ function refresh(): void {
 battle.onChange = refresh;
 board.onHint = message => { get("viewport-hint").textContent = message; };
 board.onInspectionChange = renderSelection;
+
+const mobileInfo=button("mobile-info");
+const mobileBack=button("mobile-back");
+const mobileCommands=button("mobile-commands");
+const mobileEndTurn=button("mobile-end-turn");
+const mobileSidebar=get("unit-sidebar");
+function setMobileInfo(open:boolean):void {
+  mobileSidebar.classList.toggle("mobile-open",open);
+  mobileInfo.setAttribute("aria-expanded",String(open));
+  mobileSidebar.setAttribute("aria-hidden",String(!open &&
+    window.matchMedia("(max-width: 900px), (max-height: 600px) and (pointer: coarse)").matches));
+}
+mobileInfo.addEventListener("click",()=>setMobileInfo(!mobileSidebar.classList.contains("mobile-open")));
+button("mobile-sidebar-close").addEventListener("click",()=>setMobileInfo(false));
+mobileBack.addEventListener("click",()=>{if(!endingTurn)board.cancelAction();renderSelection();});
+mobileCommands.addEventListener("click",()=>{if(!endingTurn)board.openMobileCommands();renderSelection();});
+mobileEndTurn.addEventListener("click",()=>{setMobileInfo(false);button("settings-end-turn").click();});
+window.addEventListener("resize",()=>{
+  mobileSidebar.setAttribute("aria-hidden",String(!mobileSidebar.classList.contains("mobile-open") &&
+    window.matchMedia("(max-width: 900px), (max-height: 600px) and (pointer: coarse)").matches));
+});
+setMobileInfo(false);
 
 get("minimap-grid").addEventListener("dblclick", () => board.resetCamera());
 
@@ -183,6 +209,7 @@ button("settings-end-turn").addEventListener("click", () => {
   if (endingTurn || board.isAnimating || battle.phase !== "player" ||
       battle.result !== "playing") return;
   endingTurn = true;
+  setMobileInfo(false);
   const run = ++turnRunId;
   setSettings(false);
   board.hideCommandMenu();
@@ -225,6 +252,7 @@ button("restart-button").addEventListener("click", () => {
   battle.restart();
   board.clearInspection();
   board.resetCamera();
+  setMobileInfo(false);
   setSettings(false);
   showPhase("第 1 回合 · 我方行动", "PLAYER PHASE");
 });

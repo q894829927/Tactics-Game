@@ -7,6 +7,7 @@ import { clampCameraOffset } from "./cameraBounds.ts";
 import { buildMapScenery } from "./mapScenery.ts";
 import { GroundPainter } from "./GroundPainter.ts";
 import { InspectionState } from "./InspectionState.ts";
+import {pinchCamera,touchPair,type Contact,type PinchOrigin} from "./touchCamera.ts";
 import { loadMapAsset, MAP_ASSET_FILES, type MapAssetFile } from "./mapAssets.ts";
 import {
   TILE, WORLD_COLS, WORLD_ROWS, WORLD_WIDTH, WORLD_HEIGHT, TACTICAL_X, TACTICAL_Y,
@@ -81,6 +82,8 @@ export class BoardView {
   private drag: { pointerId: number; button: number; x: number; y: number; offsetX: number; offsetY: number; moved: boolean } | null = null;
   private readonly inspection: InspectionState;
   private suppressClick = false;
+  private readonly touchPoints = new Map<number,Contact>();
+  private pinchOrigin:PinchOrigin | null = null;
   private menuVisible = false;
   private attackMode = false;
   private forecastTargetId: string | null = null;
@@ -301,10 +304,10 @@ export class BoardView {
         event.clientX - viewport.getBoundingClientRect().left,
         event.clientY - viewport.getBoundingClientRect().top);
     }, { passive: false });
-    viewport.addEventListener("pointerdown", event => this.startDrag(event));
-    viewport.addEventListener("pointermove", event => this.moveDrag(event));
-    viewport.addEventListener("pointerup", event => this.finishDrag(event));
-    viewport.addEventListener("pointercancel", event => this.finishDrag(event, true));
+    viewport.addEventListener("pointerdown", event => this.pointerDown(event));
+    viewport.addEventListener("pointermove", event => this.pointerMove(event));
+    viewport.addEventListener("pointerup", event => this.pointerEnd(event));
+    viewport.addEventListener("pointercancel", event => this.pointerEnd(event, true));
     viewport.addEventListener("click", event => {
       if (!this.suppressClick) return;
       event.preventDefault();
@@ -483,6 +486,15 @@ export class BoardView {
 
   private onCellClick(x: number, y: number): void {
     if (this.battle.result !== "playing" || this.battle.phase !== "player" || this.isAnimating) return;
+    // A second tap on an already selected ally replaces desktop right-click.
+    // In targeting mode a tap still chooses the target, not the command menu.
+    const touched = this.battle.occupant(x,y);
+    if (window.matchMedia("(pointer: coarse)").matches &&
+        touched?.team==="ally" && touched.id===this.battle.selectedId &&
+        !this.attackMode && !this.pickerMode && !this.forecastTargetId) {
+      this.onRightCellClick(x,y);
+      return;
+    }
     this.inspectCell(x, y);
     const intent = leftClickIntent(this.battle, x, y, this.attackMode);
     if (intent === "attack") {
@@ -513,6 +525,15 @@ export class BoardView {
     }
     this.refresh();
     this.onInspectionChange?.();
+  }
+
+  /** Mobile toolbar alternative to right-click. */
+  openMobileCommands(): boolean {
+    const unit=this.battle.selected;
+    if(!unit || unit.team!=="ally" || unit.spent || this.isAnimating ||
+       this.battle.phase!=="player" || this.battle.result!=="playing") return false;
+    this.onRightCellClick(unit.x,unit.y);
+    return true;
   }
 
   private onRightCellClick(x: number, y: number): void {
@@ -829,6 +850,59 @@ export class BoardView {
     name.textContent = unit.name;
     label.append(emblem, hp, name);
     return label;
+  }
+
+  private pointerDown(e:PointerEvent):void {
+    if(e.pointerType==="touch"){
+      if ((e.target as HTMLElement).closest(".unit-command-menu, .weapon-picker")) return;
+      if(this.isAnimating || this.battle.phase!=="player") return;
+      this.touchPoints.set(e.pointerId,{x:e.clientX,y:e.clientY});
+      if(this.touchPoints.size===2){
+        const [a,b]=[...this.touchPoints.values()];
+        const rect=this.viewport.getBoundingClientRect();
+        const pair=touchPair(
+          {x:a!.x-rect.left,y:a!.y-rect.top},
+          {x:b!.x-rect.left,y:b!.y-rect.top});
+        this.pinchOrigin={worldX:(pair.x-this.offsetX)/this.zoom,
+          worldY:(pair.y-this.offsetY)/this.zoom,distance:pair.distance,zoom:this.zoom};
+        this.drag=null;
+        this.suppressClick=true;
+        return;
+      }
+      if(this.touchPoints.size>2)return;
+    }
+    this.startDrag(e);
+  }
+  private pointerMove(e:PointerEvent):void {
+    if(e.pointerType==="touch" && this.touchPoints.has(e.pointerId)){
+      this.touchPoints.set(e.pointerId,{x:e.clientX,y:e.clientY});
+      if(this.pinchOrigin && this.touchPoints.size>=2){
+        const [a,b]=[...this.touchPoints.values()];
+        const rect=this.viewport.getBoundingClientRect();
+        const next=pinchCamera(this.pinchOrigin,
+          {x:a!.x-rect.left,y:a!.y-rect.top},
+          {x:b!.x-rect.left,y:b!.y-rect.top},MIN_ZOOM,MAX_ZOOM);
+        this.zoom=next.zoom;this.offsetX=next.x;this.offsetY=next.y;
+        this.applyCamera();
+        return;
+      }
+      if(this.touchPoints.size>1)return;
+    }
+    this.moveDrag(e);
+  }
+  private pointerEnd(e:PointerEvent,cancelled=false):void {
+    if(e.pointerType==="touch"){
+      const wasPinching=this.pinchOrigin!==null || this.touchPoints.size>1;
+      this.touchPoints.delete(e.pointerId);
+      if(wasPinching){
+        this.pinchOrigin=null;
+        this.drag=null;
+        this.suppressClick=true;
+        window.setTimeout(()=>{this.suppressClick=false;},0);
+        return;
+      }
+    }
+    this.finishDrag(e,cancelled);
   }
 
   private startDrag(e: PointerEvent): void {
