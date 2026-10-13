@@ -1,4 +1,4 @@
-# 《原创奇幻战棋》ECS 直部署操作说明
+# Wildfield Tactics · ECS 直部署操作说明
 
 ## 当前独立发布结构
 

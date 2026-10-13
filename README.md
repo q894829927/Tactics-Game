@@ -1,4 +1,6 @@
-# Tactics-Game · 原创奇幻战棋
+# Wildfield Tactics（暂定名）
+
+当前英文工作名为 **Wildfield Tactics**，源码仓库标识为 `Tactics-Game`。
 
 独立网页战棋项目，采用 **TypeScript + Vite + 原生 DOM/CSS**。战场采用可缩放、可拖动的地图视口；战斗逻辑独立于渲染层。以《火焰纹章》等经典战棋的回合行动与地形策略为玩法参考，不使用相关官方角色、美术或剧情。
 
