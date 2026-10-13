@@ -7,12 +7,12 @@ import re
 from PIL import Image, ImageChops, features
 
 ROOT = Path(__file__).resolve().parents[1]
-SOURCE = ROOT / "art/map-style-samples/v1"
 OUTPUT = ROOT / "public/assets/maps/red-banner/modular"
 CONFIG = (
-    ("ground", "ground-grass", "ground-style-v1.png", 1024, False),
-    ("tree", "tree-spruce", "tree-style-v1.png", 768, True),
-    ("cliff", "cliff-moss", "cliff-style-v1.png", 1024, True),
+    ("ground", "ground-grass", "art/map-style-samples/v1/ground-style-v1.png", 1024, False),
+    ("tree", "tree-spruce", "art/map-style-samples/v1/tree-style-v1.png", 768, True),
+    ("cliff", "rock-outcrop", "art/terrain-readability/v0.1.5.2/rock-outcrop.png", 768, True),
+    ("water", "river-water", "art/terrain-readability/v0.1.5.2/river-water.png", 512, False),
 )
 
 
@@ -21,7 +21,7 @@ def main():
     assets = []
     files = {}
     for kind, name, source_name, max_width, alpha in CONFIG:
-        source = SOURCE / source_name
+        source = ROOT / source_name
         with Image.open(source) as original:
             original.load()
             image = original.convert("RGBA" if alpha else "RGB")

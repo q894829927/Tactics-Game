@@ -27,7 +27,7 @@ const imgAsset = (name: MapAssetFile, x: number, y: number, w: number, h: number
 };
 
 const terrainNames: Record<string, string> = { ".": "平地", F: "森林", H: "丘陵", "#": "峭壁" };
-const terrainGlyphs: Record<string, string> = { ".": "", F: "♠♠", H: "▲", "#": "▥" };
+const terrainGlyphs: Record<string, string> = { ".": "", F: "♠♠", H: "▲", "#": "" };
 const roleNames: Record<string, string> = {
   sword: "剑", lancer: "枪", archer: "弓", mage: "术", raider: "兵", commander: "将",
 };
@@ -366,12 +366,14 @@ export class BoardView {
         cell.className = "battle-cell"
           + (terrain === "#" ? " is-blocked" : "")
           + (actor?.id === this.battle.selectedId ? " is-selected" : "");
+        cell.title = terrain === "#" ? "峭壁 · 不可通行" : (terrainNames[terrain] ?? "平地");
         overlay.className = [
           "range-cell", accessible ? "can-move" : "", targeted ? "can-attack" : "",
           actor?.id === this.battle.selectedId ? "is-selected" : "",
         ].filter(Boolean).join(" ");
         cell.setAttribute("aria-label",
-          String.fromCharCode(65 + x) + (y + 1) + " " + terrainNames[terrain] + " " +
+          String.fromCharCode(65 + x) + (y + 1) + " " + terrainNames[terrain] +
+          (terrain === "#" ? " 不可通行 " : " ") +
           (actor ? actor.name + " 生命 " + actor.hp + "/" + actor.maxHp :
            accessible ? "可移动" : targeted ? "可攻击" : ""));
       }

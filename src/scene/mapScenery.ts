@@ -7,7 +7,7 @@ export type ScenerySprite = {
   file: typeof MAP_ASSET_FILES.tree | typeof MAP_ASSET_FILES.cliff;
   x: number; y: number; width: number; height: number;
   footY: number;
-  terrainCell: { x: number; y: number } | null;
+  terrainCells: { x: number; y: number }[];
 };
 
 /** Stable variation: camera movement and unit actions never shuffle the scenery. */
@@ -18,17 +18,17 @@ export function artNoise(index: number): number {
 
 /** Water is decorative, wholly east of the playable grid. */
 export function riverBankX(y: number): number {
-  let rockBank = 0;
-  for (let i=0; i<5; i++) rockBank += 94 * Math.exp(-(((y-(179+i*196))/58)**2));
-  return TACTICAL_X + MAP_WIDTH * TILE + 64 + Math.sin(y / 137) * 22 + rockBank;
+  // Unequal broad bends and small shoreline variation, independent of rock placement.
+  return TACTICAL_X + MAP_WIDTH * TILE + 80 +
+    Math.sin(y / 292 + .4) * 28 + Math.sin(y / 143 + 1.7) * 15 + Math.sin(y / 47 + .8) * 5;
 }
 
 export function buildMapScenery(terrain: readonly string[]): ScenerySprite[] {
   const sprites: ScenerySprite[] = [];
   const add = (id: string, tree: boolean, x: number, y: number, width: number, height: number,
-    terrainCell: ScenerySprite["terrainCell"] = null) => {
+    terrainCells: ScenerySprite["terrainCells"] = []) => {
     sprites.push({id, file: tree ? MAP_ASSET_FILES.tree : MAP_ASSET_FILES.cliff,
-      x, y, width, height, footY: y + height * .87, terrainCell});
+      x, y, width, height, footY: y + height * .87, terrainCells});
   };
   for (let row = 0; row < WORLD_ROWS; row++) {
     for (let col = 0; col < WORLD_COLS; col++) {
@@ -49,19 +49,17 @@ export function buildMapScenery(terrain: readonly string[]): ScenerySprite[] {
       if (terrain[y]?.[x] === "F") {
         const size = 82 + artNoise(y * MAP_WIDTH + x) * 6;
         add(`forest-${x}-${y}`, true, TACTICAL_X + x * TILE + (TILE-size)/2,
-          TACTICAL_Y + y * TILE + (TILE-size)/2, size, size, {x,y});
+          TACTICAL_Y + y * TILE + (TILE-size)/2, size, size, [{x,y}]);
       }
       if (terrain[y]?.[x] === "#") {
-        // One independent rock piece per blocked cell; it never covers a walkable cell.
-        add(`wall-${x}-${y}`, false, TACTICAL_X + x * TILE + 2,
-          TACTICAL_Y + y * TILE + 14, TILE-4, 68, {x,y});
+        // Join adjacent blocked cells into one natural mass; never span a walkable cell.
+        const cells = [{x,y}];
+        if (terrain[y]?.[x+1] === "#") cells.push({x:x+1,y});
+        add(`rock-${x}-${y}`, false, TACTICAL_X + x * TILE + 3,
+          TACTICAL_Y + y * TILE + 2, cells.length*TILE-6, TILE-4, cells);
+        x += cells.length-1;
       }
     }
-  }
-  for (let index = 0; index < 5; index++) {
-    const y = 135 + index * 196;
-    add(`river-cliff-${index}`, false, TACTICAL_X + MAP_WIDTH * TILE + 5,
-      y, 164 + artNoise(index + 240) * 28, 88);
   }
   return sprites.sort((a,b) => a.footY-b.footY || a.id.localeCompare(b.id));
 }

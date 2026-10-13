@@ -603,8 +603,6 @@ button:disabled { cursor: not-allowed; }
   image-rendering: auto;
 }
 .world-stage .battle-cell.is-blocked {
-  background: #13272018 !important;
-  box-shadow: inset 0 0 0 1.5px #c9c5a878 !important;
   cursor: not-allowed;
 }
 .minimap-tactical-outline { z-index: 4; }

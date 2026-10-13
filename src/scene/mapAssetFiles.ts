@@ -2,5 +2,6 @@
 export const MAP_ASSET_FILES = {
   "ground": "modular/ground-grass.ab0a48efd6ac.webp",
   "tree": "modular/tree-spruce.85c73f984762.webp",
-  "cliff": "modular/cliff-moss.4585ec7cd2b1.webp"
+  "cliff": "modular/rock-outcrop.10c67ef0c364.webp",
+  "water": "modular/river-water.9070857988e6.webp"
 } as const;

@@ -7,42 +7,62 @@ import { buildMapScenery, riverBankX } from "../src/scene/mapScenery.ts";
 import { TILE, TACTICAL_X, TACTICAL_Y, TACTICAL_WIDTH, TACTICAL_HEIGHT } from "../src/scene/worldGeometry.ts";
 import { MAP_ASSET_FILES } from "../src/scene/mapAssetFiles.ts";
 
-test("forest and wall sprites follow actual terrain, without replacing walkable hill cells", () => {
+test("forest and rock sprites cover their actual terrain, without covering walkable cells", () => {
   const terrain=new Battle().terrain;
   const scenery=buildMapScenery(terrain);
-  const inside=scenery.filter(s=>s.terrainCell);
+  const inside=scenery.filter(s=>s.terrainCells.length);
   let count=0;
   for(let y=0;y<terrain.length;y++) for(let x=0;x<terrain[y].length;x++) {
     const type=terrain[y][x];
-    const props=inside.filter(s=>s.terrainCell.x===x&&s.terrainCell.y===y);
+    const props=inside.filter(s=>s.terrainCells.some(cell=>cell.x===x&&cell.y===y));
     assert.equal(props.length,type==="F"||type==="#"?1:0,`${x},${y} ${type}`);
     for(const prop of props) {
       count++;
-      assert.ok(prop.x>=TACTICAL_X+x*TILE&&prop.x+prop.width<=TACTICAL_X+(x+1)*TILE);
-      assert.ok(prop.y>=TACTICAL_Y+y*TILE&&prop.y+prop.height<=TACTICAL_Y+(y+1)*TILE);
+      assert.equal(prop.file,type==="F"?MAP_ASSET_FILES.tree:MAP_ASSET_FILES.cliff);
     }
   }
-  assert.equal(inside.length,count);
+  assert.equal(inside.reduce((total,prop)=>total+prop.terrainCells.length,0),count);
+  for(const prop of inside) {
+    const xs=prop.terrainCells.map(cell=>cell.x),ys=prop.terrainCells.map(cell=>cell.y);
+    assert.ok(prop.x>=TACTICAL_X+Math.min(...xs)*TILE);
+    assert.ok(prop.x+prop.width<=TACTICAL_X+(Math.max(...xs)+1)*TILE);
+    assert.ok(prop.y>=TACTICAL_Y+Math.min(...ys)*TILE);
+    assert.ok(prop.y+prop.height<=TACTICAL_Y+(Math.max(...ys)+1)*TILE);
+  }
   const cleared=terrain.map(row=>row.replace(/[F#]/g,"."));
-  assert.equal(buildMapScenery(cleared).filter(s=>s.terrainCell).length,0);
+  assert.equal(buildMapScenery(cleared).filter(s=>s.terrainCells.length).length,0);
+});
+
+test("a joined rock obstacle preserves blocked coverage and cannot bridge a walkable gap", () => {
+  const scenery=buildMapScenery(new Battle().terrain);
+  const rocks=scenery.filter(s=>s.file===MAP_ASSET_FILES.cliff);
+  assert.equal(rocks.length,1);
+  assert.deepEqual(rocks[0].terrainCells,[{x:3,y:2},{x:4,y:2}]);
+  const separated=buildMapScenery(["...#.#...."]).filter(s=>s.file===MAP_ASSET_FILES.cliff);
+  assert.equal(separated.length,2);
+  for(const prop of separated) {
+    assert.equal(prop.terrainCells.length,1);
+    assert.ok(prop.width<TILE);
+  }
 });
 
 test("decorations and water stay outside playable cells and scenery is stable", () => {
   const terrain=new Battle().terrain;
   const scenery=buildMapScenery(terrain);
   assert.deepEqual(scenery,buildMapScenery(terrain));
-  for(const prop of scenery.filter(s=>!s.terrainCell)) {
+  for(const prop of scenery.filter(s=>!s.terrainCells.length)) {
     const overlaps=prop.x<TACTICAL_X+TACTICAL_WIDTH&&prop.x+prop.width>TACTICAL_X&&
       prop.y<TACTICAL_Y+TACTICAL_HEIGHT&&prop.y+prop.height>TACTICAL_Y;
     assert.equal(overlaps,false,prop.id);
   }
-  for(let y=0;y<=1104;y++)assert.ok(riverBankX(y)-13>TACTICAL_X+TACTICAL_WIDTH);
+  // Include the stroke and scattered gravel, not only the water boundary.
+  for(let y=0;y<=1104;y++)assert.ok(riverBankX(y)-25>TACTICAL_X+TACTICAL_WIDTH);
 });
 
 test("content-hashed runtime WebP art stays within 1 MiB and retains alpha/source provenance", () => {
   const root=new URL("../public/assets/maps/red-banner/modular/",import.meta.url);
   const manifest=JSON.parse(readFileSync(new URL("manifest.json",root),"utf8"));
-  assert.equal(manifest.assets.length,3);
+  assert.equal(manifest.assets.length,4);
   let total=0;
   for(const asset of manifest.assets) {
     const bytes=readFileSync(new URL(asset.filename,root));

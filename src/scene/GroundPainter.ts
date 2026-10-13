@@ -6,6 +6,7 @@ import { loadMapAsset, MAP_ASSET_FILES } from "./mapAssets.ts";
 /** Only the reusable ground material is painted here. Trees/rocks stay separate sprites. */
 export class GroundPainter {
   private texture: HTMLImageElement | null = null;
+  private waterTexture: HTMLImageElement | null = null;
   constructor(private readonly canvas: HTMLCanvasElement, private readonly mini: HTMLCanvasElement,
     private readonly terrain: readonly string[]) {
     canvas.width = WORLD_WIDTH * 2; canvas.height = WORLD_HEIGHT * 2;
@@ -19,6 +20,14 @@ export class GroundPainter {
     }, {once:true});
     texture.addEventListener("error", () => { canvas.dataset.material = "fallback"; }, {once:true});
     void loadMapAsset(MAP_ASSET_FILES.ground).then(url => { texture.src = url; });
+    const water = new Image();
+    water.decoding = "async";
+    water.addEventListener("load", async () => {
+      await water.decode().catch(() => {});
+      this.waterTexture = water; this.paint();
+    }, {once:true});
+    // The base water fill remains available if the optional surface material fails.
+    void loadMapAsset(MAP_ASSET_FILES.water).then(url => { water.src = url; });
   }
 
   private paint(): void {
@@ -105,19 +114,26 @@ export class GroundPainter {
 
   private river(ctx: CanvasRenderingContext2D): void {
     const boundary=()=>{ctx.beginPath();ctx.moveTo(riverBankX(0),0);
-      for(let y=0;y<=WORLD_HEIGHT;y+=8)ctx.lineTo(riverBankX(y),y);};
+      for(let y=0;y<=WORLD_HEIGHT;y+=4)ctx.lineTo(riverBankX(y),y);};
     boundary();ctx.lineTo(WORLD_WIDTH,WORLD_HEIGHT);ctx.lineTo(WORLD_WIDTH,0);ctx.closePath();
     const water=ctx.createLinearGradient(TACTICAL_X+MAP_WIDTH*TILE,0,WORLD_WIDTH,0);
-    water.addColorStop(0,"#5d9690");water.addColorStop(.38,"#2a747d");water.addColorStop(1,"#123f50");
+    water.addColorStop(0,"#637e72");water.addColorStop(.38,"#456d68");water.addColorStop(1,"#254c50");
     ctx.fillStyle=water;ctx.fill();
-    boundary();ctx.strokeStyle="#40543bc0";ctx.lineWidth=25;ctx.stroke();
-    boundary();ctx.strokeStyle="#8e958074";ctx.lineWidth=12;ctx.stroke();
-    boundary();ctx.strokeStyle="#c2d6c351";ctx.lineWidth=3;ctx.stroke();
-    ctx.lineWidth=1.5;
-    for(let i=0;i<72;i++) {
-      const y=artNoise(i+600)*WORLD_HEIGHT,x=riverBankX(y)+24+artNoise(i+750)*110;
-      ctx.strokeStyle=i%3===0?"#a3d2cb55":"#438f9945";
-      ctx.beginPath();ctx.moveTo(x,y);ctx.quadraticCurveTo(x-6,y+16,x+5,y+32);ctx.stroke();
+    ctx.save();ctx.clip();
+    if (this.waterTexture) this.material(ctx,this.waterTexture);
+    const depth=ctx.createLinearGradient(TACTICAL_X+MAP_WIDTH*TILE,0,WORLD_WIDTH,0);
+    depth.addColorStop(0,"#82967650");depth.addColorStop(.5,"#38534a15");depth.addColorStop(1,"#153b4640");
+    ctx.fillStyle=depth;ctx.fillRect(0,0,WORLD_WIDTH,WORLD_HEIGHT);
+    ctx.restore();
+    // A narrow earth edge and scattered gravel replace the uniform striped embankment.
+    boundary();ctx.strokeStyle="#293c3280";ctx.lineWidth=7;ctx.stroke();
+    boundary();ctx.strokeStyle="#85836b58";ctx.lineWidth=2;ctx.stroke();
+    for(let i=0;i<430;i++) {
+      const y=artNoise(i+600)*WORLD_HEIGHT,x=riverBankX(y)-3-artNoise(i+750)*17;
+      const size=1+artNoise(i+850)*2.5;
+      ctx.fillStyle=i%3===0?"#c0b79a8a":"#4954478a";
+      ctx.beginPath();ctx.ellipse(x,y,size,size*.65,artNoise(i)*Math.PI,0,Math.PI*2);ctx.fill();
     }
+    this.canvas.dataset.waterMaterial = this.waterTexture ? "loaded" : "fallback";
   }
 }

@@ -1,8 +1,8 @@
 {
-  "game_version": "v0.1.5.1",
-  "source_total_bytes": 9016975,
-  "runtime_total_bytes": 897954,
-  "reduction_percent": 90.04,
+  "game_version": "v0.1.5.2",
+  "source_total_bytes": 11402461,
+  "runtime_total_bytes": 874588,
+  "reduction_percent": 92.33,
   "assets": [
     {
       "asset_id": "modular_ground",
@@ -58,8 +58,8 @@
     },
     {
       "asset_id": "modular_cliff",
-      "filename": "cliff-moss.4585ec7cd2b1.webp",
-      "source": "art/map-style-samples/v1/cliff-style-v1.png",
+      "filename": "rock-outcrop.10c67ef0c364.webp",
+      "source": "art/terrain-readability/v0.1.5.2/rock-outcrop.png",
       "source_type": "ai_generated",
       "generator": "built-in image_gen (original source)",
       "processing": {
@@ -71,14 +71,40 @@
       },
       "source_width_px": 1774,
       "source_height_px": 887,
-      "width_px": 1024,
-      "height_px": 512,
+      "width_px": 768,
+      "height_px": 384,
       "has_alpha": true,
       "alpha_matches_resized_source": true,
-      "source_file_bytes": 2412127,
-      "source_sha256": "c15feaca85e18af5d83cc7ee5a2db2d71ed3b1ffa068f4d7ddc99135b3fcc8b7",
-      "file_bytes": 175688,
-      "sha256": "4585ec7cd2b12cdf628012119f000619ac788f64b05b8c4b8823b96171d94f12",
+      "source_file_bytes": 2279636,
+      "source_sha256": "7bdfcd2bc88b7eac2a0ad01bb7312c74f1c8dd0be9f37fa8390a6a32a56c7b06",
+      "file_bytes": 88564,
+      "sha256": "10c67ef0c3642c0cb7fd38c819fa12c97016a10f9b292a9f4163fde8ee5a8b4b",
+      "status": "integrated",
+      "visual_approved": false
+    },
+    {
+      "asset_id": "modular_water",
+      "filename": "river-water.9070857988e6.webp",
+      "source": "art/terrain-readability/v0.1.5.2/river-water.png",
+      "source_type": "ai_generated",
+      "generator": "built-in image_gen (original source)",
+      "processing": {
+        "encoder": "Pillow / libwebp",
+        "webp_version": "1.6.0",
+        "quality": 88,
+        "method": 6,
+        "resampling": "LANCZOS"
+      },
+      "source_width_px": 1254,
+      "source_height_px": 1254,
+      "width_px": 512,
+      "height_px": 512,
+      "has_alpha": false,
+      "alpha_matches_resized_source": null,
+      "source_file_bytes": 2517977,
+      "source_sha256": "cbabef34857cbbbc877bad0604b5aca5d0db2e62e0db0fe50a50cd2790ea428a",
+      "file_bytes": 63758,
+      "sha256": "9070857988e6c1ef2caef06a7da2ba826da7aac1c4a4c0bda5f3ef4c3e79ef1e",
       "status": "integrated",
       "visual_approved": false
     }
