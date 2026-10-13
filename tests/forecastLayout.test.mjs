@@ -35,9 +35,10 @@ test("predicted HP bars are proportional and forecast remains non-mutating", () 
   const forecast = game.forecastAttack(attacker,target);
   assert.deepEqual([attacker.hp,target.hp],hpBefore);
   assert.ok(forecast && forecast.damage >= 0);
-  assert.match(board, /\["forecast-ally-after", forecast\.attackerHpAfter \/ attacker!\.maxHp\]/);
+  assert.match(board, /combatPreviewView\(attacker, defender, forecast\)/);
+  assert.match(board, /\["forecast-ally-after", view\.ally\.hpAfter \/ view\.ally\.unit\.maxHp\]/);
   assert.match(board, /byId\(id\)\.style\.width = Math\.max/);
-  assert.match(board, /forecast\.defenderHpAfter \/ defender!\.maxHp/);
+  assert.match(board, /view\.enemy\.hpAfter \/ view\.enemy\.unit\.maxHp/);
   assert.match(board, /this\.battle\.click\(target\.x, target\.y\)/);
   assert.match(html, /id="forecast-cancel"/);
   assert.match(html, /id="forecast-confirm"/);

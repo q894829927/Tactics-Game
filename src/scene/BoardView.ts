@@ -1,4 +1,5 @@
-import { Battle, MAP_HEIGHT, MAP_WIDTH, key, type Point, type Unit } from "../engine/battle.ts";
+import { Battle, MAP_HEIGHT, MAP_WIDTH, key, type Point, type Unit, type AttackForecast, type EnemyActionPlan } from "../engine/battle.ts";
+import { combatPreviewView } from "./combatPreviewView.ts";
 import { TERRAIN_INFO, movementCostLabel } from "../engine/terrain.ts";
 import { leftClickIntent, rightClickIntent } from "./interactionPolicy.ts";
 import { clampCameraOffset } from "./cameraBounds.ts";
@@ -73,6 +74,8 @@ export class BoardView {
   private attackMode = false;
   private forecastTargetId: string | null = null;
   private readonly forecastPanel: HTMLElement;
+  private enemyForecast: { attacker: Unit; defender: Unit; forecast: AttackForecast } | null = null;
+  private dismissEnemyForecast: (() => void) | null = null;
   private previousSelection: string | null = null;
   onZoomChange: ((percent: number) => void) | null = null;
   onHint: ((message: string) => void) | null = null;
@@ -503,37 +506,103 @@ export class BoardView {
     this.onInspectionChange?.();
   }
 
+  /** Enemy action is paused until a 5s timeout or one mouse click.
+   * The click is captured and consumed; it never selects a tile or triggers a UI button.
+   * Closing the preview does NOT skip the actual combat commit.
+   */
+  showEnemyCombatPreview(plan: EnemyActionPlan, durationMs = 5000): Promise<void> {
+    const enemy = this.battle.units.find(u => u.id === plan.unitId && u.hp > 0);
+    const ally = this.battle.units.find(u => u.id === plan.targetId && u.hp > 0);
+    if (!enemy || !ally || this.battle.phase !== "enemy") return Promise.resolve();
+    const projected = {...enemy, x: plan.destination.x, y: plan.destination.y};
+    const forecast = this.battle.forecastAttack(projected, ally);
+    if (!forecast) return Promise.resolve();
+
+    // Always close a previous pending preview before opening another.
+    this.cancelEnemyCombatPreview();
+    this.enemyForecast = {attacker: projected, defender: ally, forecast};
+    this.forecastPanel.classList.add("enemy-auto-forecast");
+    this.renderForecast();
+
+    return new Promise<void>(resolve => {
+      let closed = false;
+      let timeoutId: number | undefined;
+      const close = () => {
+        if (closed) return;
+        closed = true;
+        if (timeoutId !== undefined) window.clearTimeout(timeoutId);
+        window.removeEventListener("click", skipClick, true);
+        this.dismissEnemyForecast = null;
+        this.enemyForecast = null;
+        this.forecastPanel.classList.remove("enemy-auto-forecast");
+        this.renderForecast();
+        resolve();
+      };
+      const skipClick = (event: MouseEvent) => {
+        // One click only dismisses the preview, not the scheduled attack.
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        close();
+      };
+      this.dismissEnemyForecast = close;
+      window.addEventListener("click", skipClick, true);
+      timeoutId = window.setTimeout(close, durationMs);
+    });
+  }
+
+  cancelEnemyCombatPreview(): void {
+    this.dismissEnemyForecast?.();
+  }
+
+  /** Enemy logic still occupies the starting tile while its walk is presented.
+   * Hold all three markers at the end tile until the planned action is committed.
+   */
+  holdUnitAt(unitId: string, position: Point): void {
+    this.animationPose = {id: unitId, x: position.x, y: position.y};
+    this.paintAnimationPose();
+  }
+
+  releaseUnitHold(): void {
+    this.animationPose = null;
+  }
+
   private renderForecast(): void {
+    const enemyPreview = this.enemyForecast;
+    if (enemyPreview) {
+      this.paintForecast(enemyPreview.attacker, enemyPreview.defender, enemyPreview.forecast);
+      return;
+    }
     const attacker = this.battle.selected;
     const defender = this.battle.units.find(u => u.id === this.forecastTargetId && u.hp > 0);
     const forecast = attacker && defender ? this.battle.forecastAttack(attacker, defender) : null;
-    if (!forecast) {
+    if (!attacker || !defender || !forecast) {
       this.forecastPanel.hidden = true;
       this.forecastTargetId = null;
       return;
     }
+    this.paintForecast(attacker, defender, forecast);
+  }
+
+  private paintForecast(attacker: Unit, defender: Unit, forecast: AttackForecast): void {
+    const view = combatPreviewView(attacker, defender, forecast);
     const byId = (id: string): HTMLElement => document.getElementById(id)!;
-    byId("forecast-attacker").textContent = attacker!.name;
-    byId("forecast-defender").textContent = defender!.name;
-    byId("forecast-ally-role").textContent = roleNames[attacker!.role] ?? "兵";
-    byId("forecast-enemy-role").textContent = roleNames[defender!.role] ?? "兵";
-    byId("forecast-ally-emblem").textContent = roleNames[attacker!.role] ?? "兵";
-    byId("forecast-enemy-emblem").textContent = roleNames[defender!.role] ?? "兵";
-    byId("forecast-ally-hp").textContent = attacker!.hp + " → " + forecast.attackerHpAfter;
-    byId("forecast-enemy-hp").textContent = defender!.hp + " → " + forecast.defenderHpAfter;
-    byId("forecast-ally-odds").textContent = "命中 "+forecast.attackerHit+"% · 必杀 "+forecast.attackerCrit+"%";
-    byId("forecast-enemy-odds").textContent = forecast.canCounter
-      ? "命中 "+forecast.defenderHit+"% · 必杀 "+forecast.defenderCrit+"%" : "无法反击";
-    byId("forecast-damage").textContent = String(forecast.damage)+
-      (forecast.followUp==="attacker"?"×2":"");
-    byId("forecast-counter").textContent = forecast.canCounter
-      ? String(forecast.counterDamage)+(forecast.followUp==="defender"?"×2":"") : "—";
-    // Each side shows current HP as a dark ghost bar and the predicted HP as a bright fill.
+    byId("forecast-attacker").textContent = view.ally.unit.name;
+    byId("forecast-defender").textContent = view.enemy.unit.name;
+    byId("forecast-ally-role").textContent = roleNames[view.ally.unit.role] ?? "兵";
+    byId("forecast-enemy-role").textContent = roleNames[view.enemy.unit.role] ?? "兵";
+    byId("forecast-ally-emblem").textContent = roleNames[view.ally.unit.role] ?? "兵";
+    byId("forecast-enemy-emblem").textContent = roleNames[view.enemy.unit.role] ?? "兵";
+    byId("forecast-ally-hp").textContent = view.ally.unit.hp + " → " + view.ally.hpAfter;
+    byId("forecast-enemy-hp").textContent = view.enemy.unit.hp + " → " + view.enemy.hpAfter;
+    byId("forecast-ally-odds").textContent = view.ally.hitText;
+    byId("forecast-enemy-odds").textContent = view.enemy.hitText;
+    byId("forecast-damage").textContent = view.ally.damageText;
+    byId("forecast-counter").textContent = view.enemy.damageText;
     for (const [id, amount] of [
-      ["forecast-ally-bar", attacker!.hp / attacker!.maxHp],
-      ["forecast-ally-after", forecast.attackerHpAfter / attacker!.maxHp],
-      ["forecast-enemy-bar", defender!.hp / defender!.maxHp],
-      ["forecast-enemy-after", forecast.defenderHpAfter / defender!.maxHp],
+      ["forecast-ally-bar", view.ally.unit.hp / view.ally.unit.maxHp],
+      ["forecast-ally-after", view.ally.hpAfter / view.ally.unit.maxHp],
+      ["forecast-enemy-bar", view.enemy.unit.hp / view.enemy.unit.maxHp],
+      ["forecast-enemy-after", view.enemy.hpAfter / view.enemy.unit.maxHp],
     ] as const) {
       byId(id).style.width = Math.max(0, Math.min(100, amount * 100)) + "%";
     }
@@ -734,6 +803,7 @@ export class BoardView {
   }
 
   cancelAnimation(): void {
+    this.cancelEnemyCombatPreview();
     this.animationEpoch++;
     this.animationPose = null;
     this.animationLocked = false;

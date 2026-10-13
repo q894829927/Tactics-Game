@@ -170,7 +170,13 @@ button("settings-end-turn").addEventListener("click", () => {
       if (!plan) break;
       await board.animateMovement(plan.unitId, plan.path);
       if (run !== turnRunId) return;
-      battle.commitEnemyAction(plan);
+      board.holdUnitAt(plan.unitId, plan.destination);
+      // Only attacking enemies show the 5-second combat panel. A single click
+      // closes the panel early but still executes the attack exactly once.
+      if (plan.targetId) await board.showEnemyCombatPreview(plan, 5000);
+      if (run !== turnRunId) return;
+      board.releaseUnitHold();
+      if (!battle.commitEnemyAction(plan)) break;
       // Show each enemy's finished move/attack before the next enemy acts.
       await pause(320);
     }

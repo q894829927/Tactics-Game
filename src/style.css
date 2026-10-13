@@ -842,3 +842,7 @@ button:disabled { cursor: not-allowed; }
 .attribute-grid strong { font-size:14px; font-variant-numeric:tabular-nums; }
 .unit-progression { display:flex; gap:9px; flex-wrap:wrap; color:#e2c893; font-size:12px; margin:5px 0 3px; }
 .forecast-odds { display:block; font-size:11px; color:#cee3ec; }
+
+/* Enemy-initiated combat: reuse the player-facing duel panel without action buttons. */
+.attack-forecast.enemy-auto-forecast .forecast-actions { display: none !important; }
+.attack-forecast.enemy-auto-forecast { cursor: pointer; }
