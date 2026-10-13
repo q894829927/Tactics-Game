@@ -14,7 +14,7 @@ test("A2-2 original art files have safe standalone SVG roots", () => {
     assert.match(svg, /<svg xmlns="http:\/\/www\.w3\.org\/2000\/svg"/);
     assert.match(svg, /viewBox="0 0 \d+ \d+"/);
     assert.match(svg, /<\/svg>/);
-    assert.doesNotMatch(svg, /<script|<foreignObject|https?:\/\//i);
+    assert.doesNotMatch(svg, /<script|<foreignObject|(?:href|src)=["']https?:\/\//i);
     assert.ok(svg.length < 36000, file);
   }
 });
