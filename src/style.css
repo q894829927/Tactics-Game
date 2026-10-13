@@ -867,3 +867,14 @@ button:disabled { cursor: not-allowed; }
 @keyframes combat-dodge{50%{transform:translateX(35px);opacity:.45}}
 @keyframes combat-number{0%{opacity:0;transform:translateY(25px) scale(.6)}45%{opacity:1;transform:translateY(-15px) scale(1.15)}100%{transform:translateY(-25px)}}
 @media(prefers-reduced-motion:reduce){.combat-performance *{animation:none!important;transition:none!important}}
+
+/* Turn ownership is communicated by color as well as text. */
+.phase-banner.phase-enemy {
+  background: linear-gradient(90deg, transparent, #782333df 15%, #421321eb 50%, #782333df 85%, transparent);
+  border-top-color: #f06d6c;
+  border-bottom-color: #f06d6c;
+  color: #fff0eb;
+  text-shadow: 0 0 14px #fa6262, 0 2px 2px #36101a;
+  box-shadow: 0 0 30px #ea464f7a;
+}
+.phase-banner.phase-enemy span { color: #ffd5ba; }

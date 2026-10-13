@@ -5,6 +5,7 @@ import { leftClickIntent, rightClickIntent } from "./interactionPolicy.ts";
 import { clampCameraOffset } from "./cameraBounds.ts";
 import { buildMapScenery } from "./mapScenery.ts";
 import { GroundPainter } from "./GroundPainter.ts";
+import { InspectionState } from "./InspectionState.ts";
 import { loadMapAsset, MAP_ASSET_FILES, type MapAssetFile } from "./mapAssets.ts";
 import {
   TILE, WORLD_COLS, WORLD_ROWS, WORLD_WIDTH, WORLD_HEIGHT, TACTICAL_X, TACTICAL_Y,
@@ -75,7 +76,7 @@ export class BoardView {
   private zoom = 1;
   private initialized = false;
   private drag: { pointerId: number; button: number; x: number; y: number; offsetX: number; offsetY: number; moved: boolean } | null = null;
-  private inspectedCell: Point | null = null;
+  private readonly inspection: InspectionState;
   private suppressClick = false;
   private menuVisible = false;
   private attackMode = false;
@@ -87,9 +88,15 @@ export class BoardView {
   onZoomChange: ((percent: number) => void) | null = null;
   onHint: ((message: string) => void) | null = null;
   onInspectionChange: (() => void) | null = null;
-  get inspectionCell(): Point | null { return this.inspectedCell; }
+  get inspectionCell(): Point | null { return this.inspection.cell; }
+  clearInspection(): void {
+    this.inspection.clear();
+    this.onInspectionChange?.();
+    this.refresh();
+  }
 
   constructor(private readonly battle: Battle, private readonly viewport: HTMLElement) {
+    this.inspection = new InspectionState(battle);
     viewport.classList.add("map-viewport");
     // S0: screen-space background continues beyond the art stage at 60% zoom.
     const backdrop = document.createElement("div");
@@ -374,8 +381,9 @@ export class BoardView {
     }
     // Inspecting an enemy shows threat without changing Battle.selectedId.
     // Ally target selection and the battle forecast retain priority.
-    const inspected = this.inspectedCell
-      ? this.battle.occupant(this.inspectedCell.x, this.inspectedCell.y) : undefined;
+    const inspectedCell = this.inspectionCell;
+    const inspected = inspectedCell
+      ? this.battle.occupant(inspectedCell.x, inspectedCell.y) : undefined;
     const threat = inspected?.team === "enemy" && !this.attackMode && !this.forecastTargetId
       ? this.battle.enemyThreat(inspected) : null;
     const reachable = !threat && selected && !selected.moved && !selected.spent
@@ -427,7 +435,7 @@ export class BoardView {
         cell.className = "battle-cell"
           + (terrain === "#" ? " is-blocked" : "")
           + (actor?.id === this.battle.selectedId ? " is-selected" : "")
-          + (this.inspectedCell?.x === x && this.inspectedCell.y === y ? " is-inspected" : "");
+          + (this.inspectionCell?.x === x && this.inspectionCell.y === y ? " is-inspected" : "");
         cell.title = TERRAIN_INFO[terrain].name + " · " +
           (terrain === "#" ? "不可通行" : "移动消耗 " + movementCostLabel(terrain));
         overlay.className = [
@@ -435,7 +443,7 @@ export class BoardView {
           enemyMove ? "enemy-threat-move" : "",
           enemyAttack ? (enemyMove ? "enemy-threat-overlap" : "enemy-threat-attack") : "",
           actor?.id === this.battle.selectedId ? "is-selected" : "",
-          this.inspectedCell?.x === x && this.inspectedCell.y === y ? "is-inspected" : "",
+          this.inspectionCell?.x === x && this.inspectionCell.y === y ? "is-inspected" : "",
         ].filter(Boolean).join(" ");
         cell.setAttribute("aria-label",
           String.fromCharCode(65 + x) + (y + 1) + " " + TERRAIN_INFO[terrain].name +
@@ -452,7 +460,7 @@ export class BoardView {
   }
 
   private inspectCell(x: number, y: number): void {
-    this.inspectedCell = {x, y};
+    this.inspection.inspect(x, y);
     this.onInspectionChange?.();
   }
 
@@ -722,7 +730,7 @@ export class BoardView {
     label.className = "screen-unit-label " + (unit.team === "ally" ? "label-ally" : "label-enemy");
     if (unit.spent) label.classList.add("label-spent");
     if (unit.id === this.battle.selectedId) label.classList.add("label-selected");
-    if (this.inspectedCell?.x === unit.x && this.inspectedCell.y === unit.y) label.classList.add("label-inspected");
+    if (this.inspectionCell?.x === unit.x && this.inspectionCell.y === unit.y) label.classList.add("label-inspected");
     const emblem = document.createElement("span");
     emblem.className = "screen-label-emblem";
     emblem.textContent = roleNames[unit.role] ?? "兵";

@@ -143,6 +143,7 @@ function showPhase(title: string, english: string, duration = 1250): void {
   get("phase-label").textContent = title;
   get("phase-caption").textContent = english;
   banner.hidden = false;
+  banner.classList.toggle("phase-enemy", english === "ENEMY PHASE");
   banner.classList.remove("phase-animate");
   void banner.offsetWidth;
   banner.classList.add("phase-animate");
@@ -199,6 +200,7 @@ button("restart-button").addEventListener("click", () => {
   board.cancelAnimation();
   endingTurn = false;
   battle.restart();
+  board.clearInspection();
   board.resetCamera();
   setSettings(false);
   showPhase("第 1 回合 · 我方行动", "PLAYER PHASE");
