@@ -1,0 +1,29 @@
+{
+  "version": "v0.1.9.0",
+  "grassInspection": {
+    "cost": "移动消耗 2",
+    "defense": "防御 +0",
+    "name": "草地"
+  },
+  "earthInspection": {
+    "cost": "移动消耗 1",
+    "defense": "防御 +0",
+    "name": "土地"
+  },
+  "grassReachability": {
+    "grassDestination": true,
+    "twoGrassDestination": false
+  },
+  "grassMove": {
+    "atGrass": true,
+    "cost": "移动消耗 2",
+    "terrain": "草地",
+    "unit": "岚锋"
+  },
+  "grassUndo": {
+    "cost": "移动消耗 1",
+    "logEntries": 0,
+    "returnedToEarth": true,
+    "terrain": "土地"
+  }
+}

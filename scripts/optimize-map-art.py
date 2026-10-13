@@ -9,7 +9,10 @@ from PIL import Image, ImageChops, features
 ROOT = Path(__file__).resolve().parents[1]
 OUTPUT = ROOT / "public/assets/maps/red-banner/modular"
 CONFIG = (
-    ("ground", "ground-grass", "art/map-style-samples/v1/ground-style-v1.png", 1024, False),
+    ("ground", "ground-earth-a", "art/ground-materials/v0.1.9.0/earth-a.png", 512, False),
+    ("groundVariant", "ground-earth-b", "art/ground-materials/v0.1.9.0/earth-b.png", 512, False),
+    ("grass", "ground-grass-a", "art/ground-materials/v0.1.9.0/grass-a.png", 512, False),
+    ("grassVariant", "ground-grass-b", "art/ground-materials/v0.1.9.0/grass-b.png", 512, False),
     ("tree", "tree-spruce", "art/map-style-samples/v1/tree-style-v1.png", 768, True),
     ("cliff", "rock-outcrop", "art/terrain-readability/v0.1.5.2/rock-outcrop.png", 768, True),
     ("water", "river-water", "art/terrain-readability/v0.1.5.2/river-water.png", 512, False),

@@ -62,7 +62,7 @@ test("decorations and water stay outside playable cells and scenery is stable", 
 test("content-hashed runtime WebP art stays within 1 MiB and retains alpha/source provenance", () => {
   const root=new URL("../public/assets/maps/red-banner/modular/",import.meta.url);
   const manifest=JSON.parse(readFileSync(new URL("manifest.json",root),"utf8"));
-  assert.equal(manifest.assets.length,4);
+  assert.equal(manifest.assets.length,7);
   let total=0;
   for(const asset of manifest.assets) {
     const bytes=readFileSync(new URL(asset.filename,root));

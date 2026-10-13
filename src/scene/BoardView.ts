@@ -1,4 +1,5 @@
 import { Battle, MAP_HEIGHT, MAP_WIDTH, key, type Point, type Unit } from "../engine/battle.ts";
+import { TERRAIN_INFO, movementCostLabel } from "../engine/terrain.ts";
 import { leftClickIntent, rightClickIntent } from "./interactionPolicy.ts";
 import { clampCameraOffset } from "./cameraBounds.ts";
 import { buildMapScenery } from "./mapScenery.ts";
@@ -27,8 +28,7 @@ const imgAsset = (name: MapAssetFile, x: number, y: number, w: number, h: number
   return sprite;
 };
 
-const terrainNames: Record<string, string> = { ".": "平地", F: "森林", H: "丘陵", "#": "峭壁" };
-const terrainGlyphs: Record<string, string> = { ".": "", F: "♠♠", H: "▲", "#": "" };
+const terrainGlyphs: Record<string, string> = { ".": "", G: "", F: "♠♠", H: "▲", "#": "" };
 const roleNames: Record<string, string> = {
   sword: "剑", lancer: "枪", archer: "弓", mage: "术", raider: "兵", commander: "将",
 };
@@ -188,7 +188,7 @@ export class BoardView {
         btn.className = "mini-cell " + (inside
           ? "mini-" + (terrain === "." ? "plain" : terrain === "#" ? "wall" : terrain)
           : "mini-zone-" + zoneAt(col, row));
-        btn.title = inside ? String.fromCharCode(65 + col - 3) + (row - 1) + " · " + terrainNames[terrain!] : "场景装饰区";
+        btn.title = inside ? String.fromCharCode(65 + col - 3) + (row - 1) + " · " + TERRAIN_INFO[terrain!].name : "场景装饰区";
         btn.setAttribute("aria-label", "镜头定位：" + btn.title);
         btn.addEventListener("click", () => this.centerOnWorld((col + .5) * TILE, (row + .5) * TILE));
         mini.appendChild(btn);
@@ -394,14 +394,15 @@ export class BoardView {
           + (terrain === "#" ? " is-blocked" : "")
           + (actor?.id === this.battle.selectedId ? " is-selected" : "")
           + (this.inspectedCell?.x === x && this.inspectedCell.y === y ? " is-inspected" : "");
-        cell.title = terrain === "#" ? "峭壁 · 不可通行" : (terrainNames[terrain] ?? "平地");
+        cell.title = TERRAIN_INFO[terrain].name + " · " +
+          (terrain === "#" ? "不可通行" : "移动消耗 " + movementCostLabel(terrain));
         overlay.className = [
           "range-cell", accessible ? "can-move" : "", targeted ? "can-attack" : "",
           actor?.id === this.battle.selectedId ? "is-selected" : "",
           this.inspectedCell?.x === x && this.inspectedCell.y === y ? "is-inspected" : "",
         ].filter(Boolean).join(" ");
         cell.setAttribute("aria-label",
-          String.fromCharCode(65 + x) + (y + 1) + " " + terrainNames[terrain] +
+          String.fromCharCode(65 + x) + (y + 1) + " " + TERRAIN_INFO[terrain].name +
           (terrain === "#" ? " 不可通行 " : " ") +
           (actor ? actor.name + " 生命 " + actor.hp + "/" + actor.maxHp :
            accessible ? "可移动" : targeted ? "可攻击" : ""));

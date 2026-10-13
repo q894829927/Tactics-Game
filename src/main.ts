@@ -1,4 +1,5 @@
 import { Battle, type Unit } from "./engine/battle.ts";
+import { TERRAIN_INFO, movementCostLabel } from "./engine/terrain.ts";
 import { BoardView } from "./scene/BoardView.ts";
 import { GAME_VERSION } from "./version.ts";
 import "./style.css";
@@ -21,19 +22,13 @@ const weapons: Record<Unit["role"], string> = {
   sword: "长剑", lancer: "长枪", archer: "弓", mage: "法杖",
   raider: "短斧", commander: "指挥剑",
 };
-const terrainInfo: Record<string, { name: string; icon: string; defense: number; cost: string }> = {
-  ".": { name: "平地", icon: "◇", defense: 0, cost: "1" },
-  F: { name: "森林", icon: "♠", defense: 1, cost: "2" },
-  H: { name: "丘陵", icon: "▲", defense: 1, cost: "2" },
-  "#": { name: "峭壁", icon: "▥", defense: 0, cost: "不可通行" },
-};
 
 function renderSelection(): void {
   const inspected = board.inspectionCell;
   const selected = inspected ? battle.occupant(inspected.x, inspected.y) : battle.selected;
   const terrainCode = inspected ? battle.tile(inspected.x, inspected.y)
     : selected ? battle.tile(selected.x, selected.y) : null;
-  const terrain = terrainCode ? terrainInfo[terrainCode]! : null;
+  const terrain = terrainCode ? TERRAIN_INFO[terrainCode] : null;
   get("team-count").textContent = "我方 " + battle.alive("ally").length +
     " / 敌军 " + battle.alive("enemy").length;
   get("selection-title").textContent = selected ? "选中单位" : inspected ? "地形详情" : "选中单位";
@@ -59,10 +54,11 @@ function renderSelection(): void {
   get("terrain-icon").textContent = terrain?.icon ?? "♠";
   get("terrain-name").textContent = terrain?.name ?? "地形信息";
   get("terrain-hint").textContent = terrain
-    ? terrainCode === "#" ? "不可通行" : terrain.defense ? "地形防御加成" : "无地形防御加成"
+    ? terrainCode === "#" ? "不可通行" : terrainCode === "G" ? "草地通行消耗更多移动力"
+      : terrain.defense ? "地形防御加成" : "无地形防御加成"
     : "左键选择地形查看";
   get("terrain-defense").textContent = "防御 +" + (terrain?.defense ?? "—");
-  get("terrain-cost").textContent = "移动消耗 " + (terrain?.cost ?? "—");
+  get("terrain-cost").textContent = "移动消耗 " + (terrainCode ? movementCostLabel(terrainCode) : "—");
   get("weapon-name").textContent = selected ? weapons[selected.role] : "—";
   get("weapon-range").textContent = selected
     ? selected.minRange + (selected.maxRange !== selected.minRange ? "–" + selected.maxRange : "") + " 格" : "—";

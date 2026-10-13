@@ -1,7 +1,9 @@
+import { TERRAIN_INFO, type Terrain } from "./terrain.ts";
+export type { Terrain } from "./terrain.ts";
+
 export const MAP_WIDTH = 10;
 export const MAP_HEIGHT = 8;
 export type Team = "ally" | "enemy";
-export type Terrain = "." | "F" | "H" | "#";
 export type GameResult = "playing" | "victory" | "defeat";
 export type Role = "sword" | "lancer" | "archer" | "mage" | "raider" | "commander";
 export type Point = { x: number; y: number };
@@ -33,17 +35,15 @@ export type Unit = {
 };
 
 const LAYOUT = [
-  "..........",
-  ".F..H..F..",
-  "...##.....",
-  "F.....H...",
-  "..F.......",
-  "...H..F...",
-  "..........",
-  "..........",
+  "GGG...GGGG",
+  ".F..H.GFGG",
+  "G..##..GGG",
+  "F.....H.GG",
+  "GGF.GGG...",
+  "G..H.GF...",
+  "G....GG...",
+  "....GGG...",
 ] as const;
-const terrainCost: Record<Terrain, number> = { ".": 1, F: 2, H: 2, "#": Infinity };
-const terrainDefense: Record<Terrain, number> = { ".": 0, F: 1, H: 1, "#": 0 };
 
 function unit(id: string, name: string, role: Role, team: Team, x: number, y: number,
   maxHp: number, attack: number, defense: number, move: number, minRange = 1, maxRange = 1): Unit {
@@ -161,7 +161,7 @@ export class Battle {
       for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
         const x = current.x + dx!, y = current.y + dy!;
         if (!inBounds(x, y) || this.occupant(x, y)) continue;
-        const cost = current.cost + terrainCost[this.tile(x, y)];
+        const cost = current.cost + TERRAIN_INFO[this.tile(x, y)].moveCost;
         if (cost > actor.move || cost >= (best.get(key({ x, y })) ?? Infinity)) continue;
         best.set(key({ x, y }), cost);
         queue.push({ x, y, cost });
@@ -180,7 +180,7 @@ export class Battle {
   }
   damage(attacker: Unit, defender: Unit): number {
     return Math.max(1, attacker.attack - defender.defense -
-      terrainDefense[this.tile(defender.x, defender.y)]);
+      TERRAIN_INFO[this.tile(defender.x, defender.y)].defense);
   }
 
   click(x: number, y: number): void {
