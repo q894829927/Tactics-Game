@@ -805,3 +805,20 @@ button:disabled { cursor: not-allowed; }
 @media (prefers-reduced-motion: reduce) {
   .forecast-hp-track span { transition: none; }
 }
+
+/* Inspect enemy: movement (indigo), attack-after-movement (red). */
+.world-stage .tactical-highlight .range-cell.enemy-threat-move {
+  background: rgba(70, 91, 217, .36);
+  box-shadow: inset 0 0 0 1px rgba(152, 168, 255, .68);
+}
+.world-stage .tactical-highlight .range-cell.enemy-threat-attack {
+  background: rgba(217, 55, 71, .40);
+  box-shadow: inset 0 0 0 1px rgba(255, 120, 128, .72);
+}
+.world-stage .tactical-highlight .range-cell.enemy-threat-overlap {
+  /* Keep the movement tile visible instead of painting the entire zone solid red. */
+  box-shadow: inset 0 0 0 2px rgba(246, 112, 130, .82), inset 0 0 0 5px rgba(84, 101, 219, .18);
+}
+.world-stage .tactical-highlight .range-cell.enemy-threat-move.is-inspected {
+  box-shadow: inset 0 0 0 3px #ffdfb4, 0 0 13px rgba(255, 209, 140, .55);
+}

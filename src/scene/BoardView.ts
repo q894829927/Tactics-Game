@@ -350,7 +350,13 @@ export class BoardView {
       this.menuVisible = false;
       this.previousSelection = selectedId;
     }
-    const reachable = selected && !selected.moved && !selected.spent
+    // Inspecting an enemy shows threat without changing Battle.selectedId.
+    // Ally target selection and the battle forecast retain priority.
+    const inspected = this.inspectedCell
+      ? this.battle.occupant(this.inspectedCell.x, this.inspectedCell.y) : undefined;
+    const threat = inspected?.team === "enemy" && !this.attackMode && !this.forecastTargetId
+      ? this.battle.enemyThreat(inspected) : null;
+    const reachable = !threat && selected && !selected.moved && !selected.spent
       ? this.battle.reachable(selected) : new Map<string, number>();
     const targets = new Set(selected && !selected.acted && !selected.spent
       ? this.battle.targets(selected).map(key) : []);
@@ -390,6 +396,8 @@ export class BoardView {
         const coord = key({ x, y });
         const accessible = !actor && reachable.has(coord);
         const targeted = this.attackMode && targets.has(coord);
+        const enemyMove = threat?.move.has(coord) ?? false;
+        const enemyAttack = threat?.attack.has(coord) ?? false;
         cell.className = "battle-cell"
           + (terrain === "#" ? " is-blocked" : "")
           + (actor?.id === this.battle.selectedId ? " is-selected" : "")
@@ -398,6 +406,8 @@ export class BoardView {
           (terrain === "#" ? "不可通行" : "移动消耗 " + movementCostLabel(terrain));
         overlay.className = [
           "range-cell", accessible ? "can-move" : "", targeted ? "can-attack" : "",
+          enemyMove ? "enemy-threat-move" : "",
+          enemyAttack ? (enemyMove ? "enemy-threat-overlap" : "enemy-threat-attack") : "",
           actor?.id === this.battle.selectedId ? "is-selected" : "",
           this.inspectedCell?.x === x && this.inspectedCell.y === y ? "is-inspected" : "",
         ].filter(Boolean).join(" ");
@@ -405,7 +415,9 @@ export class BoardView {
           String.fromCharCode(65 + x) + (y + 1) + " " + TERRAIN_INFO[terrain].name +
           (terrain === "#" ? " 不可通行 " : " ") +
           (actor ? actor.name + " 生命 " + actor.hp + "/" + actor.maxHp :
-           accessible ? "可移动" : targeted ? "可攻击" : ""));
+           accessible ? "可移动" : targeted ? "可攻击" :
+           enemyAttack && enemyMove ? "敌军移动及攻击范围" :
+           enemyAttack ? "敌军攻击范围" : enemyMove ? "敌军移动范围" : ""));
       }
     }
     this.renderMenu();

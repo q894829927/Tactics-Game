@@ -7,6 +7,12 @@ export type Team = "ally" | "enemy";
 export type GameResult = "playing" | "victory" | "defeat";
 export type Role = "sword" | "lancer" | "archer" | "mage" | "raider" | "commander";
 export type Point = { x: number; y: number };
+/** Read-only movement plus potential attack preview for one enemy. */
+export type EnemyThreat = {
+  move: Set<string>;
+  attack: Set<string>;
+};
+
 export type AttackForecast = {
   damage: number;
   counterDamage: number;
@@ -168,6 +174,35 @@ export class Battle {
       }
     }
     return best;
+  }
+
+  /**
+   * Computes legal movement endpoints and all tiles attackable from those endpoints.
+   * Uses the same weighted reachable() algorithm as the enemy AI, the same
+   * Manhattan min/max range as inAttackRange, and never changes the battle.
+   */
+  enemyThreat(enemy: Unit): EnemyThreat {
+    const move = new Set<string>();
+    const attack = new Set<string>();
+    if (this.result !== "playing" || enemy.team !== "enemy" || enemy.hp <= 0) {
+      return {move, attack};
+    }
+    for (const position of this.reachable(enemy).keys()) {
+      move.add(position); // Includes standing still / a stationary attack.
+      const [px, py] = position.split(",").map(Number);
+      for (let dy = -enemy.maxRange; dy <= enemy.maxRange; dy++) {
+        for (let dx = -enemy.maxRange; dx <= enemy.maxRange; dx++) {
+          const d = Math.abs(dx) + Math.abs(dy);
+          if (d < enemy.minRange || d > enemy.maxRange) continue;
+          const x = px! + dx;
+          const y = py! + dy;
+          if (!inBounds(x, y) || this.tile(x, y) === "#") continue;
+          if (this.occupant(x, y)?.team === enemy.team) continue;
+          attack.add(key({x, y}));
+        }
+      }
+    }
+    return {move, attack};
   }
 
   inAttackRange(attacker: Unit, defender: Unit): boolean {
