@@ -21,11 +21,6 @@ const roleNames: Record<Unit["role"], string> = {
   sword: "剑士", lancer: "枪卫", archer: "弓手",
   mage: "术士", raider: "步兵", commander: "指挥官",
 };
-const weapons: Record<Unit["role"], string> = {
-  sword: "长剑", lancer: "长枪", archer: "弓", mage: "法杖",
-  raider: "短斧", commander: "指挥剑",
-};
-
 function renderSelection(): void {
   const inspected = board.inspectionCell;
   const selected = inspected ? battle.occupant(inspected.x, inspected.y) : battle.selected;

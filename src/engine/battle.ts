@@ -158,7 +158,7 @@ export class Battle {
       if(followUp==="attacker")hpD=Math.max(0,hpD-damage);
       else if(followUp==="defender"&&counterInRange)hpA=Math.max(0,hpA-counterDamage);
     }
-    return {damage,counterDamage,canCounter,attackerHpAfter:hpA,defenderHpAfter:hpD,
+    return {damage,counterDamage:canCounter?counterDamage:0,canCounter,attackerHpAfter:hpA,defenderHpAfter:hpD,
       attackerHit:this.hitChance(attacker,defender),defenderHit:this.hitChance(defender,attacker),
       attackerCrit:this.criticalChance(attacker,defender),
       defenderCrit:this.criticalChance(defender,attacker),followUp};
