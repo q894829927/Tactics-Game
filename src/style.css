@@ -1006,3 +1006,33 @@ button:disabled { cursor: not-allowed; }
 .world-stage .tactical-highlight .range-cell.ally-threat-attack.is-selected {
   box-shadow: inset 0 0 0 3px #f0f6ff, 0 0 20px #6ac1ff;
 }
+
+/* v0.1.19.0: hover shows MOVE ONLY; a selected unit plus a hovered endpoint
+   reveals the chosen path arrow and attack coverage from that destination. */
+.world-stage .tactical-route {z-index:47;pointer-events:none}
+.route-preview-svg {display:block;width:100%;height:100%;overflow:visible;pointer-events:none}
+.route-preview-svg[hidden]{display:none!important}
+.route-preview-outline,.route-preview-line {
+  fill:none;stroke-linecap:round;stroke-linejoin:round;pointer-events:none
+}
+.route-preview-outline {stroke:#112d3d;stroke-width:11;opacity:.86}
+.route-preview-line {stroke:#ffe5a0;stroke-width:5.5}
+.world-stage .tactical-highlight .range-cell.route-move-ally {
+  background:rgba(45,150,237,.48);
+  box-shadow:inset 0 0 0 1px rgba(143,209,255,.83)
+}
+.world-stage .tactical-highlight .range-cell.route-move-enemy {
+  background:rgba(231,73,85,.36);
+  box-shadow:inset 0 0 0 1px rgba(255,152,153,.84)
+}
+.world-stage .tactical-highlight .range-cell.route-attack {
+  background:rgba(218,65,73,.53);
+  box-shadow:inset 0 0 0 2px rgba(255,182,158,.9)
+}
+.world-stage .tactical-highlight .range-cell.route-overlap {
+  background:rgba(48,146,240,.45);
+  box-shadow:inset 0 0 0 2px rgba(255,173,140,.95)
+}
+.world-stage .tactical-highlight .range-cell.route-step {
+  outline:2px solid rgba(255,232,166,.64);outline-offset:-4px
+}

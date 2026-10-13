@@ -49,6 +49,10 @@ function zoneAt(worldCol: number, worldRow: number): ArtZone {
 export class BoardView {
   private readonly cells: HTMLButtonElement[] = [];
   private readonly highlights: HTMLDivElement[] = [];
+  private readonly routeSvg: SVGSVGElement;
+  private readonly routeLine: SVGPathElement;
+  private readonly routeOutline: SVGPathElement;
+  private hoveredTile: Point | null = null;
   private readonly miniCells: HTMLButtonElement[] = [];
   private readonly stage: HTMLDivElement;
   private readonly unitLayer: HTMLDivElement;
@@ -185,6 +189,41 @@ export class BoardView {
         this.highlights.push(light);
       }
     }
+    // The route is a non-interactive world-space overlay, always above
+    // movement highlights but below character sprites and labels.
+    const routeLayer=layer("tactical-route");
+    routeLayer.style.left=TACTICAL_X+"px";
+    routeLayer.style.top=TACTICAL_Y+"px";
+    const svg=document.createElementNS("http://www.w3.org/2000/svg","svg");
+    svg.classList.add("route-preview-svg");
+    svg.setAttribute("viewBox","0 0 "+(MAP_WIDTH*TILE)+" "+(MAP_HEIGHT*TILE));
+    svg.setAttribute("aria-hidden","true");
+    const defs=document.createElementNS("http://www.w3.org/2000/svg","defs");
+    const marker=document.createElementNS("http://www.w3.org/2000/svg","marker");
+    marker.setAttribute("id","tactical-route-arrowhead");
+    marker.setAttribute("viewBox","0 0 12 12");
+    marker.setAttribute("refX","10");
+    marker.setAttribute("refY","6");
+    marker.setAttribute("markerWidth","10");
+    marker.setAttribute("markerHeight","10");
+    marker.setAttribute("orient","auto");
+    const triangle=document.createElementNS("http://www.w3.org/2000/svg","path");
+    triangle.setAttribute("d","M 1 1 L 11 6 L 1 11 z");
+    triangle.setAttribute("fill","#ffe5a0");
+    triangle.setAttribute("stroke","#132b36");
+    triangle.setAttribute("stroke-width","1");
+    marker.appendChild(triangle);
+    defs.appendChild(marker);
+    const outline=document.createElementNS("http://www.w3.org/2000/svg","path");
+    outline.classList.add("route-preview-outline");
+    const line=document.createElementNS("http://www.w3.org/2000/svg","path");
+    line.classList.add("route-preview-line");
+    line.setAttribute("marker-end","url(#tactical-route-arrowhead)");
+    svg.append(defs,outline,line);
+    routeLayer.appendChild(svg);
+    this.routeSvg=svg;
+    this.routeLine=line;
+    this.routeOutline=outline;
     // W50: units have independent anchors; they cannot intercept input.
     this.unitLayer = layer("world-units");
     // W60 stays available for future foreground effects, without hiding any scenery layer.
@@ -305,7 +344,15 @@ export class BoardView {
         event.clientY - viewport.getBoundingClientRect().top);
     }, { passive: false });
     viewport.addEventListener("pointerdown", event => this.pointerDown(event));
-    viewport.addEventListener("pointermove", event => this.pointerMove(event));
+    viewport.addEventListener("pointermove", event => {
+      this.pointerMove(event);
+      this.trackPointerHover(event);
+    });
+    viewport.addEventListener("pointerleave", event => {
+      if(event.pointerType==="touch")return;
+      this.hoveredTile=null;
+      this.renderRangeHighlights();
+    });
     viewport.addEventListener("pointerup", event => this.pointerEnd(event));
     viewport.addEventListener("pointercancel", event => this.pointerEnd(event, true));
     viewport.addEventListener("click", event => {
@@ -398,22 +445,6 @@ export class BoardView {
       this.menuVisible = false;
       this.previousSelection = selectedId;
     }
-    // Inspecting an enemy shows threat without changing Battle.selectedId.
-    // Ally target selection and the battle forecast retain priority.
-    const inspectedCell = this.inspectionCell;
-    const inspected = inspectedCell
-      ? this.battle.occupant(inspectedCell.x, inspectedCell.y) : undefined;
-    const threat = inspected?.team === "enemy" && !this.attackMode && !this.forecastTargetId
-      ? this.battle.enemyThreat(inspected) : null;
-    // Threat markers are hypothetical: selecting the actual attack action
-    // remains necessary to choose a weapon and a legal target.
-    const allyPreview = !threat && selected && !this.attackMode && !this.forecastTargetId
-      ? this.battle.allyThreat(selected) : null;
-    const reachable = !threat && selected && !selected.moved && !selected.spent
-      ? this.battle.reachable(selected) : new Map<string, number>();
-    const targets = new Set(selected && !selected.acted && !selected.spent
-      ? this.battle.targets(selected).map(key) : []);
-
     this.unitLayer.replaceChildren();
     this.labelLayer.replaceChildren();
     this.labelNodes.clear();
@@ -443,50 +474,114 @@ export class BoardView {
       this.pinNodes.set(unit.id, pin);
     }
 
-    for (let y = 0; y < MAP_HEIGHT; y++) {
-      for (let x = 0; x < MAP_WIDTH; x++) {
-        const index = y * MAP_WIDTH + x;
-        const cell = this.cells[index]!;
-        const overlay = this.highlights[index]!;
-        const terrain = this.battle.tile(x, y);
-        const actor = this.battle.occupant(x, y);
-        const coord = key({ x, y });
-        const accessible = !actor && reachable.has(coord);
-        const targeted = this.attackMode && targets.has(coord);
-        const enemyMove = threat?.move.has(coord) ?? false;
-        const enemyAttack = threat?.attack.has(coord) ?? false;
-        const allyMove = allyPreview?.move.has(coord) ?? false;
-        const allyAttack = allyPreview?.attack.has(coord) ?? false;
-        cell.className = "battle-cell"
-          + (terrain === "#" ? " is-blocked" : "")
-          + (actor?.id === this.battle.selectedId ? " is-selected" : "")
-          + (this.inspectionCell?.x === x && this.inspectionCell.y === y ? " is-inspected" : "");
-        cell.title = TERRAIN_INFO[terrain].name + " · " +
-          (terrain === "#" ? "不可通行" : "移动消耗 " + movementCostLabel(terrain));
-        overlay.className = [
-          "range-cell", accessible ? "can-move" : "", targeted ? "can-attack" : "",
-          enemyMove ? "enemy-threat-move" : "",
-          enemyAttack ? (enemyMove ? "enemy-threat-overlap" : "enemy-threat-attack") : "",
-          allyMove && accessible ? "ally-threat-move" : "",
-          allyAttack ? (allyMove && accessible ? "ally-threat-overlap" : "ally-threat-attack") : "",
-          actor?.id === this.battle.selectedId ? "is-selected" : "",
-          this.inspectionCell?.x === x && this.inspectionCell.y === y ? "is-inspected" : "",
-        ].filter(Boolean).join(" ");
-        cell.setAttribute("aria-label",
-          String.fromCharCode(65 + x) + (y + 1) + " " + TERRAIN_INFO[terrain].name +
-          (terrain === "#" ? " 不可通行 " : " ") +
-          (actor ? actor.name + " 生命 " + actor.hp + "/" + actor.maxHp :
-           targeted ? "可攻击目标" :
-           enemyAttack && enemyMove ? "敌军移动及攻击范围" :
-           enemyAttack ? "敌军攻击范围" : enemyMove ? "敌军移动范围" :
-           allyAttack && accessible ? "我方移动与攻击预测范围" :
-           allyAttack ? "我方攻击预测范围" : accessible ? "我方移动范围" : ""));
-      }
-    }
+    this.renderRangeHighlights();
     this.renderMenu();
     this.renderWeaponPicker();
     this.renderForecast();
     this.applyCamera();
+  }
+
+  /** Tile hover is transient. Painting just range cells (not units/labels)
+   * avoids rebuilding DOM nodes on every pointer crossing.
+   *
+   * Hovering ANY unit: movement only. Clicking a unit fixes inspection;
+   * hovering a legal endpoint then shows route + ONLY that tile's attacks.
+   */
+  private renderRangeHighlights(): void {
+    const active=this.battle.result==="playing" && !this.isAnimating;
+    const inspectedCell=this.inspectionCell;
+    const inspected=inspectedCell
+      ? this.battle.occupant(inspectedCell.x,inspectedCell.y) : undefined;
+    const selected=this.battle.selected;
+    const mouseUnit=this.hoveredTile
+      ? this.battle.occupant(this.hoveredTile.x,this.hoveredTile.y) : undefined;
+    const hoverMode=active && !!mouseUnit && !this.attackMode &&
+      !this.forecastTargetId && !this.pickerMode;
+    const focus=hoverMode ? mouseUnit :
+      inspected ?? selected;
+    const actionable=active && !this.attackMode && !this.forecastTargetId &&
+      !this.pickerMode && !!focus;
+    const range=actionable && focus
+      ? focus.team==="enemy"
+        ? this.battle.enemyThreat(focus)
+        : this.battle.allyThreat(focus)
+      : null;
+    const move=range?.move ?? new Set<string>();
+    const targeting = new Set(selected && !selected.acted && !selected.spent
+      ? this.battle.targets(selected).map(key) : []);
+    let route:Point[]|null=null;
+    let attacks=new Set<string>();
+    if(actionable && !hoverMode && focus && this.hoveredTile &&
+       move.has(key(this.hoveredTile)) &&
+       (!mouseUnit || mouseUnit.id===focus.id)) {
+      const forecast=this.battle.previewMovementAttack(focus,this.hoveredTile);
+      route=forecast?.path??null;
+      attacks=forecast?.attack??new Set();
+    }
+    this.drawRoute(route);
+    for (let y=0;y<MAP_HEIGHT;y++) {
+      for(let x=0;x<MAP_WIDTH;x++) {
+        const index=y*MAP_WIDTH+x;
+        const cell=this.cells[index]!;
+        const overlay=this.highlights[index]!;
+        const terrain=this.battle.tile(x,y);
+        const occupant=this.battle.occupant(x,y);
+        const coord=key({x,y});
+        const canMove=move.has(coord);
+        const moveFill=canMove && (!occupant || occupant.id===focus?.id);
+        const attack=attacks.has(coord);
+        const targeted=this.attackMode && targeting.has(coord);
+        const inspectedHere=this.inspectionCell?.x===x && this.inspectionCell.y===y;
+        cell.className="battle-cell"
+          +(terrain==="#"?" is-blocked":"")
+          +(occupant?.id===this.battle.selectedId?" is-selected":"")
+          +(inspectedHere?" is-inspected":"");
+        cell.title=TERRAIN_INFO[terrain].name+" · "+
+          (terrain==="#"?"不可通行":"移动消耗 "+movementCostLabel(terrain));
+        overlay.className=[
+          "range-cell",
+          targeted?"can-attack":"",
+          moveFill ? (focus?.team==="enemy" ? "route-move-enemy" : "route-move-ally"):"",
+          attack ? "route-attack":"",
+          attack && moveFill ? "route-overlap":"",
+          route?.some(p=>p.x===x && p.y===y) ? "route-step":"",
+          occupant?.id===this.battle.selectedId?"is-selected":"",
+          inspectedHere?"is-inspected":"",
+        ].filter(Boolean).join(" ");
+        cell.setAttribute("aria-label",
+          String.fromCharCode(65+x)+(y+1)+" "+TERRAIN_INFO[terrain].name+
+          (terrain==="#"?" 不可通行 ":" ")+
+          (occupant?occupant.name+" 生命 "+occupant.hp+"/"+occupant.maxHp:
+           targeted?"可攻击目标":
+           attack&&moveFill?"移动终点与该处攻击范围":
+           attack?"所选移动终点的攻击范围":
+           moveFill?(focus?.team==="enemy"?"敌方可移动范围":"我方可移动范围"):""));
+      }
+    }
+  }
+
+  private drawRoute(path: readonly Point[]|null): void {
+    const isReal=!!path && path.length>1;
+    this.routeSvg.hidden=!isReal;
+    if(!isReal){this.routeLine.removeAttribute("d");this.routeOutline.removeAttribute("d");return;}
+    const first=path[0]!;
+    const parts=["M "+((first.x+.5)*TILE)+" "+((first.y+.5)*TILE)];
+    for(const p of path.slice(1))parts.push("L "+((p.x+.5)*TILE)+" "+((p.y+.5)*TILE));
+    const d=parts.join(" ");
+    this.routeOutline.setAttribute("d",d);
+    this.routeLine.setAttribute("d",d);
+  }
+
+  private trackPointerHover(event: PointerEvent): void {
+    if(event.pointerType==="touch" || this.drag?.moved || this.pinchOrigin ||
+       this.isAnimating || this.battle.result!=="playing")return;
+    if((event.target as HTMLElement).closest(".unit-command-menu, .weapon-picker"))return;
+    const rect=this.viewport.getBoundingClientRect();
+    const tile=this.hitTestScreen(event.clientX-rect.left,event.clientY-rect.top);
+    if(tile?.x===this.hoveredTile?.x && tile?.y===this.hoveredTile?.y)return;
+    if(!tile && !this.hoveredTile)return;
+    this.hoveredTile=tile ? {x:tile.x,y:tile.y} : null;
+    this.renderRangeHighlights();
   }
 
   private inspectCell(x: number, y: number): void {
@@ -936,6 +1031,8 @@ export class BoardView {
     if (!this.drag.moved && Math.hypot(dx, dy) < 7) return;
     if (!this.drag.moved) {
       this.drag.moved = true;
+      this.hoveredTile=null;
+      this.renderRangeHighlights();
       this.viewport.setPointerCapture(e.pointerId);
     }
     this.offsetX = this.drag.offsetX + dx;
@@ -1090,6 +1187,7 @@ export class BoardView {
   }
 
   cancelAnimation(): void {
+    this.hoveredTile=null;
     this.cancelCombatPerformance();
     this.cancelEnemyCombatPreview();
     this.animationEpoch++;

@@ -99,13 +99,10 @@ test("prediction is read-only for position, HP, log and selection",()=>{
 test("board gives enemy inspection priority and reserves actionable red for real targets",()=>{
   const board=readFileSync(new URL("../src/scene/BoardView.ts",import.meta.url),"utf8");
   const css=readFileSync(new URL("../src/style.css",import.meta.url),"utf8");
-  assert.match(board,/const allyPreview = !threat && selected && !this\.attackMode && !this\.forecastTargetId/);
-  assert.match(board,/this\.battle\.allyThreat\(selected\)/);
-  assert.match(board,/allyMove && accessible \? "ally-threat-move"/);
-  assert.match(board,/allyAttack \? \(allyMove && accessible \? "ally-threat-overlap" : "ally-threat-attack"\)/);
-  assert.match(board,/const targeted = this\.attackMode && targets\.has\(coord\)/);
-  assert.match(board,/this\.battle\.enemyThreat\(inspected\)/);
-  assert.match(css,/\.range-cell\.ally-threat-move/);
-  assert.match(css,/\.range-cell\.ally-threat-attack/);
-  assert.match(css,/\.range-cell\.ally-threat-overlap/);
+  assert.match(board,/this\.battle\.allyThreat\(focus\)/);
+  assert.match(board,/const targeted=this\.attackMode && targeting\.has\(coord\)/);
+  assert.match(board,/this\.battle\.enemyThreat\(focus\)/);
+  assert.match(css,/\.range-cell\.route-move-ally/);
+  assert.match(css,/\.range-cell\.route-attack/);
+  assert.match(css,/\.range-cell\.route-overlap/);
 });

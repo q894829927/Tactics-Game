@@ -305,6 +305,21 @@ export class Battle {
       ally.moved ? [key(ally)] : this.reachable(ally).keys());
   }
 
+  /** A legal destination preview used by BOTH teams. This does not commit
+   * movement, attack or consume a random number. An ally who already moved
+   * may only preview from its current position.
+   */
+  previewMovementAttack(unit: Unit, destination: Point): {path: Point[];attack:Set<string>} | null {
+    if (this.result !== "playing" || unit.hp <= 0 || !this.units.includes(unit))
+      return null;
+    if (unit.team === "ally" &&
+        (this.phase !== "player" || unit.spent || unit.acted ||
+         (unit.moved && key(unit) !== key(destination)))) return null;
+    const path = this.movementPath(unit, destination);
+    if (!path) return null;
+    return {path,attack:this.projectedThreat(unit,[key(destination)]).attack};
+  }
+
   /** Returns a minimum movement-cost path, including origin and destination.
    * Uses the exact reachable() terrain weights and occupancy; no state mutation.
    */

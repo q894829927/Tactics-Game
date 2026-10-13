@@ -70,11 +70,9 @@ test("threat cannot cause movement, HP, selected state or combat log changes", (
 test("board renders only inspected enemy threat, keeping attack targeting priority", () => {
   const board=readFileSync(new URL("../src/scene/BoardView.ts",import.meta.url),"utf8");
   const css=readFileSync(new URL("../src/style.css",import.meta.url),"utf8");
-  assert.match(board,/inspected\?\.team === "enemy" && !this\.attackMode && !this\.forecastTargetId/);
-  assert.match(board,/this\.battle\.enemyThreat\(inspected\)/);
-  assert.match(board,/enemyMove \? "enemy-threat-move"/);
-  assert.match(board,/enemyAttack \? \(enemyMove \? "enemy-threat-overlap" : "enemy-threat-attack"\)/);
-  assert.match(css,/\.range-cell\.enemy-threat-move/);
-  assert.match(css,/\.range-cell\.enemy-threat-attack/);
-  assert.match(css,/\.range-cell\.enemy-threat-overlap/);
+  assert.match(board,/const focus=hoverMode \? mouseUnit/);
+  assert.match(board,/this\.battle\.enemyThreat\(focus\)/);
+  assert.match(board,/focus\?\.team==="enemy" \? "route-move-enemy"/);
+  assert.match(css,/\.range-cell\.route-move-enemy/);
+  assert.match(css,/\.range-cell\.route-attack/);
 });
