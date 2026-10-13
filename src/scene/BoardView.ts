@@ -50,6 +50,12 @@ export class BoardView {
   private readonly unitLayer: HTMLDivElement;
   private readonly labelLayer: HTMLDivElement;
   private readonly labelNodes = new Map<string, HTMLDivElement>();
+  private readonly markNodes = new Map<string, HTMLSpanElement>();
+  private readonly pinNodes = new Map<string, HTMLSpanElement>();
+  private animationLocked = false;
+  private animationEpoch = 0;
+  private animationPose: {id: string; x: number; y: number} | null = null;
+  get isAnimating(): boolean { return this.animationLocked; }
   private readonly minimapUnits: HTMLDivElement;
   private miniDrag: { pointerId: number; x: number; y: number; moved: boolean } | null = null;
   private suppressMiniClick = false;
@@ -306,6 +312,7 @@ export class BoardView {
     this.applyCamera();
   }
   cancelAction(): boolean {
+    if (this.animationLocked || this.battle.phase !== "player") return false;
     if (this.forecastTargetId) {
       this.forecastTargetId = null;
       this.renderForecast();
@@ -364,7 +371,9 @@ export class BoardView {
     this.unitLayer.replaceChildren();
     this.labelLayer.replaceChildren();
     this.labelNodes.clear();
+    this.markNodes.clear();
     this.minimapUnits.replaceChildren();
+    this.pinNodes.clear();
     for (const unit of this.battle.units.filter(u => u.hp > 0)) {
       const point = tileWorld(unit.x, unit.y);
       const mark = this.unitElement(unit);
@@ -374,6 +383,7 @@ export class BoardView {
       mark.style.left = point.x + "px";
       mark.style.top = point.y + "px";
       this.unitLayer.appendChild(mark);
+      this.markNodes.set(unit.id, mark);
 
       const label = this.createScreenLabel(unit);
       this.labelLayer.appendChild(label);
@@ -384,6 +394,7 @@ export class BoardView {
       pin.style.left = point.x / WORLD_WIDTH * 100 + "%";
       pin.style.top = point.y / WORLD_HEIGHT * 100 + "%";
       this.minimapUnits.appendChild(pin);
+      this.pinNodes.set(unit.id, pin);
     }
 
     for (let y = 0; y < MAP_HEIGHT; y++) {
@@ -431,7 +442,7 @@ export class BoardView {
   }
 
   private onCellClick(x: number, y: number): void {
-    if (this.battle.result !== "playing") return;
+    if (this.battle.result !== "playing" || this.battle.phase !== "player" || this.animationLocked) return;
     this.inspectCell(x, y);
     const intent = leftClickIntent(this.battle, x, y, this.attackMode);
     if (intent === "attack") {
@@ -449,7 +460,13 @@ export class BoardView {
     this.menuVisible = false;
     this.attackMode = false;
     if (intent === "select-ally" || intent === "move") {
+      const mover = intent === "move" ? this.battle.selected : undefined;
+      const path = mover ? this.battle.movementPath(mover, {x, y}) : null;
       this.battle.click(x, y);
+      if (mover && path && path.length > 1 && mover.x === x && mover.y === y) {
+        // Logic is committed first; display travels one real path cell per segment.
+        void this.animateMovement(mover.id, path);
+      }
     } else if (!this.battle.canCancelMove) {
       this.battle.selectedId = null;
     }
@@ -458,7 +475,7 @@ export class BoardView {
   }
 
   private onRightCellClick(x: number, y: number): void {
-    if (this.battle.result !== "playing") return;
+    if (this.battle.result !== "playing" || this.battle.phase !== "player" || this.animationLocked) return;
     const actor = this.battle.occupant(x, y);
     if (this.forecastTargetId || this.attackMode) {
       this.forecastTargetId = null;
@@ -519,6 +536,7 @@ export class BoardView {
   }
 
   private confirmAttack(): void {
+    if (this.animationLocked || this.battle.phase !== "player") return;
     const attacker = this.battle.selected;
     const target = this.battle.units.find(u => u.id === this.forecastTargetId && u.hp > 0);
     if (!attacker || !target || !this.battle.forecastAttack(attacker, target)) {
@@ -560,6 +578,7 @@ export class BoardView {
       button.disabled = !cmd.enabled;
       button.title = cmd.enabled ? cmd.text : cmd.key === "attack" ? "当前射程内没有可攻击的目标，可先移动" : "后续版本开放";
       button.addEventListener("click", () => {
+        if (this.animationLocked || this.battle.phase !== "player") return;
         if (cmd.key === "wait") {
           this.battle.waitSelected();
           this.menuVisible = false;
@@ -632,6 +651,7 @@ export class BoardView {
   }
 
   private startDrag(e: PointerEvent): void {
+    if (this.animationLocked || this.battle.phase !== "player") return;
     if (e.button !== 0 && e.button !== 1 && e.button !== 2) return;
     if ((e.target as HTMLElement).closest(".unit-command-menu")) return;
     if (this.drag) return;
@@ -640,7 +660,7 @@ export class BoardView {
       offsetX: this.offsetX, offsetY: this.offsetY, moved: false };
   }
   private moveDrag(e: PointerEvent): void {
-    if (!this.drag || this.drag.pointerId !== e.pointerId) return;
+    if (!this.drag || this.drag.pointerId !== e.pointerId || this.animationLocked) return;
     const dx = e.clientX - this.drag.x;
     const dy = e.clientY - this.drag.y;
     if (!this.drag.moved && Math.hypot(dx, dy) < 7) return;
@@ -658,7 +678,7 @@ export class BoardView {
     this.drag = null;
     this.suppressClick = drag.button === 0 && drag.moved;
     if (this.viewport.hasPointerCapture(e.pointerId)) this.viewport.releasePointerCapture(e.pointerId);
-    if (!cancelled && drag.button === 2 && !drag.moved) {
+    if (!cancelled && !this.animationLocked && drag.button === 2 && !drag.moved) {
       const rect = this.viewport.getBoundingClientRect();
       const tile = this.hitTestScreen(e.clientX - rect.left, e.clientY - rect.top);
       if (tile) this.onRightCellClick(tile.x, tile.y);
@@ -667,6 +687,74 @@ export class BoardView {
     // A completed drag may not dispatch click in all browsers.
     window.setTimeout(() => { this.suppressClick = false; }, 0);
   }
+  /** Movement is graphical only: engine movement/attacks are never performed per frame.
+   * A step runs from one adjacent legal tile to the next with linear interpolation.
+   */
+  async animateMovement(unitId: string, path: readonly Point[]): Promise<void> {
+    if (this.animationLocked) return;
+    if (path.length < 2 || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    this.animationLocked = true;
+    const epoch = ++this.animationEpoch;
+    try {
+      for (let index = 1; index < path.length; index++) {
+        if (this.animationEpoch !== epoch) break;
+        const a = path[index - 1]!;
+        const b = path[index]!;
+        if (Math.abs(b.x - a.x) + Math.abs(b.y - a.y) !== 1) break;
+        const duration = 165;
+        await new Promise<void>(resolve => {
+          let start = -1;
+          const frame = (timestamp: number) => {
+            if (this.animationEpoch !== epoch) { resolve(); return; }
+            if (start < 0) start = timestamp;
+            const t = Math.min(1, (timestamp - start) / duration);
+            // Ease smoothly within each grid step, without teleporting at corners.
+            const eased = t * t * (3 - 2 * t);
+            this.animationPose = {id: unitId,
+              x: a.x + (b.x - a.x) * eased, y: a.y + (b.y - a.y) * eased};
+            this.paintAnimationPose();
+            if (t < 1) requestAnimationFrame(frame);
+            else resolve();
+          };
+          requestAnimationFrame(frame);
+        });
+      }
+    } finally {
+      if (this.animationEpoch === epoch) {
+        this.animationPose = null;
+        this.animationLocked = false;
+        this.refresh();
+      }
+    }
+  }
+
+  cancelAnimation(): void {
+    this.animationEpoch++;
+    this.animationPose = null;
+    this.animationLocked = false;
+    this.refresh();
+  }
+
+  private paintAnimationPose(): void {
+    const pose = this.animationPose;
+    if (!pose) return;
+    const point = tileWorld(pose.x, pose.y);
+    const mark = this.markNodes.get(pose.id);
+    if (mark) { mark.style.left = point.x + "px"; mark.style.top = point.y + "px"; }
+    const label = this.labelNodes.get(pose.id);
+    if (label) {
+      const screen = worldScreen(point.x, point.y,
+        {x: this.offsetX, y: this.offsetY, zoom: this.zoom});
+      label.style.left = screen.x + "px";
+      label.style.top = screen.y + "px";
+    }
+    const pin = this.pinNodes.get(pose.id);
+    if (pin) {
+      pin.style.left = point.x / WORLD_WIDTH * 100 + "%";
+      pin.style.top = point.y / WORLD_HEIGHT * 100 + "%";
+    }
+  }
+
   private zoomAt(value: number, px: number, py: number): void {
     const next = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, value));
     const before = this.zoom;
@@ -696,13 +784,15 @@ export class BoardView {
     for (const unit of this.battle.units.filter(u => u.hp > 0)) {
       const label = this.labelNodes.get(unit.id);
       if (!label) continue;
-      const point = tileWorld(unit.x, unit.y);
+      const pose = this.animationPose?.id === unit.id ? this.animationPose : unit;
+      const point = tileWorld(pose.x, pose.y);
       const screen = worldScreen(point.x, point.y, camera);
       label.style.left = screen.x + "px";
       label.style.top = screen.y + "px";
       label.hidden = screen.x < -75 || screen.y < -85 || screen.x > vw + 75 || screen.y > vh + 95;
       label.classList.toggle("label-compact", this.zoom < .80);
     }
+    this.paintAnimationPose();
     this.onZoomChange?.(this.zoomPercent);
     const frame = minimapFrame({x: this.offsetX, y: this.offsetY, zoom: this.zoom}, vw, vh);
     this.viewportMarker.style.left = frame.left * 100 + "%";

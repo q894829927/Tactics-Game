@@ -822,3 +822,9 @@ button:disabled { cursor: not-allowed; }
 .world-stage .tactical-highlight .range-cell.enemy-threat-move.is-inspected {
   box-shadow: inset 0 0 0 3px #ffdfb4, 0 0 13px rgba(255, 209, 140, .55);
 }
+
+/* Do not animate the UI's grid highlights; only the unit's actual footpoint moves.
+   During the enemy turn the battle logic commits one action per enemy. */
+.world-units .unit-ground-mark,
+.screen-unit-label,
+.minimap-unit-pin { will-change: left, top; }

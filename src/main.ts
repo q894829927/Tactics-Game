@@ -13,6 +13,8 @@ const button = (id: string): HTMLButtonElement => get(id) as HTMLButtonElement;
 get("game-version").textContent = GAME_VERSION;
 const battle = new Battle();
 const board = new BoardView(battle, get("game"));
+let endingTurn = false;
+let turnRunId = 0;
 
 const roleNames: Record<Unit["role"], string> = {
   sword: "剑士", lancer: "枪卫", archer: "弓手",
@@ -70,7 +72,8 @@ function renderSelection(): void {
         : "左键选中与移动；右键该单位打开指令，移动后可取消"
       : inspected ? "当前地形：" + terrain?.name + "。左键查看其他格子，右键拖动地图。"
       : "左键查看地形或选择单位；右键点击友军打开指令。";
-  button("settings-end-turn").disabled = battle.result !== "playing";
+  button("settings-end-turn").disabled =
+    battle.result !== "playing" || battle.phase !== "player" || endingTurn || board.isAnimating;
 }
 
 function refresh(): void {
@@ -113,7 +116,6 @@ button("reset-view").addEventListener("click", () => { board.resetCamera(); setS
 
 let phaseTimeout: number | undefined;
 let enemyTurnTimeout: number | undefined;
-let endingTurn = false;
 function showPhase(title: string, english: string, duration = 1250): void {
   const banner = get("phase-banner");
   window.clearTimeout(phaseTimeout);
@@ -126,25 +128,46 @@ function showPhase(title: string, english: string, duration = 1250): void {
   phaseTimeout = window.setTimeout(() => { banner.hidden = true; }, duration);
 }
 
-button("settings-end-turn").addEventListener("click", () => {
-  if (endingTurn || battle.result !== "playing") return;
-  endingTurn = true;
-  setSettings(false);
-  board.hideCommandMenu();
-  showPhase("第 " + battle.round + " 回合 · 敌方行动", "ENEMY PHASE", 850);
+const pause = (ms: number) => new Promise<void>(resolve => {
   enemyTurnTimeout = window.setTimeout(() => {
     enemyTurnTimeout = undefined;
-    battle.endTurn();
-    endingTurn = false;
-    if (battle.result === "playing") {
-      showPhase("第 " + battle.round + " 回合 · 我方行动", "PLAYER PHASE");
+    resolve();
+  }, ms);
+});
+button("settings-end-turn").addEventListener("click", () => {
+  if (endingTurn || board.isAnimating || battle.phase !== "player" ||
+      battle.result !== "playing") return;
+  endingTurn = true;
+  const run = ++turnRunId;
+  setSettings(false);
+  board.hideCommandMenu();
+  renderSelection();
+  showPhase("第 " + battle.round + " 回合 · 敌方行动", "ENEMY PHASE", 650);
+  void (async () => {
+    await pause(650);
+    if (run !== turnRunId || !battle.beginEnemyTurn()) return;
+    while (run === turnRunId && battle.result === "playing") {
+      const plan = battle.planEnemyAction();
+      if (!plan) break;
+      await board.animateMovement(plan.unitId, plan.path);
+      if (run !== turnRunId) return;
+      battle.commitEnemyAction(plan);
+      // Show each enemy's finished move/attack before the next enemy acts.
+      await pause(320);
     }
-  }, 860);
+    if (run !== turnRunId) return;
+    battle.finishEnemyTurn();
+    endingTurn = false;
+    refresh();
+    if (battle.result === "playing")
+      showPhase("第 " + battle.round + " 回合 · 我方行动", "PLAYER PHASE");
+  })();
 });
 button("restart-button").addEventListener("click", () => {
   if (!window.confirm("重新开始关卡？当前进度将丢失。")) return;
-  window.clearTimeout(enemyTurnTimeout);
-  enemyTurnTimeout = undefined;
+  // Invalidate an in-flight enemy turn and any active interpolation first.
+  turnRunId++;
+  board.cancelAnimation();
   endingTurn = false;
   battle.restart();
   board.resetCamera();
@@ -155,7 +178,7 @@ button("restart-button").addEventListener("click", () => {
 window.addEventListener("keydown", event => {
   if (event.key === "Escape") {
     if (!overlay.hidden) setSettings(false);
-    else board.cancelAction();
+    else if (!endingTurn) board.cancelAction();
   }
   if (!overlay.hidden || event.target instanceof HTMLInputElement) return;
   if (event.key === "+" || event.key === "=") board.zoomBy(1.18);

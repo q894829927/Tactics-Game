@@ -8,6 +8,14 @@ export type GameResult = "playing" | "victory" | "defeat";
 export type Role = "sword" | "lancer" | "archer" | "mage" | "raider" | "commander";
 export type Point = { x: number; y: number };
 /** Read-only movement plus potential attack preview for one enemy. */
+/** Single enemy action plan, created before animation and committed afterwards. */
+export type EnemyActionPlan = {
+  unitId: string;
+  destination: Point;
+  path: Point[];
+  targetId: string | null;
+};
+
 export type EnemyThreat = {
   move: Set<string>;
   attack: Set<string>;
@@ -70,10 +78,12 @@ export class Battle {
   units: Unit[] = [];
   selectedId: string | null = null;
   round = 1;
+  phase: "player" | "enemy" = "player";
   result: GameResult = "playing";
   log: string[] = [];
   onChange: (() => void) | null = null;
   private moveOrigin: Point | null = null;
+  private enemyQueue: string[] = [];
 
   constructor() { this.restart(); }
 
@@ -91,6 +101,8 @@ export class Battle {
       unit("e6", "赤旗统领", "commander", "enemy", 9, 7, 38, 11, 5, 2),
     ];
     this.round = 1;
+    this.phase = "player";
+    this.enemyQueue = [];
     this.result = "playing";
     this.selectedId = null;
     this.moveOrigin = null;
@@ -108,7 +120,7 @@ export class Battle {
   }
 
   cancelMove(): boolean {
-    if (!this.canCancelMove || !this.moveOrigin) return false;
+    if (this.phase !== "player" || !this.canCancelMove || !this.moveOrigin) return false;
     const actor = this.selected!;
     if (this.occupant(this.moveOrigin.x, this.moveOrigin.y)) return false;
     actor.x = this.moveOrigin.x;
@@ -205,6 +217,31 @@ export class Battle {
     return {move, attack};
   }
 
+  /** Returns a minimum movement-cost path, including origin and destination.
+   * Uses the exact reachable() terrain weights and occupancy; no state mutation.
+   */
+  movementPath(actor: Unit, destination: Point): Point[] | null {
+    if (!inBounds(destination.x, destination.y)) return null;
+    const costs = this.reachable(actor);
+    if (!costs.has(key(destination))) return null;
+    const path: Point[] = [{x: destination.x, y: destination.y}];
+    let current = path[0]!;
+    while (current.x !== actor.x || current.y !== actor.y) {
+      const cost = costs.get(key(current))!;
+      const entering = TERRAIN_INFO[this.tile(current.x, current.y)].moveCost;
+      const previous = [
+        {x: current.x - 1, y: current.y},
+        {x: current.x, y: current.y - 1},
+        {x: current.x + 1, y: current.y},
+        {x: current.x, y: current.y + 1},
+      ].find(p => costs.get(key(p)) === cost - entering);
+      if (!previous) return null;
+      path.push(previous);
+      current = previous;
+    }
+    return path.reverse();
+  }
+
   inAttackRange(attacker: Unit, defender: Unit): boolean {
     const d = distance(attacker, defender);
     return d >= attacker.minRange && d <= attacker.maxRange;
@@ -219,7 +256,7 @@ export class Battle {
   }
 
   click(x: number, y: number): void {
-    if (this.result !== "playing" || !inBounds(x, y)) return;
+    if (this.phase !== "player" || this.result !== "playing" || !inBounds(x, y)) return;
     const found = this.occupant(x, y);
     if (found?.team === "ally") {
       if (!found.spent) {
@@ -263,7 +300,7 @@ export class Battle {
   }
 
   waitSelected(): void {
-    if (this.result !== "playing") return;
+    if (this.phase !== "player" || this.result !== "playing") return;
     const actor = this.selected;
     if (!actor || actor.team !== "ally" || actor.spent) return;
     this.committedLog(actor.name + " " + this.completedMovement(actor) + "待机");
@@ -274,63 +311,108 @@ export class Battle {
     this.emit();
   }
 
+  /** Player-facing legacy entry point: runs the same sequential API without delays.
+   * Browser uses begin/plan/commit/finish for one-by-one presentation.
+   */
   endTurn(): void {
-    if (this.result !== "playing") return;
+    if (!this.beginEnemyTurn()) return;
+    while (this.result === "playing") {
+      const plan = this.planEnemyAction();
+      if (!plan) break;
+      this.commitEnemyAction(plan);
+    }
+    this.finishEnemyTurn();
+  }
+
+  beginEnemyTurn(): boolean {
+    if (this.phase !== "player" || this.result !== "playing") return false;
+    this.phase = "enemy";
     this.selectedId = null;
     this.moveOrigin = null;
     this.alive("ally").forEach(u => { u.spent = true; });
-    for (const enemy of this.alive("enemy")) {
-      if (this.result !== "playing") break;
-      this.enemyAct(enemy);
-      this.resolve();
-    }
-    if (this.result === "playing") {
-      this.round++;
-      for (const u of this.alive("ally")) {
-        u.moved = false;
-        u.acted = false;
-        u.spent = false;
-      }
-      // No standalone turn or selection entries: the log records complete actions only.
-    }
+    this.enemyQueue = this.alive("enemy").map(u => u.id);
     this.emit();
+    return true;
   }
 
-  private enemyAct(enemy: Unit): void {
+  /** Does not move, attack, log or alter the pending queue. */
+  planEnemyAction(): EnemyActionPlan | null {
+    if (this.phase !== "enemy" || this.result !== "playing") return null;
+    const id = this.enemyQueue[0];
+    if (!id) return null;
+    const enemy = this.units.find(u => u.id === id && u.hp > 0);
+    if (!enemy) return null; // Queue is static; currently dead enemies cannot be acted.
     const foes = this.alive("ally");
-    if (!foes.length) return;
-    const before = {x: enemy.x, y: enemy.y};
-    let target = this.nearest(enemy, foes);
-    if (!this.inAttackRange(enemy, target)) {
-      const places = [...this.reachable(enemy).keys()];
-      let best = {x: enemy.x, y: enemy.y};
-      let bestScore = this.approachScore(enemy, target);
-      for (const p of places) {
-        const [x, y] = p.split(",").map(Number);
-        const choice = {x: x!, y: y!};
-        const score = this.approachScore(choice, target);
-        if (score < bestScore) {best = choice; bestScore = score;}
+    if (!foes.length) return null;
+    const nearest = this.nearest(enemy, foes);
+    let destination = {x: enemy.x, y: enemy.y};
+    if (!this.inAttackRange(enemy, nearest)) {
+      let best = this.approachScore(enemy, nearest);
+      for (const position of this.reachable(enemy).keys()) {
+        const [x, y] = position.split(",").map(Number);
+        const candidate = {x: x!, y: y!};
+        const score = this.approachScore(candidate, nearest);
+        if (score < best) { destination = candidate; best = score; }
       }
-      enemy.x = best.x; enemy.y = best.y;
     }
-    const moved = before.x !== enemy.x || before.y !== enemy.y
-      ? " 移动至 (" + enemy.x + ", " + enemy.y + ") 后" : " ";
-    const attackable = this.targets(enemy);
-    if (attackable.length) {
-      target = [...attackable].sort((a, b) =>
-        (this.damage(enemy, b) >= b.hp ? 1 : 0) -
-        (this.damage(enemy, a) >= a.hp ? 1 : 0) || a.hp - b.hp)[0]!;
+    const future = {...enemy, x: destination.x, y: destination.y};
+    const attackable = foes.filter(u => this.inAttackRange(future, u));
+    const target = [...attackable].sort((a, b) =>
+      (this.damage(enemy, b) >= b.hp ? 1 : 0) -
+      (this.damage(enemy, a) >= a.hp ? 1 : 0) || a.hp - b.hp)[0];
+    return {unitId: enemy.id, destination,
+      path: this.movementPath(enemy, destination) ?? [{x:enemy.x,y:enemy.y}],
+      targetId: target?.id ?? null};
+  }
+
+  /** Commits exactly one enemy's completed action and emits a single state change. */
+  commitEnemyAction(plan: EnemyActionPlan): boolean {
+    if (this.phase !== "enemy" || this.result !== "playing" ||
+        this.enemyQueue[0] !== plan.unitId) return false;
+    const enemy = this.units.find(u => u.id === plan.unitId && u.hp > 0);
+    if (!enemy || !this.movementPath(enemy, plan.destination)) return false;
+    const start = {x: enemy.x, y: enemy.y};
+    enemy.x = plan.destination.x;
+    enemy.y = plan.destination.y;
+    const moved = start.x !== enemy.x || start.y !== enemy.y;
+    const prefix = enemy.name + (moved
+      ? " 移动至 (" + enemy.x + ", " + enemy.y + ") 后" : " ");
+    const target = this.units.find(u => u.id === plan.targetId && u.hp > 0);
+    if (target && this.inAttackRange(enemy, target)) {
       const result = this.strike(enemy, target);
-      this.committedLog(enemy.name + moved + "攻击 " + target.name + "：造成 " +
+      this.committedLog(prefix + "攻击 " + target.name + "：造成 " +
         result.damage + " 点伤害" +
         (result.counterDamage ? "；" + target.name + "反击造成 " + result.counterDamage + " 点伤害" : "") +
         (result.defenderFell ? "；目标被击败" : "") +
         (result.attackerFell ? "；攻击者被击败" : ""));
     } else {
-      this.committedLog(enemy.name + (before.x !== enemy.x || before.y !== enemy.y
+      this.committedLog(enemy.name + (moved
         ? " 移动至 (" + enemy.x + ", " + enemy.y + ")" : " 待机"));
     }
+    enemy.spent = true;
+    this.enemyQueue.shift();
+    this.resolve();
+    this.emit();
+    return true;
   }
+
+  finishEnemyTurn(): boolean {
+    if (this.phase !== "enemy" || this.enemyQueue.length !== 0) return false;
+    this.enemyQueue = [];
+    this.phase = "player";
+    if (this.result === "playing") {
+      this.round++;
+      for (const unit of this.alive("ally")) {
+        unit.moved = false; unit.acted = false; unit.spent = false;
+      }
+      for (const unit of this.alive("enemy")) {
+        unit.moved = false; unit.acted = false; unit.spent = false;
+      }
+    }
+    this.emit();
+    return true;
+  }
+
   private approachScore(from: Point, target: Unit): number {
     const d = distance(from, target);
     return d > target.maxRange ? d : Math.max(0, d - 1) * 2;
@@ -357,6 +439,8 @@ export class Battle {
     if (this.result !== "playing") {
       this.selectedId = null;
       this.moveOrigin = null;
+      // No additional enemy actions occur once the battle is over.
+      this.enemyQueue = [];
     }
   }
   private logLine(line: string): void {
