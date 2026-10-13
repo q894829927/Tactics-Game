@@ -8,7 +8,7 @@ const board = readFileSync(new URL("../src/scene/BoardView.ts", import.meta.url)
 const css = readFileSync(new URL("../src/style.css", import.meta.url), "utf8");
 
 test("screen space unit HUD is a sibling of transformed world, not a scaled child", () => {
-  assert.match(board, /viewport\.replaceChildren\(backdrop, world, this\.labelLayer, this\.menu\)/);
+  assert.match(board, /viewport\.replaceChildren\(backdrop, world, this\.labelLayer, this\.menu, this\.weaponPicker\)/);
   assert.match(board, /this\.labelLayer\.appendChild\(label\)/);
   assert.match(board, /const screen = worldScreen\(point\.x, point\.y, camera\)/);
   assert.match(css, /\.screen-unit-labels\s*\{[^}]*pointer-events:\s*none/s);
