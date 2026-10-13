@@ -351,3 +351,114 @@ button:disabled { cursor: not-allowed; }
   .phase-animate { animation-duration: .05s; }
   .hp-fill { transition: none; }
 }
+
+
+/* A2-1: camera world stage and pointer-independent, layered placeholder art. */
+.battlefield {
+  background: linear-gradient(145deg, #183831, #12333a 56%, #162f34);
+}
+.map-backdrop {
+  position: absolute; inset: -40px; pointer-events: none;
+  background:
+    radial-gradient(ellipse at 15% 23%, #244d40b8, transparent 45%),
+    radial-gradient(ellipse at 81% 78%, #234d5688, transparent 48%),
+    repeating-linear-gradient(125deg, #193d34 0 34px, #20483b 35px 68px, #183b3a 69px 101px);
+  opacity: .82;
+}
+.map-world.world-stage {
+  background: #355542;
+  border: 1px solid #284637;
+  overflow: hidden;
+}
+.world-layer {
+  position: absolute; inset: 0;
+  pointer-events: none;
+}
+.world-ground {
+  display: grid;
+  background: #345543;
+}
+.stage-ground-cell { min-width: 0; min-height: 0; border: 0; }
+.stage-terrain-plain, .stage-zone-grass {
+  background: radial-gradient(ellipse at 21% 26%, #63805588, transparent 52%),
+              linear-gradient(140deg, #3e6148, #385c45 60%, #4d6348);
+}
+.stage-terrain-F, .stage-zone-forest {
+  background: radial-gradient(circle at 35% 25%, #3c6851 4%, transparent 52%),
+              repeating-linear-gradient(120deg, #24483b 0 24px, #315846 25px 49px);
+}
+.stage-terrain-H, .stage-zone-camp {
+  background: linear-gradient(140deg, #736c4f, #5c6750 54%, #4d5947);
+}
+.stage-terrain-wall, .stage-zone-cliff {
+  background: repeating-linear-gradient(120deg, #263a41, #3b4e53 24px, #283e42 48px);
+}
+.stage-zone-river {
+  background: linear-gradient(135deg, #154458, #1c6781 47%, #124354 65%, #17647d);
+}
+.world-environment .environment-placeholder {
+  position: absolute; pointer-events: none;
+}
+.stage-river-placeholder {
+  background: linear-gradient(92deg, #254b58bb, #1d6d89cc 45%, #164356);
+  border-left: 8px solid #667568aa;
+  border-radius: 44% 15% 35% 28%;
+  opacity: .55;
+}
+.stage-camp-placeholder {
+  border: 6px solid #735a39ad;
+  background: repeating-linear-gradient(125deg, #5b513a99 0 34px, #69564091 36px 68px);
+  border-radius: 10px 10px 25px 20px;
+  opacity: .68;
+}
+.world-decal .stage-terrain-mark {
+  position: absolute; width: 92px; height: 92px; display: grid;
+  place-items: center; font-size: 35px; color: #76a67b9e;
+  text-shadow: 2px 6px 8px #102a21;
+}
+.stage-terrain-mark-H { color: #d2c49a !important; }
+.stage-terrain-mark-wall { color: #9dafb0 !important; }
+.world-stage .tactical-hit-grid,
+.world-stage .tactical-highlight {
+  right: auto; bottom: auto; width: 920px; height: 736px;
+  display: grid;
+}
+.world-stage .tactical-hit-grid { pointer-events: auto; }
+.world-stage .battle-cell {
+  background: transparent !important;
+  box-shadow: inset 0 0 0 1px #bed9d915 !important;
+  border: 1px solid #d6e8e81f;
+  overflow: hidden;
+}
+.world-stage .battle-cell:focus-visible {
+  outline: 3px solid #edcf8f; outline-offset: -3px; z-index: 4;
+}
+.world-stage .battle-cell:hover {
+  box-shadow: inset 0 0 0 2px #bde0f6a8 !important;
+}
+.world-stage .tactical-highlight { pointer-events: none; }
+.range-cell { position: relative; }
+.range-cell.can-move { background: #318af36b; box-shadow: inset 0 0 0 1px #89c3ffb8; }
+.range-cell.can-attack { background: #e85d5388; box-shadow: inset 0 0 0 2px #ff947d; }
+.range-cell.is-selected { box-shadow: inset 0 0 0 3px #f0f6ff, 0 0 20px #6ac1ff; z-index: 3; }
+.world-units { pointer-events: none; }
+.world-units .world-unit {
+  left: 0; top: 0; right: auto; bottom: auto; inset: auto;
+  width: 90px; height: 100px;
+  transform: translate(-50%, -48%); z-index: 2;
+}
+.world-units .world-unit.is-selected .unit-emblem {
+  box-shadow: 0 0 16px #7ac8ff, 0 0 0 2px #e5efff;
+}
+.world-foreground { pointer-events: none; }
+.minimap-grid { aspect-ratio: 16 / 12; }
+.mini-zone-forest { background: #255243; }
+.mini-zone-grass { background: #566c4e; }
+.mini-zone-camp { background: #766347; }
+.mini-zone-river { background: #21617b; }
+.mini-zone-cliff { background: #354750; }
+.minimap-tactical-outline {
+  position: absolute; pointer-events: none;
+  left: 18.75%; top: 16.66667%; width: 62.5%; height: 66.66667%;
+  border: 1px dashed #e1e9dda6; z-index: 3;
+}
