@@ -792,10 +792,15 @@ export class BoardView {
   /** Called both when opening the picker and whenever the camera changes.
    * Move the floating screen-space panel without rebuilding its contents or state.
    */
+  private touchDockInset():number {
+    return window.matchMedia("(max-width: 900px), (max-height: 600px) and (pointer: coarse)").matches
+      ? 82 : 8;
+  }
+
   private positionWeaponPicker(actor: Unit): void {
     const point=tileWorld(actor.x,actor.y);
     const width=205;
-    const height=Math.min(320,Math.max(0,this.viewport.clientHeight*0.8));
+    const height=this.weaponPicker.offsetHeight || Math.min(320,Math.max(0,this.viewport.clientHeight*0.8));
     const right=this.offsetX+(point.x+TILE/2)*this.zoom+10;
     const left=this.offsetX+(point.x-TILE/2)*this.zoom-width-10;
     const preferredX=right+width>this.viewport.clientWidth-8 ? left : right;
@@ -803,20 +808,20 @@ export class BoardView {
     this.weaponPicker.style.left=Math.max(8,Math.min(
       this.viewport.clientWidth-width-8,preferredX))+"px";
     this.weaponPicker.style.top=Math.max(8,Math.min(
-      this.viewport.clientHeight-height-8,preferredY))+"px";
+      this.viewport.clientHeight-height-this.touchDockInset(),preferredY))+"px";
   }
 
   private positionMenu(actor: Unit): void {
     const point = tileWorld(actor.x, actor.y);
     const menuWidth = 150;
-    const menuHeight = this.battle.canCancelMove ? 256 : 218;
+    const menuHeight = this.menu.offsetHeight || (this.battle.canCancelMove ? 256 : 218);
     let x = this.offsetX + (point.x + TILE / 2) * this.zoom + 10;
     let y = this.offsetY + (point.y - TILE / 2) * this.zoom - 20;
     if (x + menuWidth > this.viewport.clientWidth - 10) {
       x = this.offsetX + (point.x - TILE / 2) * this.zoom - menuWidth - 10;
     }
     x = Math.max(8, Math.min(this.viewport.clientWidth - menuWidth - 8, x));
-    y = Math.max(8, Math.min(this.viewport.clientHeight - menuHeight - 8, y));
+    y = Math.max(8, Math.min(this.viewport.clientHeight - menuHeight - this.touchDockInset(), y));
     this.menu.style.left = x + "px";
     this.menu.style.top = y + "px";
   }

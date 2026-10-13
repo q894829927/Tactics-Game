@@ -980,3 +980,9 @@ button:disabled { cursor: not-allowed; }
   .attack-forecast {bottom:56px;max-height:calc(100dvh - 64px)}
   .right-sidebar {max-height:90dvh}
 }
+
+/* Keep popovers scrollable and fully tappable above the mobile command dock. */
+@media (max-width:900px), (max-height:600px) and (pointer:coarse) {
+  .unit-command-menu {max-height:calc(100dvh - 96px);overflow-y:auto;overscroll-behavior:contain}
+  .weapon-picker {max-height:calc(100dvh - 96px);overscroll-behavior:contain}
+}
