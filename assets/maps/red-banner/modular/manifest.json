@@ -1,0 +1,47 @@
+{
+  "game_version": "v0.1.5.0",
+  "assets": [
+    {
+      "asset_id": "modular_ground",
+      "filename": "ground-grass.png",
+      "source": "art/map-style-samples/v1/ground-style-v1.png",
+      "source_type": "ai_generated",
+      "generator": "built-in image_gen",
+      "width_px": 1254,
+      "height_px": 1254,
+      "has_alpha": false,
+      "file_bytes": 4054775,
+      "sha256": "c0564e8e1abc8160021d5405af76bedb8730a7053c29af8b0d5f7310715cd19e",
+      "status": "integrated",
+      "visual_approved": false
+    },
+    {
+      "asset_id": "modular_tree",
+      "filename": "tree-spruce.png",
+      "source": "art/map-style-samples/v1/tree-style-v1.png",
+      "source_type": "ai_generated",
+      "generator": "built-in image_gen",
+      "width_px": 1254,
+      "height_px": 1254,
+      "has_alpha": true,
+      "file_bytes": 2550073,
+      "sha256": "7492d35241671844bb6b52374bd108ae092f2edd1058d32ffab37b9c42f6497a",
+      "status": "integrated",
+      "visual_approved": false
+    },
+    {
+      "asset_id": "modular_cliff",
+      "filename": "cliff-moss.png",
+      "source": "art/map-style-samples/v1/cliff-style-v1.png",
+      "source_type": "ai_generated",
+      "generator": "built-in image_gen",
+      "width_px": 1774,
+      "height_px": 887,
+      "has_alpha": true,
+      "file_bytes": 2412127,
+      "sha256": "c15feaca85e18af5d83cc7ee5a2db2d71ed3b1ffa068f4d7ddc99135b3fcc8b7",
+      "status": "integrated",
+      "visual_approved": false
+    }
+  ]
+}
