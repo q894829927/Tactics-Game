@@ -8,7 +8,11 @@ export class InspectionState {
   private point: Point | null = null;
   private unitId: string | null = null;
 
-  constructor(private readonly battle: Battle) {}
+  private readonly battle: Battle;
+
+  constructor(battle: Battle) {
+    this.battle = battle;
+  }
 
   inspect(x: number, y: number): void {
     this.point = {x, y};
