@@ -1,0 +1,98 @@
+{
+  "schema_version": 1,
+  "created_date": "2026-10-13",
+  "purpose": "ground / tree / cliff style review only",
+  "runtime_assets": false,
+  "assets": [
+    {
+      "asset_id": "ground_style_v1",
+      "filename": "ground-style-v1.png",
+      "width_px": 1254,
+      "height_px": 1254,
+      "mode": "RGB",
+      "has_alpha": false,
+      "alpha_extrema": [
+        255,
+        255
+      ],
+      "fully_transparent_fraction": 0.0,
+      "partially_transparent_fraction": 0.0,
+      "visible_bbox_alpha_128": [
+        0,
+        0,
+        1254,
+        1254
+      ],
+      "file_bytes": 4054775,
+      "sha256": "c0564e8e1abc8160021d5405af76bedb8730a7053c29af8b0d5f7310715cd19e",
+      "source_type": "ai_generated",
+      "generator": "built-in image_gen",
+      "status": "in_review",
+      "integrated": false,
+      "visual_approved": false,
+      "seamless_verified": false,
+      "world_size": null,
+      "anchor_xy": null
+    },
+    {
+      "asset_id": "tree_style_v1",
+      "filename": "tree-style-v1.png",
+      "width_px": 1254,
+      "height_px": 1254,
+      "mode": "RGBA",
+      "has_alpha": true,
+      "alpha_extrema": [
+        0,
+        255
+      ],
+      "fully_transparent_fraction": 0.43315,
+      "partially_transparent_fraction": 0.566843,
+      "visible_bbox_alpha_128": [
+        79,
+        81,
+        1199,
+        1180
+      ],
+      "file_bytes": 2550073,
+      "sha256": "7492d35241671844bb6b52374bd108ae092f2edd1058d32ffab37b9c42f6497a",
+      "source_type": "ai_generated",
+      "generator": "built-in image_gen",
+      "status": "in_review",
+      "integrated": false,
+      "visual_approved": false,
+      "seamless_verified": false,
+      "world_size": null,
+      "anchor_xy": null
+    },
+    {
+      "asset_id": "cliff_style_v1",
+      "filename": "cliff-style-v1.png",
+      "width_px": 1774,
+      "height_px": 887,
+      "mode": "RGBA",
+      "has_alpha": true,
+      "alpha_extrema": [
+        0,
+        255
+      ],
+      "fully_transparent_fraction": 0.464404,
+      "partially_transparent_fraction": 0.535352,
+      "visible_bbox_alpha_128": [
+        42,
+        83,
+        1732,
+        808
+      ],
+      "file_bytes": 2412127,
+      "sha256": "c15feaca85e18af5d83cc7ee5a2db2d71ed3b1ffa068f4d7ddc99135b3fcc8b7",
+      "source_type": "ai_generated",
+      "generator": "built-in image_gen",
+      "status": "in_review",
+      "integrated": false,
+      "visual_approved": false,
+      "seamless_verified": false,
+      "world_size": null,
+      "anchor_xy": null
+    }
+  ]
+}

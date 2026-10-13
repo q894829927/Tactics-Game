@@ -31,7 +31,7 @@ test("A2-2 art is routed through Vite base and cannot steal clicks", () => {
 });
 
 test("A2-2 asset register matches files and records generated originals", () => {
-  const m = readFileSync(new URL("../docs/A1-ASSET-MANIFEST.csv", import.meta.url), "utf8").trim().split("\n");
+  const m = readFileSync(new URL("../docs/A1-ASSET-MANIFEST.csv", import.meta.url), "utf8").trim().split(/\r?\n/);
   assert.equal(m.length, 18); // header + 12 original SVG fallbacks + 5 AI raster assets
   for (const file of files) {
     assert.ok(m.some(line => line.includes(","+file+",")), file);

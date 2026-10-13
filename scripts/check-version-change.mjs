@@ -41,6 +41,8 @@ if (!previous) {
   if (!valid) fail("invalid bump from " + previous + " to " + head + "; increment exactly one segment and reset lower ones");
   const previousLog = execFileSync("git", ["show","HEAD^:CHANGELOG.md"], {encoding:"utf8",stdio:["ignore","pipe","ignore"]});
   const oldSections = previousLog.slice(previousLog.indexOf("\n## "));
-  if (!changelog.includes(oldSections)) fail("older changelog records must be preserved");
+  if (!changelog.replace(/\r\n/g, "\n").includes(oldSections.replace(/\r\n/g, "\n"))) {
+    fail("older changelog records must be preserved");
+  }
 }
 console.log("Version check passed:", previous ? previous + " -> " + head : head + " (baseline)", "; changes:", changeLines.length);
