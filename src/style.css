@@ -627,40 +627,181 @@ button:disabled { cursor: not-allowed; }
 }
 .hp-fill.hp-enemy { background: linear-gradient(90deg,#a83a49,#f18c87); }
 
-/* v0.1.7.0: FE-inspired damage forecast is screen-space, never part of the map image. */
+/* v0.1.8.0: compact Fire Emblem-inspired duel forecast and top-right minimap. */
+.sr-only {
+  position: absolute !important;
+  width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0;
+}
+.minimap {
+  top: 14px;
+  right: 14px;
+  bottom: auto;
+  left: auto;
+  width: clamp(112px, 12.5vw, 168px);
+  padding: 5px;
+  border: 1px solid rgba(219,183,124,.75);
+  border-radius: 3px;
+  background: #061929df;
+  box-shadow: 0 6px 20px #010a12a6, inset 0 0 0 1px #253a4680;
+  z-index: 35;
+}
+.minimap-grid { border-color: #52646b; }
+.minimap-caption { display: none; }
+
 .attack-forecast {
   position: absolute;
   z-index: 65;
-  left: max(300px, 28%);
-  right: 16px;
-  bottom: 16px;
-  border: 1px solid #c9a36a;
-  border-radius: 8px;
-  background: linear-gradient(165deg, #0a2538f5, #061320f7);
-  color: #e8f5ff;
-  box-shadow: 0 5px 35px #000c, inset 0 0 18px #1d587a55;
-  padding: 12px 15px;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  min-height: 202px;
+  padding: 0 23px 15px;
+  border: 0;
+  border-radius: 0;
+  border-top: 1px solid #c4a67b9e;
+  color: #eaf5fd;
+  background:
+    radial-gradient(ellipse 35% 120% at 4% 80%, #21628c75, transparent),
+    radial-gradient(ellipse 35% 120% at 98% 80%, #80363b6b, transparent),
+    linear-gradient(180deg,#0b1e2a5e 0%,#08141fee 15%,#08141ff8 100%);
+  box-shadow: 0 -9px 40px #0009, inset 0 9px 16px #06121a77;
+  backdrop-filter: blur(8px);
   pointer-events: auto;
 }
 .attack-forecast[hidden] { display: none !important; }
-.forecast-heading { display: flex; align-items: center; justify-content: space-between; color: #f3d7a2; font-size: 16px; font-weight: 800; }
-.forecast-heading span { font-size: 11px; font-weight: 400; color: #a7becc; }
-.forecast-matchup { display: grid; grid-template-columns: 1fr 35px 1fr; gap: 9px; align-items: center; margin: 11px 0; }
-.forecast-versus { text-align: center; font-size: 24px; color: #d3aa77; }
-.forecast-side { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
-.forecast-side strong { font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.forecast-side span { font-size: 12px; color: #cbdee7; }
-.forecast-enemy { text-align: right; }
-#forecast-damage { color: #8be9ef; }
-#forecast-counter { color: #ffabab; }
-.forecast-actions { display: flex; gap: 9px; justify-content: flex-end; }
-.forecast-actions button {
-  border: 1px solid #7f9db1; border-radius: 4px;
-  background: #152e43; color: #f2f5fa; padding: 7px 15px; font-size: 13px;
+.forecast-line { position: absolute; bottom: 0; height: 3px; width: 50%; }
+.forecast-line-ally { left: 0; background: linear-gradient(90deg, #368baf, #39c3fa, #57b6c2); }
+.forecast-line-enemy { right: 0; background: linear-gradient(90deg, #bb574b, #b33841, #59212e); }
+.forecast-duel {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(140px, 220px) minmax(0, 1fr);
+  min-height: 131px;
+  align-items: center;
+  gap: 9px;
 }
-#forecast-confirm { border-color: #dbab67; background: #6b4b2d; font-weight: bold; }
-.forecast-actions button:hover { filter: brightness(1.2); }
-@media (max-width: 780px) {
-  .attack-forecast { left: 12px; right: 12px; bottom: 14px; padding: 10px 12px; }
-  .forecast-side strong { font-size: 13px; }
+.forecast-combatant {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: clamp(8px, 2vw, 23px);
+}
+.forecast-combatant-enemy { justify-content: flex-end; text-align: right; }
+.forecast-emblem {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  height: 107px;
+  width: clamp(64px, 9vw, 104px);
+  font: 700 clamp(32px, 4.3vw, 51px)/1 "Noto Serif SC", "Microsoft YaHei", serif;
+  text-shadow: 0 3px 5px #0009;
+  clip-path: polygon(12% 2%, 87% 2%, 100% 16%, 100% 86%, 87% 99%, 11% 99%, 0 85%, 0 16%);
+  border-bottom: 3px solid #c8b992;
+  box-shadow: inset 0 0 17px #0009;
+}
+.forecast-emblem-ally {
+  color: #9be1ff;
+  background: radial-gradient(ellipse at 22% 16%, #4b98c3b0, transparent 64%), linear-gradient(140deg, #1a4b70, #0b2236 65%, #07131f);
+}
+.forecast-emblem-enemy {
+  color: #fbc8ae;
+  background: radial-gradient(ellipse at 76% 14%, #9b4f4aaf, transparent 64%), linear-gradient(220deg, #633943, #291d2b 65%, #13131f);
+}
+.forecast-identity { display: flex; flex-direction: column; gap: 7px; min-width: 0; }
+.forecast-identity strong {
+  font: 700 clamp(17px, 2vw, 24px)/1.2 "Noto Serif SC", "Microsoft YaHei", serif;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  text-shadow: 0 2px 7px #000;
+}
+.forecast-identity span {
+  color: #c7c4af;
+  font-size: clamp(11px, 1vw, 14px);
+  letter-spacing: .08em;
+}
+.forecast-center {
+  align-self: center;
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  color: #ead7b3;
+}
+.forecast-stat-label { font-size: 12px; letter-spacing: .25em; color: #cec0a7; }
+.forecast-stat-values { display: flex; align-items: baseline; gap: 10px; line-height: 1; }
+.forecast-stat-values strong { min-width: 42px; text-align: center; font: 700 32px/1 Georgia,serif; }
+#forecast-damage { color: #9de9ff; }
+#forecast-counter { color: #ff9a96; }
+.forecast-stat-divider { font-size: 20px; color: #baa478; }
+.forecast-actions { display: flex; gap: 8px; margin-top: 5px; }
+.forecast-actions button {
+  border: 1px solid #9d8b75;
+  background: #182633e9;
+  color: #ecdfc9;
+  padding: 5px 16px;
+  min-width: 63px;
+  border-radius: 2px;
+  font-size: 13px;
+  font-weight: 650;
+  letter-spacing: .08em;
+}
+.forecast-actions button:hover { filter: brightness(1.25); }
+#forecast-confirm { border-color: #ddb76d; color: #fff1d7; background: #6b4a32; }
+.forecast-health {
+  display: grid;
+  grid-template-columns: minmax(0,1fr) 44px minmax(0,1fr);
+  align-items: center;
+  gap: 13px;
+  max-width: 100%;
+  margin: 2px 0 0;
+}
+.forecast-health-side { display: flex; gap: 10px; align-items: center; min-width: 0; }
+.forecast-health-enemy { flex-direction: row; justify-content: flex-end; }
+.forecast-hp-center { font: italic 700 24px/1 Georgia,serif; color: #e8d6b0; text-align: center; }
+.forecast-hp-value { white-space: nowrap; font-size: 16px; font-weight: 700; font-variant-numeric: tabular-nums; color: #f1efdc; }
+.forecast-hp-track {
+  position: relative;
+  overflow: hidden;
+  flex: 1;
+  height: 18px;
+  background: #10171c;
+  box-shadow: inset 0 2px 6px #000c, 0 0 0 1px #7d795f;
+  border: 2px solid #253a43;
+}
+.forecast-health-enemy .forecast-hp-track { order: 0; }
+.forecast-hp-track span { position: absolute; top: 0; left: 0; height: 100%; transition: width .15s ease-out; }
+.forecast-hp-initial { background: #a5a7b0aa; z-index: 1; }
+.forecast-hp-remaining { background: linear-gradient(90deg, #178bb7, #39c5ff); z-index: 2; }
+.forecast-health-enemy .forecast-hp-initial { background: #a05b5b; }
+.forecast-health-enemy .forecast-hp-remaining { background: linear-gradient(90deg, #9c2435, #f0656a); }
+
+@media (max-width: 900px) {
+  .minimap { top: 9px; right: 9px; left: auto; bottom: auto; width: 128px; padding: 4px; }
+  .attack-forecast { min-height: 186px; padding: 0 12px 12px; }
+  .forecast-duel { min-height: 119px; grid-template-columns: minmax(0,1fr) minmax(118px, 148px) minmax(0,1fr); gap: 6px; }
+  .forecast-emblem { width: 55px; height: 82px; font-size: 33px; }
+  .forecast-identity strong { font-size: 15px; }
+  .forecast-health { grid-template-columns: minmax(0,1fr) 32px minmax(0,1fr); gap: 5px; }
+  .forecast-hp-value { font-size: 12px; }
+  .forecast-hp-track { height: 13px; }
+  .forecast-hp-center { font-size: 18px; }
+}
+@media (max-width: 560px) {
+  .minimap { width: 106px; }
+  .attack-forecast { min-height: 182px; padding: 3px 8px 10px; }
+  .forecast-duel { grid-template-columns: minmax(0,1fr) 100px minmax(0,1fr); gap: 2px; min-height: 114px; }
+  .forecast-combatant { gap: 4px; }
+  .forecast-emblem { width: 34px; height: 63px; font-size: 24px; }
+  .forecast-identity strong { font-size: 12px; }
+  .forecast-identity span { font-size: 10px; }
+  .forecast-center { gap: 5px; }
+  .forecast-stat-label { font-size: 10px; }
+  .forecast-stat-values strong { font-size: 24px; min-width: 23px; }
+  .forecast-stat-values { gap: 2px; }
+  .forecast-stat-divider { font-size: 14px; }
+  .forecast-actions button { min-width: 42px; padding: 5px 8px; font-size: 11px; }
+  .forecast-health-side { gap: 5px; }
+  .forecast-hp-center { font-size: 15px; }
+  .forecast-hp-value { font-size: 11px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .forecast-hp-track span { transition: none; }
 }

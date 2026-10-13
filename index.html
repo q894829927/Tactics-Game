@@ -13,38 +13,61 @@
       <section class="battlefield" aria-label="战棋地图">
         <div id="game" class="map-viewport" tabindex="0" aria-label="战场：滚轮缩放、按住鼠标右键拖动、左键查看地形和单位、右键友军打开指令"></div>
         <button id="settings-button" class="corner-settings" type="button" aria-label="打开设置" aria-haspopup="dialog" aria-expanded="false">⚙</button>
-        <div class="zoom-control" aria-label="地图缩放">
-          <button id="zoom-out" type="button" aria-label="缩小地图">−</button>
-          <output id="zoom-value" aria-live="off">100%</output>
-          <button id="zoom-in" type="button" aria-label="放大地图">＋</button>
-        </div>
-        <div id="viewport-hint" class="viewport-hint" aria-live="polite">滚轮缩放 · 右键拖动 · 再按右键关闭菜单 · Esc 撤销移动</div>
-        <div class="minimap" aria-label="战场小地图">
+        <div id="viewport-hint" class="sr-only" aria-live="polite"></div>
+        <div class="minimap" aria-label="战场小地图" title="点击定位，拖动地图">
           <div id="minimap-grid" class="minimap-grid" role="group" aria-label="点击小地图定位视角"></div>
-          <div class="minimap-caption"><span>◎ 全局地图</span><span id="map-size">10 × 8</span></div>
         </div>
         <div id="phase-banner" class="phase-banner" hidden role="status" aria-live="polite">
           <strong id="phase-label"></strong>
           <span id="phase-caption"></span>
         </div>
         <div id="attack-forecast" class="attack-forecast" role="region" aria-label="战斗预测" hidden>
-          <div class="forecast-heading">战斗预测 <span>确认后才会结算</span></div>
-          <div class="forecast-matchup">
-            <div class="forecast-side forecast-ally">
-              <strong id="forecast-attacker">我方单位</strong>
-              <span id="forecast-ally-hp">HP — → —</span>
-              <span id="forecast-damage">预计伤害 —</span>
+          <div class="forecast-line forecast-line-ally"></div>
+          <div class="forecast-line forecast-line-enemy"></div>
+          <div class="forecast-duel">
+            <div class="forecast-combatant forecast-combatant-ally">
+              <div class="forecast-emblem forecast-emblem-ally" id="forecast-ally-emblem" aria-hidden="true">剑</div>
+              <div class="forecast-identity">
+                <strong id="forecast-attacker">我方单位</strong>
+                <span id="forecast-ally-role">剑士</span>
+              </div>
             </div>
-            <div class="forecast-versus">⚔</div>
-            <div class="forecast-side forecast-enemy">
-              <strong id="forecast-defender">敌方单位</strong>
-              <span id="forecast-enemy-hp">HP — → —</span>
-              <span id="forecast-counter">反击 —</span>
+            <div class="forecast-center">
+              <div class="forecast-stat-label">伤害</div>
+              <div class="forecast-stat-values">
+                <strong id="forecast-damage">—</strong>
+                <span class="forecast-stat-divider">／</span>
+                <strong id="forecast-counter">—</strong>
+              </div>
+              <div class="forecast-actions">
+                <button id="forecast-cancel" type="button" aria-label="取消攻击">返回</button>
+                <button id="forecast-confirm" type="button" aria-label="确认攻击">攻击</button>
+              </div>
+            </div>
+            <div class="forecast-combatant forecast-combatant-enemy">
+              <div class="forecast-identity">
+                <strong id="forecast-defender">敌方单位</strong>
+                <span id="forecast-enemy-role">步兵</span>
+              </div>
+              <div class="forecast-emblem forecast-emblem-enemy" id="forecast-enemy-emblem" aria-hidden="true">兵</div>
             </div>
           </div>
-          <div class="forecast-actions">
-            <button id="forecast-cancel" type="button">取消</button>
-            <button id="forecast-confirm" type="button">确认攻击</button>
+          <div class="forecast-health">
+            <div class="forecast-health-side forecast-health-ally">
+              <span class="forecast-hp-value" id="forecast-ally-hp">— → —</span>
+              <div class="forecast-hp-track">
+                <span id="forecast-ally-bar" class="forecast-hp-initial"></span>
+                <span id="forecast-ally-after" class="forecast-hp-remaining"></span>
+              </div>
+            </div>
+            <span class="forecast-hp-center">HP</span>
+            <div class="forecast-health-side forecast-health-enemy">
+              <div class="forecast-hp-track">
+                <span id="forecast-enemy-bar" class="forecast-hp-initial"></span>
+                <span id="forecast-enemy-after" class="forecast-hp-remaining"></span>
+              </div>
+              <span class="forecast-hp-value" id="forecast-enemy-hp">— → —</span>
+            </div>
           </div>
         </div>
         <div id="result-banner" class="result-banner" hidden role="status"></div>

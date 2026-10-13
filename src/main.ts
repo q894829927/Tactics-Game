@@ -98,12 +98,9 @@ function refresh(): void {
   }
 }
 battle.onChange = refresh;
-board.onZoomChange = percent => { get("zoom-value").textContent = percent + "%"; };
 board.onHint = message => { get("viewport-hint").textContent = message; };
 board.onInspectionChange = renderSelection;
 
-button("zoom-in").addEventListener("click", () => board.zoomBy(1.18));
-button("zoom-out").addEventListener("click", () => board.zoomBy(1 / 1.18));
 get("minimap-grid").addEventListener("dblclick", () => board.resetCamera());
 
 const overlay = get("settings-overlay");

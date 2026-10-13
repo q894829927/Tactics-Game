@@ -227,7 +227,6 @@ export class BoardView {
     this.viewportMarker.className = "minimap-viewport";
     this.viewportMarker.setAttribute("aria-hidden", "true");
     mini.appendChild(this.viewportMarker);
-    document.getElementById("map-size")!.textContent = MAP_WIDTH + " × " + MAP_HEIGHT;
 
     // Dragging the miniature pans the camera; keyboard/click on any cell remains accessible.
     mini.addEventListener("pointerdown", event => {
@@ -486,11 +485,23 @@ export class BoardView {
     const byId = (id: string): HTMLElement => document.getElementById(id)!;
     byId("forecast-attacker").textContent = attacker!.name;
     byId("forecast-defender").textContent = defender!.name;
-    byId("forecast-ally-hp").textContent = "HP " + attacker!.hp + " → " + forecast.attackerHpAfter;
-    byId("forecast-enemy-hp").textContent = "HP " + defender!.hp + " → " + forecast.defenderHpAfter;
-    byId("forecast-damage").textContent = "预计伤害 " + forecast.damage;
-    byId("forecast-counter").textContent = forecast.canCounter
-      ? "反击伤害 " + forecast.counterDamage : "无法反击";
+    byId("forecast-ally-role").textContent = roleNames[attacker!.role] ?? "兵";
+    byId("forecast-enemy-role").textContent = roleNames[defender!.role] ?? "兵";
+    byId("forecast-ally-emblem").textContent = roleNames[attacker!.role] ?? "兵";
+    byId("forecast-enemy-emblem").textContent = roleNames[defender!.role] ?? "兵";
+    byId("forecast-ally-hp").textContent = attacker!.hp + " → " + forecast.attackerHpAfter;
+    byId("forecast-enemy-hp").textContent = defender!.hp + " → " + forecast.defenderHpAfter;
+    byId("forecast-damage").textContent = String(forecast.damage);
+    byId("forecast-counter").textContent = forecast.canCounter ? String(forecast.counterDamage) : "—";
+    // Each side shows current HP as a dark ghost bar and the predicted HP as a bright fill.
+    for (const [id, amount] of [
+      ["forecast-ally-bar", attacker!.hp / attacker!.maxHp],
+      ["forecast-ally-after", forecast.attackerHpAfter / attacker!.maxHp],
+      ["forecast-enemy-bar", defender!.hp / defender!.maxHp],
+      ["forecast-enemy-after", forecast.defenderHpAfter / defender!.maxHp],
+    ] as const) {
+      byId(id).style.width = Math.max(0, Math.min(100, amount * 100)) + "%";
+    }
     this.forecastPanel.hidden = false;
   }
 

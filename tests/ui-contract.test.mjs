@@ -15,13 +15,15 @@ test("UI uses fullscreen viewport and no obsolete header", () => {
 
 test("mockup primary controls and footer have functional elements", () => {
   for (const id of [
-    "settings-button", "zoom-in", "zoom-out", "zoom-value",
-    "minimap-grid", "phase-banner", "settings-overlay",
+    "settings-button", "minimap-grid", "phase-banner", "settings-overlay",
     "settings-end-turn", "restart-button", "log-list",
   ]) {
     assert.ok(html.includes('id="' + id + '"'), id);
   }
   assert.match(html, /id="game-version"/);
+  assert.doesNotMatch(html, /class="zoom-control"/);
+  assert.doesNotMatch(html, /id="zoom-(?:in|out|value)"/);
+  assert.doesNotMatch(html, /class="minimap-caption"/);
   assert.doesNotMatch(html, /v\d+\.\d+\.\d+(?:\.\d+)?/);
   const main = readFileSync(new URL("../src/main.ts", import.meta.url), "utf8");
   assert.match(main, /import \{ GAME_VERSION \} from "\.\/version\.ts"/);
