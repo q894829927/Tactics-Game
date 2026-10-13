@@ -1,0 +1,13 @@
+asset_id,filename,layer,scene_zone,size_px,anchor_xy,alpha,source_type,license,source_url,status
+ground_grass_a,ground-grass-a.webp,W10,playable-and-decor,184x184,"0;0",no,planned,pending,,planned
+ground_grass_b,ground-grass-b.webp,W10,playable-and-decor,184x184,"0;0",no,planned,pending,,planned
+ground_path_a,ground-path-a.webp,W10,playable-plains-and-decor,184x184,"0;0",no,planned,pending,,planned
+forest_cluster_a,forest-cluster-a.webp,W60,northwest-and-playable-F,552x552,"0.5;1",yes,planned,pending,,planned
+forest_cluster_b,forest-cluster-b.webp,W60,southwest-edge,552x736,"0.5;1",yes,planned,pending,,planned
+cliff_face_a,cliff-face-a.webp,W20,east-river-edge,736x552,"0.5;1",yes,planned,pending,,planned
+cliff_face_b,cliff-face-b.webp,W20,playable-walls-and-southeast,552x368,"0.5;1",yes,planned,pending,,planned
+river_flow_a,river-flow-a.webp,W20,east-outside-playable,368x368,"0;0",no,planned,pending,,planned
+river_bank_a,river-bank-a.webp,W20,east-outside-playable,552x368,"0.5;1",yes,planned,pending,,planned
+bridge_wood_a,bridge-wood-a.webp,W20,east-outside-playable,736x368,"0.5;0.5",yes,planned,pending,,planned
+camp_platform_a,camp-platform-a.webp,W20,northeast-outside-playable,736x552,"0.5;1",yes,planned,pending,,planned
+fog_low_a,fog-low-a.webp,W60,forest-and-river-decor,736x368,"0.5;0.5",yes,planned,pending,,planned

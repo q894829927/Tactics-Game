@@ -13,7 +13,7 @@
 
 ## 目标图四阶段落地计划
 
-根据已确定的战场目标 UI，将视觉与交互落地分为：**A 地图美术重建 → B 角色及右侧状态栏 → C 战斗交互反馈 → D 细节打磨与综合验收**。详细任务、交付物、验收门槛及版本规划见 [docs/VISUAL-IMPLEMENTATION-PLAN.md](docs/VISUAL-IMPLEMENTATION-PLAN.md)。这是待执行计划，不代表这些内容已经完成。**A1 的资源规格与布局方案已记录**：[查看 A1 设计文档](docs/A1-MAP-ART-SPEC.md)；场景素材尚未制作。
+根据已确定的战场目标 UI，将视觉与交互落地分为：**A 地图美术重建 → B 角色及右侧状态栏 → C 战斗交互反馈 → D 细节打磨与综合验收**。详细任务、交付物、验收门槛及版本规划见 [docs/VISUAL-IMPLEMENTATION-PLAN.md](docs/VISUAL-IMPLEMENTATION-PLAN.md)。这是待执行计划，不代表这些内容已经完成。**A1 的坐标、12 项资源清单与图层规范已定稿（素材尚未制作）**：[查看 A1 设计文档](docs/A1-MAP-ART-SPEC.md)；场景素材尚未制作。
 
 ## 第一版范围
 
