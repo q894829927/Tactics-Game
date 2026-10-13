@@ -6,14 +6,14 @@
   <meta name="description" content="原创奇幻战棋：可缩放的战场地图与回合制战斗。"/>
   <meta name="theme-color" content="#071522"/>
   <title>未命名战棋 · 赤旗要塞</title>
-  <script type="module" crossorigin src="/games/tactics/assets/index-B2ig8KP0.js"></script>
-  <link rel="stylesheet" crossorigin href="/games/tactics/assets/index-CAyGpgl1.css">
+  <script type="module" crossorigin src="/games/tactics/assets/index-B7b2-0rI.js"></script>
+  <link rel="stylesheet" crossorigin href="/games/tactics/assets/index-cvbLL-bW.css">
 </head>
 <body>
   <div id="app" class="battle-shell">
     <main class="battle-layout">
       <section class="battlefield" aria-label="战棋地图">
-        <div id="game" class="map-viewport" tabindex="0" aria-label="战场：滚轮缩放、按住鼠标右键拖动、左键查看地形和单位、右键友军打开指令"></div>
+        <div id="game" class="map-viewport" tabindex="0" aria-label="战场：手机轻点选中，双击选中友军打开指令，单指拖动地图，双指缩放；桌面支持右键与滚轮"></div>
         <button id="settings-button" class="corner-settings" type="button" aria-label="打开设置" aria-haspopup="dialog" aria-expanded="false">⚙</button>
         <div id="viewport-hint" class="sr-only" aria-live="polite"></div>
         <div class="minimap" aria-label="战场小地图" title="点击定位，拖动地图">
@@ -77,8 +77,18 @@
           </div>
         </div>
         <div id="result-banner" class="result-banner" hidden role="status"></div>
+        <nav class="mobile-dock" aria-label="手机战斗快捷操作">
+          <button id="mobile-commands" type="button">⚔ 指令</button>
+          <button id="mobile-back" type="button">↶ 返回</button>
+          <button id="mobile-info" type="button" aria-controls="unit-sidebar" aria-expanded="false">☷ 信息</button>
+          <button id="mobile-end-turn" type="button">结束回合</button>
+        </nav>
       </section>
-      <aside class="right-sidebar" aria-label="战斗信息">
+      <aside id="unit-sidebar" class="right-sidebar" aria-label="战斗信息">
+        <div class="mobile-sidebar-header">
+          <strong>角色信息与战斗日志</strong>
+          <button id="mobile-sidebar-close" type="button" aria-label="关闭角色信息">关闭 ✕</button>
+        </div>
         <section class="sidebar-section unit-panel">
           <h2 class="section-title"><span class="title-icon">✥</span><span id="selection-title">选中单位</span> <span id="team-count" class="section-aside"></span></h2>
           <div class="unit-profile">
@@ -136,7 +146,7 @@
         <button id="reset-view" type="button">重置地图视角</button>
         <button id="restart-button" type="button">重新开始关卡</button>
         <a href="/" class="settings-link">← 返回游戏大厅</a>
-        <small>滚轮缩放 · 左键选择 · 右键拖动地图或点击友军开菜单 · Esc 返回</small>
+        <small>电脑：滚轮缩放 · 右键指令／拖动；手机：轻点选中 · 再点友军开指令 · 单指拖动 · 双指缩放 · 底部快捷按钮</small>
       </div>
     </div>
   </div>
