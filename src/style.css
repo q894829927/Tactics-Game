@@ -626,3 +626,41 @@ button:disabled { cursor: not-allowed; }
   background: radial-gradient(ellipse at 25% 16%, #486d5b, #1e3a3e 68%, #122731);
 }
 .hp-fill.hp-enemy { background: linear-gradient(90deg,#a83a49,#f18c87); }
+
+/* v0.1.7.0: FE-inspired damage forecast is screen-space, never part of the map image. */
+.attack-forecast {
+  position: absolute;
+  z-index: 65;
+  left: max(300px, 28%);
+  right: 16px;
+  bottom: 16px;
+  border: 1px solid #c9a36a;
+  border-radius: 8px;
+  background: linear-gradient(165deg, #0a2538f5, #061320f7);
+  color: #e8f5ff;
+  box-shadow: 0 5px 35px #000c, inset 0 0 18px #1d587a55;
+  padding: 12px 15px;
+  pointer-events: auto;
+}
+.attack-forecast[hidden] { display: none !important; }
+.forecast-heading { display: flex; align-items: center; justify-content: space-between; color: #f3d7a2; font-size: 16px; font-weight: 800; }
+.forecast-heading span { font-size: 11px; font-weight: 400; color: #a7becc; }
+.forecast-matchup { display: grid; grid-template-columns: 1fr 35px 1fr; gap: 9px; align-items: center; margin: 11px 0; }
+.forecast-versus { text-align: center; font-size: 24px; color: #d3aa77; }
+.forecast-side { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.forecast-side strong { font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.forecast-side span { font-size: 12px; color: #cbdee7; }
+.forecast-enemy { text-align: right; }
+#forecast-damage { color: #8be9ef; }
+#forecast-counter { color: #ffabab; }
+.forecast-actions { display: flex; gap: 9px; justify-content: flex-end; }
+.forecast-actions button {
+  border: 1px solid #7f9db1; border-radius: 4px;
+  background: #152e43; color: #f2f5fa; padding: 7px 15px; font-size: 13px;
+}
+#forecast-confirm { border-color: #dbab67; background: #6b4b2d; font-weight: bold; }
+.forecast-actions button:hover { filter: brightness(1.2); }
+@media (max-width: 780px) {
+  .attack-forecast { left: 12px; right: 12px; bottom: 14px; padding: 10px 12px; }
+  .forecast-side strong { font-size: 13px; }
+}

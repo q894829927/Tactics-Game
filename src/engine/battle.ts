@@ -5,6 +5,14 @@ export type Terrain = "." | "F" | "H" | "#";
 export type GameResult = "playing" | "victory" | "defeat";
 export type Role = "sword" | "lancer" | "archer" | "mage" | "raider" | "commander";
 export type Point = { x: number; y: number };
+export type AttackForecast = {
+  damage: number;
+  counterDamage: number;
+  canCounter: boolean;
+  attackerHpAfter: number;
+  defenderHpAfter: number;
+};
+
 export type Unit = {
   id: string;
   name: string;
@@ -59,6 +67,7 @@ export class Battle {
   result: GameResult = "playing";
   log: string[] = [];
   onChange: (() => void) | null = null;
+  private moveOrigin: Point | null = null;
 
   constructor() { this.restart(); }
 
@@ -78,13 +87,54 @@ export class Battle {
     this.round = 1;
     this.result = "playing";
     this.selectedId = null;
-    this.log = ["目标：击败敌军统领。点击蓝方单位，然后移动或攻击。"];
+    this.moveOrigin = null;
+    this.log = [];
     this.emit();
   }
 
   get selected(): Unit | undefined {
     return this.units.find(u => u.id === this.selectedId && u.hp > 0);
   }
+  get canCancelMove(): boolean {
+    const selected = this.selected;
+    return !!(selected && selected.team === "ally" && selected.moved &&
+      !selected.acted && !selected.spent && this.moveOrigin);
+  }
+
+  cancelMove(): boolean {
+    if (!this.canCancelMove || !this.moveOrigin) return false;
+    const actor = this.selected!;
+    if (this.occupant(this.moveOrigin.x, this.moveOrigin.y)) return false;
+    actor.x = this.moveOrigin.x;
+    actor.y = this.moveOrigin.y;
+    actor.moved = false;
+    this.moveOrigin = null;
+    this.emit();
+    return true;
+  }
+
+  /** Pure prediction: uses the exact damage and retaliation rules of the battle engine. */
+  forecastAttack(attacker: Unit, defender: Unit): AttackForecast | null {
+    if (this.result !== "playing" || attacker.hp <= 0 || defender.hp <= 0 ||
+        attacker.team === defender.team || attacker.spent || attacker.acted ||
+        !this.inAttackRange(attacker, defender)) return null;
+    const damage = this.damage(attacker, defender);
+    const defenderHpAfter = Math.max(0, defender.hp - damage);
+    const canCounter = defenderHpAfter > 0 && this.inAttackRange(defender, attacker);
+    const counterDamage = canCounter ? this.damage(defender, attacker) : 0;
+    return {damage, counterDamage, canCounter,
+      attackerHpAfter: Math.max(0, attacker.hp - counterDamage), defenderHpAfter};
+  }
+
+  private completedMovement(actor: Unit): string {
+    return this.moveOrigin
+      ? "移动至 (" + actor.x + ", " + actor.y + ") 后" : "";
+  }
+
+  private committedLog(action: string): void {
+    this.logLine("第 " + this.round + " 回合 · " + action);
+  }
+
   alive(team: Team): Unit[] {
     return this.units.filter(u => u.hp > 0 && u.team === team);
   }
@@ -138,50 +188,62 @@ export class Battle {
     const found = this.occupant(x, y);
     if (found?.team === "ally") {
       if (!found.spent) {
+        // Do not leave a different ally's tentative move stranded.
+        if (this.selectedId !== found.id && this.canCancelMove) this.cancelMove();
         this.selectedId = found.id;
-        this.note("选择了 " + found.name + (found.moved ? "，等待行动" : "，可移动或攻击"));
-      } else this.note(found.name + " 已结束本回合行动");
+        this.emit();
+      }
       return;
     }
     const actor = this.selected;
     if (!actor || actor.spent) return;
     if (found?.team === "enemy") {
-      if (actor.acted || !this.inAttackRange(actor, found)) {
-        this.note("目标不在攻击范围内");
-        return;
-      }
-      this.strike(actor, found);
+      const forecast = this.forecastAttack(actor, found);
+      if (!forecast) return;
+      const moved = this.completedMovement(actor);
+      const result = this.strike(actor, found);
+      const hit = actor.name + (moved ? " " + moved : "") +
+        "攻击 " + found.name + "：造成 " + result.damage + " 点伤害";
+      const retaliation = result.counterDamage > 0 ? "；" + found.name + "反击造成 " +
+        result.counterDamage + " 点伤害" : "";
+      this.committedLog(hit + retaliation +
+        (result.defenderFell ? "；目标被击败" : "") +
+        (result.attackerFell ? "；攻击者被击败" : ""));
       actor.acted = true;
       actor.spent = true;
+      this.moveOrigin = null;
       this.selectedId = null;
       this.resolve();
       this.emit();
       return;
     }
-    if (actor.moved) { this.note("本回合已移动，请攻击或待机"); return; }
-    if (!this.reachable(actor).has(key({ x, y }))) {
-      this.note("无法到达该格子");
-      return;
-    }
-    actor.x = x; actor.y = y; actor.moved = true;
-    this.note(actor.name + " 移动至 (" + x + ", " + y + ")");
+    if (actor.moved) return;
+    if (!this.reachable(actor).has(key({ x, y }))) return;
+    this.moveOrigin = {x: actor.x, y: actor.y};
+    actor.x = x;
+    actor.y = y;
+    actor.moved = true;
+    // A tentative move is NOT a completed action and must not enter the log.
+    this.emit();
   }
 
   waitSelected(): void {
     if (this.result !== "playing") return;
-    const u = this.selected;
-    if (!u || u.team !== "ally") return;
-    u.spent = true;
-    u.acted = true;
+    const actor = this.selected;
+    if (!actor || actor.team !== "ally" || actor.spent) return;
+    this.committedLog(actor.name + " " + this.completedMovement(actor) + "待机");
+    actor.spent = true;
+    actor.acted = true;
+    this.moveOrigin = null;
     this.selectedId = null;
-    this.note(u.name + " 待机");
+    this.emit();
   }
 
   endTurn(): void {
     if (this.result !== "playing") return;
     this.selectedId = null;
+    this.moveOrigin = null;
     this.alive("ally").forEach(u => { u.spent = true; });
-    this.logLine("— 第 " + this.round + " 回合：敌方行动 —");
     for (const enemy of this.alive("enemy")) {
       if (this.result !== "playing") break;
       this.enemyAct(enemy);
@@ -194,7 +256,7 @@ export class Battle {
         u.acted = false;
         u.spent = false;
       }
-      this.logLine("— 第 " + this.round + " 回合：我方行动 —");
+      // No standalone turn or selection entries: the log records complete actions only.
     }
     this.emit();
   }
@@ -202,27 +264,36 @@ export class Battle {
   private enemyAct(enemy: Unit): void {
     const foes = this.alive("ally");
     if (!foes.length) return;
+    const before = {x: enemy.x, y: enemy.y};
     let target = this.nearest(enemy, foes);
     if (!this.inAttackRange(enemy, target)) {
       const places = [...this.reachable(enemy).keys()];
-      let best = { x: enemy.x, y: enemy.y };
+      let best = {x: enemy.x, y: enemy.y};
       let bestScore = this.approachScore(enemy, target);
       for (const p of places) {
         const [x, y] = p.split(",").map(Number);
-        const choice = { x: x!, y: y! };
+        const choice = {x: x!, y: y!};
         const score = this.approachScore(choice, target);
-        if (score < bestScore) { best = choice; bestScore = score; }
+        if (score < bestScore) {best = choice; bestScore = score;}
       }
       enemy.x = best.x; enemy.y = best.y;
     }
+    const moved = before.x !== enemy.x || before.y !== enemy.y
+      ? " 移动至 (" + enemy.x + ", " + enemy.y + ") 后" : " ";
     const attackable = this.targets(enemy);
     if (attackable.length) {
       target = [...attackable].sort((a, b) =>
         (this.damage(enemy, b) >= b.hp ? 1 : 0) -
         (this.damage(enemy, a) >= a.hp ? 1 : 0) || a.hp - b.hp)[0]!;
-      this.strike(enemy, target);
+      const result = this.strike(enemy, target);
+      this.committedLog(enemy.name + moved + "攻击 " + target.name + "：造成 " +
+        result.damage + " 点伤害" +
+        (result.counterDamage ? "；" + target.name + "反击造成 " + result.counterDamage + " 点伤害" : "") +
+        (result.defenderFell ? "；目标被击败" : "") +
+        (result.attackerFell ? "；攻击者被击败" : ""));
     } else {
-      this.logLine(enemy.name + " 正在逼近");
+      this.committedLog(enemy.name + (before.x !== enemy.x || before.y !== enemy.y
+        ? " 移动至 (" + enemy.x + ", " + enemy.y + ")" : " 待机"));
     }
   }
   private approachScore(from: Point, target: Unit): number {
@@ -232,35 +303,30 @@ export class Battle {
   private nearest(from: Point, candidates: Unit[]): Unit {
     return [...candidates].sort((a, b) => distance(from, a) - distance(from, b))[0]!;
   }
-  private strike(actor: Unit, defender: Unit): void {
-    const first = this.damage(actor, defender);
-    defender.hp = Math.max(0, defender.hp - first);
-    this.logLine(actor.name + " → " + defender.name + "：" + first + " 伤害");
-    if (defender.hp <= 0) {
-      this.logLine(defender.name + " 被击败");
-      return;
-    }
-    if (this.inAttackRange(defender, actor)) {
-      const counter = this.damage(defender, actor);
-      actor.hp = Math.max(0, actor.hp - counter);
-      this.logLine(defender.name + " 反击：" + counter + " 伤害");
-      if (actor.hp <= 0) this.logLine(actor.name + " 被击败");
-    }
+  private strike(actor: Unit, defender: Unit): {
+    damage: number; counterDamage: number; defenderFell: boolean; attackerFell: boolean;
+  } {
+    const forecast = this.forecastAttack(actor, defender);
+    if (!forecast) return {damage: 0, counterDamage: 0, defenderFell: false, attackerFell: false};
+    defender.hp = forecast.defenderHpAfter;
+    if (forecast.canCounter) actor.hp = forecast.attackerHpAfter;
+    return {damage: forecast.damage, counterDamage: forecast.counterDamage,
+      defenderFell: defender.hp <= 0, attackerFell: actor.hp <= 0};
   }
   private resolve(): void {
     if (!this.alive("ally").length) {
       this.result = "defeat";
-      this.logLine("全军覆没。挑战失败。");
     } else if (!this.units.some(u => u.id === "e6" && u.hp > 0)) {
       this.result = "victory";
-      this.logLine("敌军统领被击败。任务完成！");
     }
-    if (this.result !== "playing") this.selectedId = null;
+    if (this.result !== "playing") {
+      this.selectedId = null;
+      this.moveOrigin = null;
+    }
   }
   private logLine(line: string): void {
     this.log.push(line);
     if (this.log.length > 12) this.log.shift();
   }
-  private note(line: string): void { this.logLine(line); this.emit(); }
   private emit(): void { this.onChange?.(); }
 }

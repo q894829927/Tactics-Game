@@ -65,6 +65,8 @@ export class BoardView {
   private suppressClick = false;
   private menuVisible = false;
   private attackMode = false;
+  private forecastTargetId: string | null = null;
+  private readonly forecastPanel: HTMLElement;
   private previousSelection: string | null = null;
   onZoomChange: ((percent: number) => void) | null = null;
   onHint: ((message: string) => void) | null = null;
@@ -167,6 +169,9 @@ export class BoardView {
     this.menu.className = "unit-command-menu";
     this.menu.setAttribute("aria-label", "单位行动指令");
     this.menu.hidden = true;
+    this.forecastPanel = document.getElementById("attack-forecast")!;
+    document.getElementById("forecast-confirm")!.addEventListener("click", () => this.confirmAttack());
+    document.getElementById("forecast-cancel")!.addEventListener("click", () => this.cancelAction());
     viewport.replaceChildren(backdrop, world, this.labelLayer, this.menu);
 
     // Full 16x12 stage minimap, not the old 10x8 grid.
@@ -302,6 +307,12 @@ export class BoardView {
     this.applyCamera();
   }
   cancelAction(): boolean {
+    if (this.forecastTargetId) {
+      this.forecastTargetId = null;
+      this.renderForecast();
+      this.refresh();
+      return true;
+    }
     if (this.attackMode) {
       this.attackMode = false;
       this.menuVisible = false;
@@ -313,11 +324,21 @@ export class BoardView {
       this.refresh();
       return true;
     }
+    if (this.battle.canCancelMove) {
+      if (this.battle.cancelMove()) {
+        const unit = this.battle.selected!;
+        this.inspectCell(unit.x, unit.y);
+        this.refresh();
+        return true;
+      }
+    }
     return false;
   }
   hideCommandMenu(): void {
+    this.forecastTargetId = null;
     this.attackMode = false;
     this.menuVisible = false;
+    this.renderForecast();
     this.refresh();
   }
   refresh(): void {
@@ -325,6 +346,7 @@ export class BoardView {
     const selectedId = selected?.id ?? null;
     if (selectedId !== this.previousSelection) {
       this.attackMode = false;
+      this.forecastTargetId = null;
       // Selecting with the left button only inspects; only a right-click opens commands.
       this.menuVisible = false;
       this.previousSelection = selectedId;
@@ -387,6 +409,7 @@ export class BoardView {
       }
     }
     this.renderMenu();
+    this.renderForecast();
     this.applyCamera();
   }
 
@@ -399,13 +422,23 @@ export class BoardView {
     if (this.battle.result !== "playing") return;
     this.inspectCell(x, y);
     const intent = leftClickIntent(this.battle, x, y, this.attackMode);
-    // Left clicks are selection, inspection or movement, never a context-menu trigger.
+    if (intent === "attack") {
+      const selected = this.battle.selected;
+      const target = this.battle.occupant(x, y);
+      if (selected && target && this.battle.forecastAttack(selected, target)) {
+        this.forecastTargetId = target.id;
+        this.menuVisible = false;
+        this.refresh();
+        this.onInspectionChange?.();
+        return;
+      }
+    }
+    this.forecastTargetId = null;
     this.menuVisible = false;
     this.attackMode = false;
-    if (intent === "select-ally" || intent === "move" || intent === "attack") {
+    if (intent === "select-ally" || intent === "move") {
       this.battle.click(x, y);
-    } else {
-      // Inspection alone cannot leave a hidden ally selected and ready to attack.
+    } else if (!this.battle.canCancelMove) {
       this.battle.selectedId = null;
     }
     this.refresh();
@@ -414,16 +447,66 @@ export class BoardView {
 
   private onRightCellClick(x: number, y: number): void {
     if (this.battle.result !== "playing") return;
+    const actor = this.battle.occupant(x, y);
+    if (this.forecastTargetId || this.attackMode) {
+      this.forecastTargetId = null;
+      this.attackMode = false;
+      this.menuVisible = false;
+      this.refresh();
+      return;
+    }
+    // A second right-click on the same ally toggles the command menu off.
+    if (this.menuVisible && actor?.id === this.battle.selectedId) {
+      this.menuVisible = false;
+      this.refresh();
+      return;
+    }
     this.inspectCell(x, y);
     const intent = rightClickIntent(this.battle, x, y);
-    this.attackMode = false;
     this.menuVisible = false;
     if (intent === "open-menu") {
       this.battle.click(x, y);
       this.menuVisible = true;
-    } else {
+    } else if (!this.battle.canCancelMove) {
       this.battle.selectedId = null;
     }
+    this.refresh();
+    this.onInspectionChange?.();
+  }
+
+  private renderForecast(): void {
+    const attacker = this.battle.selected;
+    const defender = this.battle.units.find(u => u.id === this.forecastTargetId && u.hp > 0);
+    const forecast = attacker && defender ? this.battle.forecastAttack(attacker, defender) : null;
+    if (!forecast) {
+      this.forecastPanel.hidden = true;
+      this.forecastTargetId = null;
+      return;
+    }
+    const byId = (id: string): HTMLElement => document.getElementById(id)!;
+    byId("forecast-attacker").textContent = attacker!.name;
+    byId("forecast-defender").textContent = defender!.name;
+    byId("forecast-ally-hp").textContent = "HP " + attacker!.hp + " → " + forecast.attackerHpAfter;
+    byId("forecast-enemy-hp").textContent = "HP " + defender!.hp + " → " + forecast.defenderHpAfter;
+    byId("forecast-damage").textContent = "预计伤害 " + forecast.damage;
+    byId("forecast-counter").textContent = forecast.canCounter
+      ? "反击伤害 " + forecast.counterDamage : "无法反击";
+    this.forecastPanel.hidden = false;
+  }
+
+  private confirmAttack(): void {
+    const attacker = this.battle.selected;
+    const target = this.battle.units.find(u => u.id === this.forecastTargetId && u.hp > 0);
+    if (!attacker || !target || !this.battle.forecastAttack(attacker, target)) {
+      this.forecastTargetId = null;
+      this.refresh();
+      return;
+    }
+    this.forecastTargetId = null;
+    this.attackMode = false;
+    this.menuVisible = false;
+    this.inspectCell(target.x, target.y);
+    this.battle.click(target.x, target.y);
     this.refresh();
     this.onInspectionChange?.();
   }
@@ -441,6 +524,9 @@ export class BoardView {
       { text: "术法", icon: "✦", enabled: false, key: "magic" },
       { text: "交换", icon: "⇄", enabled: false, key: "trade" },
       { text: "待机", icon: "⌛", enabled: true, key: "wait" },
+      ...(this.battle.canCancelMove
+        ? [{ text: "取消移动", icon: "↶", enabled: true, key: "undo" }]
+        : []),
     ];
     for (const cmd of commands) {
       const button = document.createElement("button");
@@ -452,8 +538,18 @@ export class BoardView {
       button.addEventListener("click", () => {
         if (cmd.key === "wait") {
           this.battle.waitSelected();
+          this.menuVisible = false;
+          this.refresh();
+        } else if (cmd.key === "undo") {
+          this.menuVisible = false;
+          if (this.battle.cancelMove()) {
+            const restored = this.battle.selected!;
+            this.inspectCell(restored.x, restored.y);
+          }
+          this.refresh();
         } else if (cmd.key === "attack") {
           this.menuVisible = false;
+          this.forecastTargetId = null;
           this.attackMode = true;
           this.onHint?.("攻击模式：左键点击红色目标；Esc 或右键空地取消");
           this.refresh();
@@ -468,7 +564,7 @@ export class BoardView {
   private positionMenu(actor: Unit): void {
     const point = tileWorld(actor.x, actor.y);
     const menuWidth = 150;
-    const menuHeight = 218;
+    const menuHeight = this.battle.canCancelMove ? 256 : 218;
     let x = this.offsetX + (point.x + TILE / 2) * this.zoom + 10;
     let y = this.offsetY + (point.y - TILE / 2) * this.zoom - 20;
     if (x + menuWidth > this.viewport.clientWidth - 10) {

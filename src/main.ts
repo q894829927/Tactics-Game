@@ -71,7 +71,7 @@ function renderSelection(): void {
     : selected
       ? selected.spent ? "本回合已结束行动"
         : selected.moved ? "已移动：右键该单位选择攻击或待机"
-        : "左键选中与移动；右键该单位打开攻击、道具等指令"
+        : "左键选中与移动；右键该单位打开指令，移动后可取消"
       : inspected ? "当前地形：" + terrain?.name + "。左键查看其他格子，右键拖动地图。"
       : "左键查看地形或选择单位；右键点击友军打开指令。";
   button("settings-end-turn").disabled = battle.result !== "playing";
