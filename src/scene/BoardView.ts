@@ -5,6 +5,24 @@ import {
   MIN_ZOOM, MAX_ZOOM, tileWorld, minimapFrame, screenTile,
 } from "./worldGeometry.ts";
 
+// The A2-2 vertical slice consists of original, reusable SVG assets in public/.
+// Respect Vite's sub-directory base (/games/tactics/) rather than absolute /assets paths.
+const sceneAsset = (name: string): string => import.meta.env.BASE_URL + "assets/maps/red-banner/" + name;
+const imgAsset = (name: string, x: number, y: number, w: number, h: number, opacity=1): HTMLImageElement => {
+  const sprite = document.createElement("img");
+  sprite.src = sceneAsset(name);
+  sprite.alt = "";
+  sprite.setAttribute("aria-hidden", "true");
+  sprite.className = "scene-art-sprite";
+  sprite.style.left = x + "px"; sprite.style.top = y + "px";
+  sprite.style.width = w + "px"; sprite.style.height = h + "px";
+  sprite.style.opacity = String(opacity);
+  sprite.draggable = false;
+  // Art is optional: missing assets must not block the functional battle grid.
+  sprite.addEventListener("error", () => sprite.remove(), {once: true});
+  return sprite;
+};
+
 const terrainNames: Record<string, string> = { ".": "平地", F: "森林", H: "丘陵", "#": "峭壁" };
 const terrainGlyphs: Record<string, string> = { ".": "", F: "♠♠", H: "▲", "#": "▥" };
 const roleNames: Record<string, string> = {
@@ -72,24 +90,45 @@ export class BoardView {
         const tile = document.createElement("div");
         tile.className = "stage-ground-cell " + (inside ? "stage-terrain-" + (terrain === "." ? "plain" : terrain === "#" ? "wall" : terrain) : "stage-zone-" + zoneAt(col, row));
         tile.setAttribute("aria-hidden", "true");
+        // Every cell uses a reusable terrain asset, never a screenshot of the entire map.
+        // The background gradient in CSS remains visible if an SVG fails to load.
+        let groundFile = "ground-grass-a.svg";
+        if (zoneAt(col, row) === "river" && !inside) groundFile = "river-flow-a.svg";
+        else if (!inside && zoneAt(col, row) === "camp") groundFile = "ground-path-a.svg";
+        else if (terrain === "H" || terrain === "#" || (!inside && zoneAt(col, row) === "forest")) groundFile = "ground-grass-b.svg";
+        else if (inside && terrain === "." && (col * 7 + row * 5) % 11 === 0) groundFile = "ground-path-a.svg";
+        else if ((col * 13 + row * 3) % 5 === 0) groundFile = "ground-grass-b.svg";
+        tile.style.backgroundImage = 'url("' + sceneAsset(groundFile) + '")';
         ground.appendChild(tile);
       }
     }
 
-    // W20: temporary silhouettes only; they are NOT actual art assets or passable terrain.
+    // W20: independent scenic SVGs. The water, bridge and fort remain outside playable cells.
     const environment = layer("world-environment");
-    for (const [name, left, top, width, height] of [
-      ["stage-river-placeholder", 1198, 184, 274, 735],
-      ["stage-camp-placeholder", 1005, 15, 418, 135],
-    ] as const) {
-      const shape = document.createElement("div");
-      shape.className = "environment-placeholder " + name;
-      shape.style.left = left + "px";
-      shape.style.top = top + "px";
-      shape.style.width = width + "px";
-      shape.style.height = height + "px";
-      shape.setAttribute("aria-hidden", "true");
-      environment.appendChild(shape);
+    const sceneSprites = [
+      // Non-interactive eastern river bank: x >= 1196 is outside the 10x8 playable grid.
+      ["river-bank-a.svg", 1170, 170, 178, 240, .99],
+      ["river-bank-a.svg", 1170, 390, 178, 240, .99],
+      ["river-bank-a.svg", 1170, 610, 178, 240, .99],
+      ["cliff-face-a.svg", 1242, 148, 235, 200, .95],
+      ["cliff-face-a.svg", 1242, 705, 235, 220, .95],
+      ["cliff-face-b.svg", 1198, 897, 255, 170, .92],
+      ["bridge-wood-a.svg", 1220, 410, 237, 126, .97],
+      ["camp-platform-a.svg", 1005, 3, 405, 182, 1],
+      // Actual impassable cells (3,2) and (4,2), visually distinct but no rules changed.
+      ["cliff-face-b.svg", 552, 363, 184, 117, .93],
+      // Forest stands: all rendered below the unit/hit layers.
+      ["forest-cluster-a.svg", 0, 40, 235, 240, .94],
+      ["forest-cluster-b.svg", 40, 230, 215, 297, .89],
+      ["forest-cluster-a.svg", 35, 740, 205, 235, .96],
+      ["forest-cluster-b.svg", 805, 0, 195, 255, .91],
+      ["forest-cluster-a.svg", 328, 209, 132, 143, .81],
+      ["forest-cluster-b.svg", 843, 213, 135, 164, .79],
+      ["forest-cluster-a.svg", 253, 401, 140, 143, .80],
+      ["forest-cluster-b.svg", 801, 605, 145, 182, .79],
+    ] as const;
+    for (const [file,x,y,w,h,alpha] of sceneSprites) {
+      environment.appendChild(imgAsset(file,x,y,w,h,alpha));
     }
 
     // W30: decoration is not input. Terrain symbols are deliberately separate from hit cells.
@@ -139,8 +178,10 @@ export class BoardView {
     }
     // W50: units have independent anchors; they cannot intercept input.
     this.unitLayer = layer("world-units");
-    // W60: future foliage/fog art; independent layer already present.
-    layer("world-foreground");
+    // W60: fog is visually in front, but never intercepts pointer events.
+    const foreground = layer("world-foreground");
+    foreground.appendChild(imgAsset("fog-low-a.svg", 17, 38, 450, 220, .5));
+    foreground.appendChild(imgAsset("fog-low-a.svg", 1090, 584, 330, 175, .3));
 
     // S70: contextual menu stays screen-space and remains sharp when zooming.
     this.menu = document.createElement("div");

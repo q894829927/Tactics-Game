@@ -462,3 +462,10 @@ button:disabled { cursor: not-allowed; }
   left: 18.75%; top: 16.66667%; width: 62.5%; height: 66.66667%;
   border: 1px dashed #e1e9dda6; z-index: 3;
 }
+
+/* A2-2: original independent SVG scene assets, non-interactive across camera layers. */
+.stage-ground-cell { background-position: center; background-size: 100% 100%; background-repeat: no-repeat; }
+.scene-art-sprite { position: absolute; display: block; object-fit: fill; pointer-events: none; user-select: none; -webkit-user-drag: none; }
+.world-environment, .world-foreground, .world-ground { pointer-events: none !important; }
+.world-decal .stage-terrain-mark { opacity: .15; }
+.world-stage .tactical-hit-grid { isolation: isolate; }
