@@ -30,6 +30,7 @@
               <div class="forecast-identity">
                 <strong id="forecast-attacker">我方单位</strong>
                 <span id="forecast-ally-role">剑士</span>
+                <span id="forecast-ally-odds" class="forecast-odds">命中 — · 必杀 —</span>
               </div>
             </div>
             <div class="forecast-center">
@@ -48,6 +49,7 @@
               <div class="forecast-identity">
                 <strong id="forecast-defender">敌方单位</strong>
                 <span id="forecast-enemy-role">步兵</span>
+                <span id="forecast-enemy-odds" class="forecast-odds">命中 — · 必杀 —</span>
               </div>
               <div class="forecast-emblem forecast-emblem-enemy" id="forecast-enemy-emblem" aria-hidden="true">兵</div>
             </div>
@@ -80,6 +82,7 @@
             <div class="unit-profile-detail">
               <div class="unit-name-line"><strong id="selection-name">尚未选择单位</strong><span class="crest">✥</span></div>
               <span id="selection-role" class="unit-subtitle">左键查看单位或地形</span>
+              <div class="unit-progression"><span id="unit-level">Lv.—</span><span id="unit-exp">EXP —</span><span>体格 <b id="unit-build">—</b></span></div>
               <div class="hp-caption"><span>HP</span><span id="hp-text">— / —</span></div>
               <div class="hp-track"><div id="hp-fill" class="hp-fill"></div></div>
             </div>
@@ -95,6 +98,17 @@
             <div><strong id="terrain-name">地形信息</strong><small id="terrain-hint">选择单位后显示</small></div>
             <div class="terrain-effects"><span id="terrain-defense">防御 —</span><span id="terrain-cost">消耗 —</span></div>
           </div>
+        </section>
+        <section class="sidebar-section attributes-panel" aria-label="角色属性">
+          <details class="attribute-detail" open>
+            <summary>基本能力</summary><div id="basic-attributes" class="attribute-grid"></div>
+          </details>
+          <details class="attribute-detail">
+            <summary>战斗能力</summary><div id="combat-attributes" class="attribute-grid"></div>
+          </details>
+          <details class="attribute-detail">
+            <summary>成长值</summary><div id="growth-attributes" class="attribute-grid"></div>
+          </details>
         </section>
         <section class="sidebar-section equipment-panel">
           <h2 class="section-title"><span class="title-icon">⚔</span>战斗能力</h2>

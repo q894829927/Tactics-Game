@@ -2,6 +2,7 @@ import { Battle, type Unit } from "./engine/battle.ts";
 import { TERRAIN_INFO, movementCostLabel } from "./engine/terrain.ts";
 import { BoardView } from "./scene/BoardView.ts";
 import { GAME_VERSION } from "./version.ts";
+import {BASIC_KEYS,BASIC_LABELS,GROWTH_KEYS,GROWTH_LABELS} from "./engine/attributes.ts";
 import "./style.css";
 
 const get = (id: string): HTMLElement => {
@@ -45,10 +46,14 @@ function renderSelection(): void {
   get("unit-portrait").classList.toggle("portrait-enemy", selected?.team === "enemy");
   get("unit-portrait").classList.toggle("portrait-terrain", !selected && !!inspected);
   get("hp-fill").classList.toggle("hp-enemy", selected?.team === "enemy");
+  get("unit-level").textContent = selected ? "Lv."+selected.level : "Lv.—";
+  get("unit-exp").textContent = selected ? "EXP "+selected.exp+"/100" : "EXP —";
+  get("unit-build").textContent = selected ? String(selected.build) : "—";
+  const combat = selected ? battle.combatStats(selected) : null;
   get("hp-text").textContent = selected ? selected.hp + " / " + selected.maxHp : "— / —";
   get("hp-fill").style.width = selected ? (selected.hp / selected.maxHp * 100) + "%" : "0%";
-  get("stat-attack").textContent = selected ? String(selected.attack) : "—";
-  get("stat-defense").textContent = selected ? String(selected.defense) : "—";
+  get("stat-attack").textContent = combat ? String(combat.physicalAttack) : "—";
+  get("stat-defense").textContent = combat ? String(combat.physicalProtection) : "—";
   get("stat-range").textContent = selected
     ? selected.minRange === selected.maxRange ? String(selected.minRange)
       : selected.minRange + "–" + selected.maxRange : "—";
@@ -61,9 +66,28 @@ function renderSelection(): void {
     : "左键选择地形查看";
   get("terrain-defense").textContent = "防御 +" + (terrain?.defense ?? "—");
   get("terrain-cost").textContent = "移动消耗 " + (terrainCode ? movementCostLabel(terrainCode) : "—");
-  get("weapon-name").textContent = selected ? weapons[selected.role] : "—";
-  get("weapon-range").textContent = selected
-    ? selected.minRange + (selected.maxRange !== selected.minRange ? "–" + selected.maxRange : "") + " 格" : "—";
+  get("weapon-name").textContent = selected ? selected.weapon.name : "—";
+  get("weapon-range").textContent = combat ? combat.range+" 格" : "—";
+  const paint=(id:string,rows:readonly (readonly [string,string])[])=>{
+    const root=get(id);root.replaceChildren();
+    for(const [name,value] of rows){
+      const line=document.createElement("div");
+      const label=document.createElement("span");label.textContent=name;
+      const text=document.createElement("strong");text.textContent=value;
+      line.append(label,text);root.appendChild(line);
+    }
+  };
+  paint("basic-attributes", BASIC_KEYS.map(k=>
+    [BASIC_LABELS[k],selected?String(selected.stats[k]):"—"] as const));
+  const combatFields=[
+    ["物攻","physicalAttack"],["耐物","physicalProtection"],["攻速","attackSpeed"],
+    ["耐魔","magicalProtection"],["命中","hit"],["回避","avoid"],
+    ["必杀","crit"],["必避","critAvoid"],["射程","range"],
+  ] as const;
+  paint("combat-attributes",combatFields.map(([label,key])=>
+    [label,combat?String(combat[key]):"—"] as const));
+  paint("growth-attributes",GROWTH_KEYS.map(k=>
+    [GROWTH_LABELS[k],selected?selected.growths[k]+"%":"—"] as const));
   get("selection-hint").textContent = selected?.team === "enemy"
     ? "敌军信息仅供查看；选中我方单位后右键打开行动菜单"
     : selected

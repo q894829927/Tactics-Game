@@ -1,4 +1,6 @@
 import { TERRAIN_INFO, type Terrain } from "./terrain.ts";
+import {createCharacter,deriveCombat,awardExperience,clampChance,
+  type CharacterData,type CombatStats} from "./attributes.ts";
 export type { Terrain } from "./terrain.ts";
 
 export const MAP_WIDTH = 10;
@@ -22,30 +24,16 @@ export type EnemyThreat = {
 };
 
 export type AttackForecast = {
-  damage: number;
-  counterDamage: number;
-  canCounter: boolean;
-  attackerHpAfter: number;
-  defenderHpAfter: number;
+  damage:number; counterDamage:number; canCounter:boolean;
+  attackerHpAfter:number; defenderHpAfter:number;
+  attackerHit:number; defenderHit:number; attackerCrit:number; defenderCrit:number;
+  followUp:"attacker"|"defender"|null;
 };
 
-export type Unit = {
-  id: string;
-  name: string;
-  role: Role;
-  team: Team;
-  x: number;
-  y: number;
-  hp: number;
-  maxHp: number;
-  attack: number;
-  defense: number;
-  move: number;
-  minRange: number;
-  maxRange: number;
-  moved: boolean;
-  acted: boolean;
-  spent: boolean;
+export type Unit = CharacterData & {
+  id:string;name:string;role:Role;team:Team;x:number;y:number;
+  minRange:number;maxRange:number;
+  moved:boolean;acted:boolean;spent:boolean;
 };
 
 const LAYOUT = [
@@ -59,10 +47,11 @@ const LAYOUT = [
   "....GGG...",
 ] as const;
 
-function unit(id: string, name: string, role: Role, team: Team, x: number, y: number,
-  maxHp: number, attack: number, defense: number, move: number, minRange = 1, maxRange = 1): Unit {
-  return { id, name, role, team, x, y, hp: maxHp, maxHp, attack, defense,
-    move, minRange, maxRange, moved: false, acted: false, spent: false };
+function unit(id:string,name:string,role:Role,team:Team,x:number,y:number,
+  maxHp:number,attack:number,defense:number,move:number,minRange=1,maxRange=1):Unit {
+  return {id,name,role,team,x,y,
+    ...createCharacter(role,maxHp,attack,defense,move,minRange,maxRange),
+    minRange,maxRange,moved:false,acted:false,spent:false};
 }
 export function key(p: Point): string { return String(p.x) + "," + String(p.y); }
 export function distance(a: Point, b: Point): number {
@@ -84,6 +73,17 @@ export class Battle {
   onChange: (() => void) | null = null;
   private moveOrigin: Point | null = null;
   private enemyQueue: string[] = [];
+  private randomState=0x2946e73b;
+  setRandomSeed(seed:number):void {this.randomState=(seed>>>0)||1;}
+  private nextRandom():number {
+    let x=this.randomState;
+    x^=x<<13;x^=x>>>17;x^=x<<5;
+    this.randomState=x>>>0;
+    return this.randomState/4294967296;
+  }
+  private roll(chance:number):boolean {
+    return chance>=100?true:chance<=0?false:this.nextRandom()*100<chance;
+  }
 
   constructor() { this.restart(); }
 
@@ -104,6 +104,7 @@ export class Battle {
     this.phase = "player";
     this.enemyQueue = [];
     this.result = "playing";
+    this.setRandomSeed(0x2946e73b);
     this.selectedId = null;
     this.moveOrigin = null;
     this.log = [];
@@ -131,17 +132,36 @@ export class Battle {
     return true;
   }
 
-  /** Pure prediction: uses the exact damage and retaliation rules of the battle engine. */
-  forecastAttack(attacker: Unit, defender: Unit): AttackForecast | null {
-    if (this.result !== "playing" || attacker.hp <= 0 || defender.hp <= 0 ||
-        attacker.team === defender.team || attacker.spent || attacker.acted ||
-        !this.inAttackRange(attacker, defender)) return null;
-    const damage = this.damage(attacker, defender);
-    const defenderHpAfter = Math.max(0, defender.hp - damage);
-    const canCounter = defenderHpAfter > 0 && this.inAttackRange(defender, attacker);
-    const counterDamage = canCounter ? this.damage(defender, attacker) : 0;
-    return {damage, counterDamage, canCounter,
-      attackerHpAfter: Math.max(0, attacker.hp - counterDamage), defenderHpAfter};
+  combatStats(unit:Unit):CombatStats {
+    return deriveCombat(unit,TERRAIN_INFO[this.tile(unit.x,unit.y)].defense);
+  }
+  hitChance(from:Unit,to:Unit):number {
+    return clampChance(this.combatStats(from).hit-this.combatStats(to).avoid);
+  }
+  criticalChance(from:Unit,to:Unit):number {
+    return clampChance(this.combatStats(from).crit-this.combatStats(to).critAvoid);
+  }
+  /** Pure forecast: normal hits land, no criticals. Actual combat uses seeded RNG. */
+  forecastAttack(attacker:Unit,defender:Unit):AttackForecast|null {
+    if(this.result!=="playing"||attacker.hp<=0||defender.hp<=0||
+      attacker.team===defender.team||attacker.spent||attacker.acted||
+      !this.inAttackRange(attacker,defender))return null;
+    const damage=this.damage(attacker,defender);
+    const counterDamage=this.damage(defender,attacker);
+    const counterInRange=this.inAttackRange(defender,attacker);
+    const diff=this.combatStats(attacker).attackSpeed-this.combatStats(defender).attackSpeed;
+    const followUp=diff>=5?"attacker":diff<=-5?"defender":null;
+    let hpA=attacker.hp,hpD=Math.max(0,defender.hp-damage);
+    const canCounter=counterInRange&&hpD>0;
+    if(canCounter)hpA=Math.max(0,hpA-counterDamage);
+    if(hpA>0&&hpD>0){
+      if(followUp==="attacker")hpD=Math.max(0,hpD-damage);
+      else if(followUp==="defender"&&counterInRange)hpA=Math.max(0,hpA-counterDamage);
+    }
+    return {damage,counterDamage,canCounter,attackerHpAfter:hpA,defenderHpAfter:hpD,
+      attackerHit:this.hitChance(attacker,defender),defenderHit:this.hitChance(defender,attacker),
+      attackerCrit:this.criticalChance(attacker,defender),
+      defenderCrit:this.criticalChance(defender,attacker),followUp};
   }
 
   private completedMovement(actor: Unit): string {
@@ -250,9 +270,11 @@ export class Battle {
     return this.alive(actor.team === "ally" ? "enemy" : "ally")
       .filter(u => this.inAttackRange(actor, u));
   }
-  damage(attacker: Unit, defender: Unit): number {
-    return Math.max(1, attacker.attack - defender.defense -
-      TERRAIN_INFO[this.tile(defender.x, defender.y)].defense);
+  damage(attacker:Unit,defender:Unit):number {
+    const from=this.combatStats(attacker),to=this.combatStats(defender);
+    return Math.max(0,attacker.weapon.kind==="magical"
+      ? from.magicalAttack-to.magicalProtection
+      : from.physicalAttack-to.physicalProtection);
   }
 
   click(x: number, y: number): void {
@@ -280,7 +302,7 @@ export class Battle {
         result.counterDamage + " 点伤害" : "";
       this.committedLog(hit + retaliation +
         (result.defenderFell ? "；目标被击败" : "") +
-        (result.attackerFell ? "；攻击者被击败" : ""));
+        (result.attackerFell ? "；攻击者被击败" : "") + result.detail);
       actor.acted = true;
       actor.spent = true;
       this.moveOrigin = null;
@@ -390,7 +412,7 @@ export class Battle {
         result.damage + " 点伤害" +
         (result.counterDamage ? "；" + target.name + "反击造成 " + result.counterDamage + " 点伤害" : "") +
         (result.defenderFell ? "；目标被击败" : "") +
-        (result.attackerFell ? "；攻击者被击败" : ""));
+        (result.attackerFell ? "；攻击者被击败" : "") + result.detail);
     } else {
       this.committedLog(enemy.name + (moved
         ? " 移动至 (" + enemy.x + ", " + enemy.y + ")" : " 待机"));
@@ -426,15 +448,42 @@ export class Battle {
   private nearest(from: Point, candidates: Unit[]): Unit {
     return [...candidates].sort((a, b) => distance(from, a) - distance(from, b))[0]!;
   }
-  private strike(actor: Unit, defender: Unit): {
-    damage: number; counterDamage: number; defenderFell: boolean; attackerFell: boolean;
+  private strike(actor:Unit,defender:Unit):{
+    damage:number;counterDamage:number;defenderFell:boolean;attackerFell:boolean;detail:string;
   } {
-    const forecast = this.forecastAttack(actor, defender);
-    if (!forecast) return {damage: 0, counterDamage: 0, defenderFell: false, attackerFell: false};
-    defender.hp = forecast.defenderHpAfter;
-    if (forecast.canCounter) actor.hp = forecast.attackerHpAfter;
-    return {damage: forecast.damage, counterDamage: forecast.counterDamage,
-      defenderFell: defender.hp <= 0, attackerFell: actor.hp <= 0};
+    const forecast=this.forecastAttack(actor,defender);
+    if(!forecast)return {damage:0,counterDamage:0,defenderFell:false,attackerFell:false,detail:""};
+    let damage=0,counterDamage=0,misses=0,crits=0,countered=false;
+    const hit=(from:Unit,to:Unit):number=>{
+      if(from.hp<=0||to.hp<=0)return 0;
+      if(!this.roll(this.hitChance(from,to))){misses++;return 0;}
+      const critical=this.roll(this.criticalChance(from,to));
+      if(critical)crits++;
+      const amount=this.damage(from,to)*(critical?3:1);
+      to.hp=Math.max(0,to.hp-amount);
+      return amount;
+    };
+    damage+=hit(actor,defender);
+    if(defender.hp>0&&actor.hp>0&&this.inAttackRange(defender,actor)){
+      countered=true;counterDamage+=hit(defender,actor);
+    }
+    if(actor.hp>0&&defender.hp>0){
+      if(forecast.followUp==="attacker")damage+=hit(actor,defender);
+      else if(forecast.followUp==="defender"&&this.inAttackRange(defender,actor)){
+        countered=true;counterDamage+=hit(defender,actor);
+      }
+    }
+    let levelNote="";
+    if(actor.team==="ally"&&actor.hp>0){
+      if(awardExperience(actor,10+(defender.hp===0?25:0),()=>this.nextRandom()))
+        levelNote+="；"+actor.name+" Lv."+actor.level;
+    }
+    if(defender.team==="ally"&&defender.hp>0&&countered){
+      if(awardExperience(defender,10,()=>this.nextRandom()))
+        levelNote+="；"+defender.name+" Lv."+defender.level;
+    }
+    return {damage,counterDamage,defenderFell:defender.hp<=0,attackerFell:actor.hp<=0,
+      detail:(misses?"；未命中 "+misses+" 次":"")+(crits?"；必杀 "+crits+" 次":"")+levelNote};
   }
   private resolve(): void {
     if (!this.alive("ally").length) {

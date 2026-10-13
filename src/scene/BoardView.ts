@@ -521,8 +521,13 @@ export class BoardView {
     byId("forecast-enemy-emblem").textContent = roleNames[defender!.role] ?? "兵";
     byId("forecast-ally-hp").textContent = attacker!.hp + " → " + forecast.attackerHpAfter;
     byId("forecast-enemy-hp").textContent = defender!.hp + " → " + forecast.defenderHpAfter;
-    byId("forecast-damage").textContent = String(forecast.damage);
-    byId("forecast-counter").textContent = forecast.canCounter ? String(forecast.counterDamage) : "—";
+    byId("forecast-ally-odds").textContent = "命中 "+forecast.attackerHit+"% · 必杀 "+forecast.attackerCrit+"%";
+    byId("forecast-enemy-odds").textContent = forecast.canCounter
+      ? "命中 "+forecast.defenderHit+"% · 必杀 "+forecast.defenderCrit+"%" : "无法反击";
+    byId("forecast-damage").textContent = String(forecast.damage)+
+      (forecast.followUp==="attacker"?"×2":"");
+    byId("forecast-counter").textContent = forecast.canCounter
+      ? String(forecast.counterDamage)+(forecast.followUp==="defender"?"×2":"") : "—";
     // Each side shows current HP as a dark ghost bar and the predicted HP as a bright fill.
     for (const [id, amount] of [
       ["forecast-ally-bar", attacker!.hp / attacker!.maxHp],

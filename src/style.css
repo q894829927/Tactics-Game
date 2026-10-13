@@ -828,3 +828,17 @@ button:disabled { cursor: not-allowed; }
 .world-units .unit-ground-mark,
 .screen-unit-label,
 .minimap-unit-pin { will-change: left, top; }
+
+/* Collapsible Fire Emblem style unit statistics, without crowding the map. */
+.right-sidebar { overflow-y:auto; min-height:0; scrollbar-width:thin; }
+.attribute-detail { border-top:1px solid #385166; }
+.attribute-detail summary { cursor:pointer; user-select:none; padding:9px 12px;
+  color:#e2c893; font-size:13px; font-weight:700; }
+.attribute-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:4px; padding:0 10px 9px; }
+.attribute-grid>div { display:flex; justify-content:space-between; gap:5px; padding:5px 7px;
+  background:#11283a; border:1px solid #314757; font-size:12px; }
+.attribute-grid span { color:#bbc9d4; }
+.attribute-grid strong { font-size:14px; font-variant-numeric:tabular-nums; }
+.unit-progression { display:flex; gap:9px; flex-wrap:wrap; color:#e2c893; font-size:12px; margin:5px 0 3px; }
+.forecast-odds { display:block; font-size:11px; color:#cee3ec; }
