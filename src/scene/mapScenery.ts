@@ -1,7 +1,6 @@
 import { MAP_HEIGHT, MAP_WIDTH } from "../engine/battle.ts";
 import { TILE, WORLD_COLS, WORLD_ROWS, TACTICAL_X, TACTICAL_Y } from "./worldGeometry.ts";
 import { MAP_ASSET_FILES } from "./mapAssetFiles.ts";
-import { M1_SLICE } from "./terrainTransitions.ts";
 
 export type ScenerySprite = {
   id: string;
@@ -69,22 +68,19 @@ export function buildMapScenery(terrain: readonly string[]): ScenerySprite[] {
   // inputs; reuse existing transparent, cacheable spruce/rock WebP sources.
   const tacticalRight = TACTICAL_X + MAP_WIDTH*TILE;
   for (let row=2;row<10;row++) {
-    const cy=(row+.5)*TILE;
     const seed=artNoise(row+610);
+    const cy=(row+.17+seed*.69)*TILE;
     const bank=riverBankX(cy);
-    const width=38+seed*15;
-    const x=Math.max(tacticalRight+6,bank-57);
-    add(`shore-rock-${row}`,false,x,cy-width*.45,width,width*.78);
-    if (row%2===0) {
-      const treeWidth=44+artNoise(row+932)*11;
-      // Keep the tree entirely outside the playable ground.
-      const tx=tacticalRight+6+artNoise(row+1103)*6;
-      const ty=(row+.15)*TILE;
+    const width=30+artNoise(row+430)*28;
+    const x=Math.max(tacticalRight+6,bank-43-artNoise(row+540)*23);
+    add(`shore-rock-${row}`,false,x,cy-width*.45,width,width*(.65+seed*.16));
+    // Interleave trees irregularly rather than at every second identical row.
+    if (row===2 || row===5 || row===8) {
+      const treeWidth=43+artNoise(row+932)*19;
+      const tx=tacticalRight+6+artNoise(row+1103)*9;
+      const ty=(row+.13+artNoise(row+1200)*.33)*TILE;
       add(`shore-spruce-${row}`,true,tx,ty,treeWidth,treeWidth);
     }
   }
-  // Ensure the 6x5 proof area contains mixed land and shore decor; once
-  // validated, the same full-stage map is rendered without a special overlay.
-  void M1_SLICE;
   return sprites.sort((a,b) => a.footY-b.footY || a.id.localeCompare(b.id));
 }

@@ -58,7 +58,7 @@ test("shoreline props and water remain east of playable grid; full scene determi
   assert.deepEqual(scene,buildMapScenery(terrain));
   const shore=scene.filter(p=>p.id.startsWith("shore-"));
   assert.equal(shore.filter(p=>p.id.startsWith("shore-rock-")).length,8);
-  assert.equal(shore.filter(p=>p.id.startsWith("shore-spruce-")).length,4);
+  assert.equal(shore.filter(p=>p.id.startsWith("shore-spruce-")).length,3);
   assert.ok(shore.some(p=>p.y>=M1_SLICE.row*TILE&&p.y<(M1_SLICE.row+M1_SLICE.rows)*TILE));
   for(const p of shore) {
     assert.equal(p.terrainCells.length,0);

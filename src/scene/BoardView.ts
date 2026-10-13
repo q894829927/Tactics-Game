@@ -399,7 +399,15 @@ export class BoardView {
     const h = this.viewport.clientHeight;
     if (!w || !h) return;
     this.zoom = Math.min(1.15, Math.max(MIN_ZOOM, Math.min(w / WORLD_WIDTH, h / WORLD_HEIGHT)));
-    this.offsetX = (w - WORLD_WIDTH * this.zoom) / 2;
+    // The wide full-stage overview clips most allied units on a phone.
+    // Frame the initial mobile view on the allied deployment area instead;
+    // players can still drag and zoom to inspect enemies and the riverbank.
+    if (w <= 600) {
+      const ally=tileWorld(1,5);
+      this.offsetX = w*.44 - ally.x*this.zoom;
+    } else {
+      this.offsetX = (w - WORLD_WIDTH * this.zoom) / 2;
+    }
     this.offsetY = (h - WORLD_HEIGHT * this.zoom) / 2;
     this.applyCamera();
   }

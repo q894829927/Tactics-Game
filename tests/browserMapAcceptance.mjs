@@ -51,6 +51,16 @@ try {
     } else {
       assert.equal(await page.locator(".mobile-dock").isVisible(),true,"mobile dock");
       assert.ok((await page.locator("#game").boundingBox()).width>260);
+      const allies=await page.locator(".screen-unit-labels").locator("*").count();
+      assert.ok(allies>=4,"mobile ally labels remain present");
+      const view=await page.locator("#game").boundingBox();
+      const allyPosition=await page.evaluate(() => {
+        const el=document.querySelector('.battle-cell[data-x="1"][data-y="5"]');
+        const box=el.getBoundingClientRect();
+        return {x:(box.left+box.right)/2,y:(box.top+box.bottom)/2};
+      });
+      assert.ok(allyPosition.x>view.x+45 && allyPosition.x<view.x+view.width-45,
+        "mobile camera should frame the initial allied deployment");
     }
     await page.screenshot({path:`${out}/${name}.png`,animations:"disabled"});
     if(name==="desktop-1920x1080") {
