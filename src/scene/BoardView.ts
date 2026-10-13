@@ -48,7 +48,8 @@ function zoneAt(worldCol: number, worldRow: number): ArtZone {
 
 export class BoardView {
   private readonly cells: HTMLButtonElement[] = [];
-  private readonly highlights: HTMLDivElement[] = [];
+  private readonly moveHighlights: HTMLDivElement[] = [];
+  private readonly attackHighlights: HTMLDivElement[] = [];
   private readonly routeSvg: SVGSVGElement;
   private readonly routeLine: SVGPathElement;
   private readonly routeOutline: SVGPathElement;
@@ -167,26 +168,36 @@ export class BoardView {
     grid.style.gridTemplateRows = "repeat(" + MAP_HEIGHT + ", " + TILE + "px)";
     grid.setAttribute("role", "group");
     grid.setAttribute("aria-label", "战术操作区域");
-    const highlight = layer("tactical-highlight");
-    highlight.style.left = TACTICAL_X + "px";
-    highlight.style.top = TACTICAL_Y + "px";
-    highlight.style.gridTemplateColumns = grid.style.gridTemplateColumns;
-    highlight.style.gridTemplateRows = grid.style.gridTemplateRows;
-    for (let y = 0; y < MAP_HEIGHT; y++) {
-      for (let x = 0; x < MAP_WIDTH; x++) {
-        const cell = document.createElement("button");
-        cell.type = "button";
-        cell.className = "battle-cell";
-        cell.dataset.x = String(x);
-        cell.dataset.y = String(y);
-        cell.addEventListener("click", () => this.onCellClick(x, y));
+    // The two grid layers share the same world coordinates and never hit-test.
+    const makeHighlight = (kind: "move" | "attack"): HTMLDivElement => {
+      const el=layer("tactical-highlight tactical-highlight-"+kind);
+      el.style.left=TACTICAL_X+"px";
+      el.style.top=TACTICAL_Y+"px";
+      el.style.gridTemplateColumns=grid.style.gridTemplateColumns;
+      el.style.gridTemplateRows=grid.style.gridTemplateRows;
+      el.setAttribute("aria-hidden","true");
+      return el;
+    };
+    const moveLayer=makeHighlight("move");
+    const attackLayer=makeHighlight("attack");
+    for(let y=0;y<MAP_HEIGHT;y++){
+      for(let x=0;x<MAP_WIDTH;x++){
+        const cell=document.createElement("button");
+        cell.type="button";
+        cell.className="battle-cell";
+        cell.dataset.x=String(x);
+        cell.dataset.y=String(y);
+        cell.addEventListener("click",()=>this.onCellClick(x,y));
         grid.appendChild(cell);
         this.cells.push(cell);
-
-        const light = document.createElement("div");
-        light.className = "range-cell";
-        highlight.appendChild(light);
-        this.highlights.push(light);
+        const moveCell=document.createElement("div");
+        moveCell.className="range-cell";
+        moveLayer.appendChild(moveCell);
+        this.moveHighlights.push(moveCell);
+        const attackCell=document.createElement("div");
+        attackCell.className="range-cell";
+        attackLayer.appendChild(attackCell);
+        this.attackHighlights.push(attackCell);
       }
     }
     // The route is a non-interactive world-space overlay, always above
@@ -525,7 +536,8 @@ export class BoardView {
       for(let x=0;x<MAP_WIDTH;x++) {
         const index=y*MAP_WIDTH+x;
         const cell=this.cells[index]!;
-        const overlay=this.highlights[index]!;
+        const moveOverlay=this.moveHighlights[index]!;
+        const attackOverlay=this.attackHighlights[index]!;
         const terrain=this.battle.tile(x,y);
         const occupant=this.battle.occupant(x,y);
         const coord=key({x,y});
@@ -540,15 +552,20 @@ export class BoardView {
           +(inspectedHere?" is-inspected":"");
         cell.title=TERRAIN_INFO[terrain].name+" · "+
           (terrain==="#"?"不可通行":"移动消耗 "+movementCostLabel(terrain));
-        overlay.className=[
+        moveOverlay.className=[
           "range-cell",
-          targeted?"can-attack":"",
           moveFill ? (focus?.team==="enemy" ? "route-move-enemy" : "route-move-ally"):"",
-          attack ? "route-attack":"",
-          attack && moveFill ? "route-overlap":"",
+          moveFill && attack ? "route-under-attack":"",
           route?.some(p=>p.x===x && p.y===y) ? "route-step":"",
           occupant?.id===this.battle.selectedId?"is-selected":"",
           inspectedHere?"is-inspected":"",
+        ].filter(Boolean).join(" ");
+        attackOverlay.className=[
+          "range-cell",
+          targeted?"can-attack":"",
+          attack?"route-attack":"",
+          (targeted||attack) && occupant?.id===this.battle.selectedId?"is-selected":"",
+          (targeted||attack) && inspectedHere?"is-inspected":"",
         ].filter(Boolean).join(" ");
         cell.setAttribute("aria-label",
           String.fromCharCode(65+x)+(y+1)+" "+TERRAIN_INFO[terrain].name+

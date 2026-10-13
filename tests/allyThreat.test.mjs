@@ -104,5 +104,6 @@ test("board gives enemy inspection priority and reserves actionable red for real
   assert.match(board,/this\.battle\.enemyThreat\(focus\)/);
   assert.match(css,/\.range-cell\.route-move-ally/);
   assert.match(css,/\.range-cell\.route-attack/);
-  assert.match(css,/\.range-cell\.route-overlap/);
+  assert.match(css,/\.range-cell\.route-under-attack/);
+  assert.match(css,/\.tactical-highlight-attack/);
 });

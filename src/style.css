@@ -383,6 +383,8 @@ button:disabled { cursor: not-allowed; }
 .world-decal { z-index: 30; }
 .tactical-hit-grid { z-index: 40; }
 .tactical-highlight { z-index: 45; }
+.tactical-highlight-move { z-index: 45; }
+.tactical-highlight-attack { z-index: 46; }
 .world-units { z-index: 50; }
 .world-foreground { z-index: 60; }
 .stage-ground-cell { min-width: 0; min-height: 0; border: 0; }
@@ -987,26 +989,6 @@ button:disabled { cursor: not-allowed; }
   .weapon-picker {max-height:calc(100dvh - 96px);overscroll-behavior:contain}
 }
 
-/* Ally previews share the enemy projection rules but have their own colors:
-   blue movement, red potential attack, blue fill/red edge when overlapping. */
-.world-stage .tactical-highlight .range-cell.ally-threat-move {
-  background: rgba(40, 143, 246, .34);
-  box-shadow: inset 0 0 0 1px rgba(135, 200, 255, .75);
-}
-.world-stage .tactical-highlight .range-cell.ally-threat-attack {
-  background: rgba(224, 69, 65, .43);
-  box-shadow: inset 0 0 0 2px rgba(255, 145, 120, .86);
-}
-.world-stage .tactical-highlight .range-cell.ally-threat-overlap {
-  background: rgba(40, 143, 246, .37);
-  box-shadow: inset 0 0 0 2px rgba(255, 121, 107, .96),
-    inset 0 0 0 5px rgba(55, 158, 255, .20);
-}
-.world-stage .tactical-highlight .range-cell.ally-threat-overlap.is-selected,
-.world-stage .tactical-highlight .range-cell.ally-threat-attack.is-selected {
-  box-shadow: inset 0 0 0 3px #f0f6ff, 0 0 20px #6ac1ff;
-}
-
 /* v0.1.19.0: hover shows MOVE ONLY; a selected unit plus a hovered endpoint
    reveals the chosen path arrow and attack coverage from that destination. */
 .world-stage .tactical-route {z-index:47;pointer-events:none}
@@ -1029,12 +1011,22 @@ button:disabled { cursor: not-allowed; }
   background:rgba(218,65,73,.53);
   box-shadow:inset 0 0 0 2px rgba(255,182,158,.9)
 }
-.world-stage .tactical-highlight .range-cell.route-overlap {
-  background:rgba(48,146,240,.45);
-  box-shadow:inset 0 0 0 2px rgba(255,173,140,.95)
-}
 .world-stage .tactical-highlight .range-cell.route-step {
   outline:2px solid rgba(255,232,166,.64);outline-offset:-4px
 }
 
 .route-preview-svg.is-hidden{display:none!important}
+
+/* Separate color layers: attack red wins, without mixing with translucent blue. */
+.world-stage .tactical-highlight-move .range-cell.route-under-attack {
+  background: transparent;
+  box-shadow: none;
+}
+.world-stage .tactical-highlight-attack .range-cell.route-attack,
+.world-stage .tactical-highlight-attack .range-cell.can-attack {
+  background: rgba(220, 62, 69, .68);
+  box-shadow: inset 0 0 0 2px rgba(255, 192, 177, .95);
+}
+.world-stage .tactical-highlight-attack .range-cell.is-selected {
+  box-shadow: inset 0 0 0 3px #f0f6ff, 0 0 20px #6ac1ff;
+}
