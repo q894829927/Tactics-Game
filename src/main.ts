@@ -16,7 +16,12 @@ get("game-version").textContent = GAME_VERSION;
 const battle = new Battle();
 const board = new BoardView(battle, get("game"));
 board.onCombatCommitted=()=>renderSelection();
-board.onCombatPresentationEnded=()=>renderSelection();
+board.onCombatPresentationEnded=()=>{
+  renderSelection();
+  // Battle.commitAttack updates unit flags before the duel is animated;
+  // do not change turns until the last visible strike has finished.
+  maybeAutoEndTurn();
+};
 let endingTurn = false;
 let turnRunId = 0;
 
@@ -144,7 +149,12 @@ function refresh(): void {
     logs.appendChild(item);
   }
 }
-battle.onChange = refresh;
+battle.onChange = ()=>{
+  refresh();
+  // Defer until Battle.click / waitSelected and BoardView event handlers have
+  // finished. A combat may start its visual playback synchronously afterward.
+  queueMicrotask(maybeAutoEndTurn);
+};
 board.onHint = message => { get("viewport-hint").textContent = message; };
 board.onInspectionChange = renderSelection;
 
@@ -205,7 +215,10 @@ const pause = (ms: number) => new Promise<void>(resolve => {
     resolve();
   }, ms);
 });
-button("settings-end-turn").addEventListener("click", () => {
+/** Both manual and automatic endings enter this single guarded sequence.
+ * The manual button still allows ending before all allies have acted.
+ */
+function startEnemyTurn(): void {
   if (endingTurn || board.isAnimating || battle.phase !== "player" ||
       battle.result !== "playing") return;
   endingTurn = true;
@@ -242,7 +255,14 @@ button("settings-end-turn").addEventListener("click", () => {
     if (battle.result === "playing")
       showPhase("第 " + battle.round + " 回合 · 我方行动", "PLAYER PHASE");
   })();
-});
+}
+
+function maybeAutoEndTurn(): void {
+  if (endingTurn || board.isAnimating || !battle.allLivingAlliesSpent) return;
+  startEnemyTurn();
+}
+
+button("settings-end-turn").addEventListener("click", startEnemyTurn);
 button("restart-button").addEventListener("click", () => {
   if (!window.confirm("重新开始关卡？当前进度将丢失。")) return;
   // Invalidate an in-flight enemy turn and any active interpolation first.

@@ -223,6 +223,16 @@ export class Battle {
   alive(team: Team): Unit[] {
     return this.units.filter(u => u.hp > 0 && u.team === team);
   }
+
+  /** Complete only when every *living* ally has committed an attack or wait.
+   * Dead allies do not block progression; an empty party is never a valid
+   * auto-transition and terminal results always take precedence.
+   */
+  get allLivingAlliesSpent(): boolean {
+    if (this.phase !== "player" || this.result !== "playing") return false;
+    const allies = this.alive("ally");
+    return allies.length > 0 && allies.every(unit => unit.spent);
+  }
   occupant(x: number, y: number): Unit | undefined {
     return this.units.find(u => u.hp > 0 && u.x === x && u.y === y);
   }
