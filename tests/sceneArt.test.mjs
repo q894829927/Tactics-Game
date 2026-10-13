@@ -21,9 +21,8 @@ test("A2-2 original art files have safe standalone SVG roots", () => {
 
 test("A2-2 art is routed through Vite base and cannot steal clicks", () => {
   assert.match(board, /import\.meta\.env\.BASE_URL/);
-  assert.match(board, /sceneAsset\(groundAsset\(col, row, inside, terrain\)\)/);
-  assert.match(board, /environment\.appendChild\(imgAsset/);
-  assert.match(board, /foreground\.appendChild\(imgAsset/);
+  assert.match(board, /buildMapScenery\(battle\.terrain\)/);
+  assert.match(board, /environment\.appendChild\(sprite\)/);
   assert.match(board, /sprite\.addEventListener\("error"/);
   const css = readFileSync(new URL("../src/style.css", import.meta.url), "utf8");
   assert.match(css, /\.scene-art-sprite \{[^}]*pointer-events: none/s);

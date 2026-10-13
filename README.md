@@ -13,13 +13,13 @@
 
 ## 目标图四阶段落地计划
 
-根据已确定的战场目标 UI，将视觉与交互落地分为：**A 地图美术重建 → B 角色及右侧状态栏 → C 战斗交互反馈 → D 细节打磨与综合验收**。详细任务、交付物、验收门槛及版本规划见 [docs/VISUAL-IMPLEMENTATION-PLAN.md](docs/VISUAL-IMPLEMENTATION-PLAN.md)。这是待执行计划，不代表这些内容已经完成。**A1 的坐标、12 项资源清单与图层规范已定稿；A2-1 世界舞台/独立命中层已提交（A2-2 已导入原创 AI 森林—石壁—河岸实景母版及小地图，旧 SVG 保留为加载失败回退；浏览器视觉验收尚未完成）**：[查看 A1 设计文档](docs/A1-MAP-ART-SPEC.md)；新增 AI 地图和森林/岩壁/河岸参考裁片位于 [ai 素材目录](public/assets/maps/red-banner/ai)，来源与已知限制见 [AI 场景接入说明](docs/A2-AI-SCENE-INTEGRATION.md)；原有 12 项 SVG 仅作回退。
+根据已确定的战场目标 UI，将视觉与交互落地分为：**A 地图美术重建 → B 角色及右侧状态栏 → C 战斗交互反馈 → D 细节打磨与综合验收**。详细计划见 [docs/VISUAL-IMPLEMENTATION-PLAN.md](docs/VISUAL-IMPLEMENTATION-PLAN.md)。A1 的坐标与图层规范已定稿；v0.1.5.0 已移除旧整张 AI 底图，采用独立地表材质、透明树木和透明岩壁组装地图，保留现有战术交互。完整素材库与最终美术验收仍待后续完成，实际范围见 [分层地图说明](docs/MODULAR-MAP-INTEGRATION.md)。
 
 ## 地图素材重构：先研究后实施
 
-[火焰纹章地图组织方式与模块化素材计划](docs/MAP-ASSET-PIPELINE.md)：先做逻辑格独立的微瓦片地表、边缘自动衔接与透明森林/石壁/河岸物件，再组出首块 6×5 地形样片。**仅规划，尚未替换当前 AI 整张底图。**
+[火焰纹章地图组织方式与模块化素材计划](docs/MAP-ASSET-PIPELINE.md)：独立地表/树木/岩壁已接入，旧整图和旧小地图纹理已退出运行时。完整微瓦片、自动边角过渡和编辑器仍属于后续计划。
 
-[地表、树木、岩壁风格样张 V1](art/map-style-samples/v1/README.md)：三张独立 PNG 已生成，透明树木/岩壁已检查实际 Alpha；当前为待评审的风格候选，后续再加工成正式瓦片和景物。
+[地表、树木、岩壁风格样张 V1](art/map-style-samples/v1/README.md)：三张原创 PNG 已作为分层地图素材接入，透明树木/岩壁已检查实际 Alpha；原始样张与提示词保留，最终美术评审仍待确认。
 
 ## 第一版范围
 

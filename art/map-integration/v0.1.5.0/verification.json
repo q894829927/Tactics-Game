@@ -1,0 +1,78 @@
+{
+  "version": "v0.1.5.0",
+  "date": "2026-10-13",
+  "method": "in-app browser through cua_repl",
+  "checks": {
+    "old_full_scene_image_count": 0,
+    "independent_world_sprites": 94,
+    "all_sprites_loaded": true,
+    "ground_material": "loaded",
+    "desktop_viewports": [
+      [
+        1366,
+        768
+      ],
+      [
+        1920,
+        1080
+      ]
+    ],
+    "desktop_zoom_percent": [
+      70,
+      98
+    ],
+    "mobile_requested_viewport": [
+      390,
+      844
+    ],
+    "mobile_zoom_percent": 60,
+    "maximum_zoom_percent": 185,
+    "nested_scroll_after_focus": [
+      0,
+      0
+    ],
+    "maximum_zoom_foot_label_error_px_less_than": 2,
+    "ally_move": "岚锋 B6 -> C6, HP 30/30; menu retained",
+    "enemy_phase": "round 1 -> round 2, all enemies moved",
+    "attack": "霜羽 C7 -> F7, attacked H6 掠夺者 B for 7 damage, enemy HP 14/21",
+    "live_minimap_unit_pins": 10
+  },
+  "screenshots": [
+    {
+      "file": "attack-after-move.jpg",
+      "image_size": [
+        1366,
+        768
+      ]
+    },
+    {
+      "file": "desktop-1366x768.jpg",
+      "image_size": [
+        1366,
+        768
+      ]
+    },
+    {
+      "file": "desktop-1920x1080.jpg",
+      "image_size": [
+        1920,
+        1080
+      ]
+    },
+    {
+      "file": "mobile-390x844.jpg",
+      "image_size": [
+        375,
+        812
+      ]
+    },
+    {
+      "file": "zoom-185.jpg",
+      "image_size": [
+        1366,
+        768
+      ]
+    }
+  ],
+  "remaining": "final user art approval and further asset variants/terrain transition modules"
+}

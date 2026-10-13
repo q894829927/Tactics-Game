@@ -24,16 +24,14 @@ test("all five binary AI assets exist and match generated WebP payloads", () => 
   }
 });
 
-test("stage image has a non-interactive world-layer fallback, minimap retains live pins", () => {
+test("archived full-scene images are absent from runtime; modular art retains live overlays", () => {
   const source = readFileSync(new URL("../src/scene/BoardView.ts", import.meta.url), "utf8");
   const css = readFileSync(new URL("../src/style.css", import.meta.url), "utf8");
-  assert.match(source, /imgAsset\("ai\/forest-cliff-river-stage\.webp", 0, 0, WORLD_WIDTH, WORLD_HEIGHT\)/);
-  assert.match(source, /paintedScene\.addEventListener\("load"/);
-  assert.match(source, /stage\.classList\.add\("has-ai-scenery"\)/);
-  assert.match(source, /miniPainting\.src = sceneAsset\("ai\/forest-cliff-river-minimap\.webp"\)/);
-  assert.match(source, /miniPainting\.addEventListener\("error"/);
+  assert.doesNotMatch(source, /forest-cliff-river-(?:stage|minimap)\.webp|paintedScene|miniPainting|has-ai-scenery/);
+  assert.match(source, /buildMapScenery\(battle\.terrain\)/);
+  assert.match(source, /new GroundPainter\(groundCanvas, miniGround, battle\.terrain\)/);
   assert.match(source, /this\.minimapUnits\.appendChild\(pin\)/);
   assert.match(source, /this\.viewportMarker\.style\.left/);
-  assert.match(css, /\.world-stage\.has-ai-scenery \.world-environment/);
-  assert.match(css, /\.minimap-ai-painting\s*\{[^}]*pointer-events: none/s);
+  assert.doesNotMatch(css, /has-ai-scenery|ai-terrain-painting|minimap-ai-painting/);
+  assert.match(css, /\.map-ground-canvas, \.minimap-ground\s*\{[^}]*pointer-events: none/s);
 });

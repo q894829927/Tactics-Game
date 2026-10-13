@@ -1,11 +1,13 @@
 import { Battle, MAP_HEIGHT, MAP_WIDTH, key, type Unit } from "../engine/battle.ts";
 import { clampCameraOffset } from "./cameraBounds.ts";
+import { buildMapScenery } from "./mapScenery.ts";
+import { GroundPainter } from "./GroundPainter.ts";
 import {
   TILE, WORLD_COLS, WORLD_ROWS, WORLD_WIDTH, WORLD_HEIGHT, TACTICAL_X, TACTICAL_Y,
   MIN_ZOOM, MAX_ZOOM, tileWorld, worldScreen, minimapFrame, screenTile,
 } from "./worldGeometry.ts";
 
-// The A2-2 vertical slice consists of original, reusable SVG assets in public/.
+// Independent ground/tree/rock assets share world coordinates with the tactical grid.
 // Respect Vite's sub-directory base (/games/tactics/) rather than absolute /assets paths.
 const sceneAsset = (name: string): string => import.meta.env.BASE_URL + "assets/maps/red-banner/" + name;
 const imgAsset = (name: string, x: number, y: number, w: number, h: number, opacity=1): HTMLImageElement => {
@@ -28,15 +30,6 @@ const terrainGlyphs: Record<string, string> = { ".": "", F: "♠♠", H: "▲", 
 const roleNames: Record<string, string> = {
   sword: "剑", lancer: "枪", archer: "弓", mage: "术", raider: "兵", commander: "将",
 };
-/** Shared asset choice for main ground and the miniature; both use the same scene. */
-function groundAsset(col: number, row: number, inside: boolean, terrain: string | null): string {
-  if (!inside && zoneAt(col, row) === "river") return "river-flow-a.svg";
-  if (!inside && zoneAt(col, row) === "camp") return "ground-path-a.svg";
-  if (terrain === "H" || terrain === "#" || (!inside && zoneAt(col, row) === "forest")) return "ground-grass-b.svg";
-  if (inside && terrain === "." && (col * 7 + row * 5) % 11 === 0) return "ground-path-a.svg";
-  return (col * 13 + row * 3) % 5 === 0 ? "ground-grass-b.svg" : "ground-grass-a.svg";
-}
-
 
 type ArtZone = "forest" | "camp" | "river" | "cliff" | "grass";
 function zoneAt(worldCol: number, worldRow: number): ArtZone {
@@ -93,61 +86,20 @@ export class BoardView {
       return element;
     };
 
-    // W10: AI-authored raster environment plate. The existing SVG tiles remain as a
-    // genuine fallback if the WebP fails, while W40/W45/W50 stay fully interactive.
+    // W10: reusable material patches, a walkable path/slopes and decorative eastern water.
     const ground = layer("world-ground");
-    ground.style.gridTemplateColumns = "repeat(" + WORLD_COLS + ", " + TILE + "px)";
-    ground.style.gridTemplateRows = "repeat(" + WORLD_ROWS + ", " + TILE + "px)";
-    for (let row = 0; row < WORLD_ROWS; row++) {
-      for (let col = 0; col < WORLD_COLS; col++) {
-        const inside = col >= 3 && col < 3 + MAP_WIDTH && row >= 2 && row < 2 + MAP_HEIGHT;
-        const terrain = inside ? battle.tile(col - 3, row - 2) : null;
-        const tile = document.createElement("div");
-        tile.className = "stage-ground-cell " + (inside ? "stage-terrain-" + (terrain === "." ? "plain" : terrain === "#" ? "wall" : terrain) : "stage-zone-" + zoneAt(col, row));
-        tile.setAttribute("aria-hidden", "true");
-        // Every cell uses a reusable terrain asset, never a screenshot of the entire map.
-        // The background gradient in CSS remains visible if an SVG fails to load.
-        tile.style.backgroundImage = 'url("' + sceneAsset(groundAsset(col, row, inside, terrain)) + '")';
-        ground.appendChild(tile);
-      }
-    }
+    const groundCanvas = document.createElement("canvas");
+    groundCanvas.className = "map-ground-canvas";
+    groundCanvas.setAttribute("aria-hidden", "true");
+    ground.appendChild(groundCanvas);
 
-    // This asset is environment art ONLY: no UI, units, pathfinding or click targets baked in.
-    // Coordinates: AI plate is exactly WORLD_WIDTH x WORLD_HEIGHT (A1 16x12 world).
-    const paintedScene = imgAsset("ai/forest-cliff-river-stage.webp", 0, 0, WORLD_WIDTH, WORLD_HEIGHT);
-    paintedScene.classList.add("ai-terrain-painting");
-    ground.appendChild(paintedScene);
-    paintedScene.addEventListener("load", () => {
-      // The new raster plate replaces old simple SVG illustrations after real load success.
-      this.stage.classList.add("has-ai-scenery");
-    }, {once: true});
-
-    // W20: independent scenic SVGs. The water, bridge and fort remain outside playable cells.
+    // W20: each tree/rock is independently positioned, always below highlights and units.
     const environment = layer("world-environment");
-    const sceneSprites = [
-      // Non-interactive eastern river bank: x >= 1196 is outside the 10x8 playable grid.
-      ["river-bank-a.svg", 1170, 170, 178, 240, .99],
-      ["river-bank-a.svg", 1170, 390, 178, 240, .99],
-      ["river-bank-a.svg", 1170, 610, 178, 240, .99],
-      ["cliff-face-a.svg", 1242, 148, 235, 200, .95],
-      ["cliff-face-a.svg", 1242, 705, 235, 220, .95],
-      ["cliff-face-b.svg", 1198, 897, 255, 170, .92],
-      ["bridge-wood-a.svg", 1220, 410, 237, 126, .97],
-      ["camp-platform-a.svg", 1005, 3, 405, 182, 1],
-      // Actual impassable cells (3,2) and (4,2), visually distinct but no rules changed.
-      ["cliff-face-b.svg", 552, 363, 184, 117, .93],
-      // Forest stands: all rendered below the unit/hit layers.
-      ["forest-cluster-a.svg", 0, 40, 235, 240, .94],
-      ["forest-cluster-b.svg", 40, 230, 215, 297, .89],
-      ["forest-cluster-a.svg", 35, 740, 205, 235, .96],
-      ["forest-cluster-b.svg", 805, 0, 195, 255, .91],
-      ["forest-cluster-a.svg", 328, 209, 132, 143, .81],
-      ["forest-cluster-b.svg", 843, 213, 135, 164, .79],
-      ["forest-cluster-a.svg", 253, 401, 140, 143, .80],
-      ["forest-cluster-b.svg", 801, 605, 145, 182, .79],
-    ] as const;
-    for (const [file,x,y,w,h,alpha] of sceneSprites) {
-      environment.appendChild(imgAsset(file,x,y,w,h,alpha));
+    const sceneSprites = buildMapScenery(battle.terrain);
+    for (const prop of sceneSprites) {
+      const sprite = imgAsset(prop.file, prop.x, prop.y, prop.width, prop.height);
+      sprite.dataset.assetId = prop.id;
+      environment.appendChild(sprite);
     }
 
     // W30: decoration is not input. Terrain symbols are deliberately separate from hit cells.
@@ -197,10 +149,8 @@ export class BoardView {
     }
     // W50: units have independent anchors; they cannot intercept input.
     this.unitLayer = layer("world-units");
-    // W60: fog is visually in front, but never intercepts pointer events.
-    const foreground = layer("world-foreground");
-    foreground.appendChild(imgAsset("fog-low-a.svg", 17, 38, 450, 220, .5));
-    foreground.appendChild(imgAsset("fog-low-a.svg", 1090, 584, 330, 175, .3));
+    // W60 stays available for future foreground effects, without hiding any scenery layer.
+    layer("world-foreground");
 
     // S70: names, class glyphs and HP are screen-space, not scaled world text.
     this.labelLayer = document.createElement("div");
@@ -228,37 +178,31 @@ export class BoardView {
           : "mini-zone-" + zoneAt(col, row));
         btn.title = inside ? String.fromCharCode(65 + col - 3) + (row - 1) + " · " + terrainNames[terrain!] : "场景装饰区";
         btn.setAttribute("aria-label", "镜头定位：" + btn.title);
-        btn.style.backgroundImage = 'url("' + sceneAsset(groundAsset(col, row, inside, terrain)) + '")';
         btn.addEventListener("click", () => this.centerOnWorld((col + .5) * TILE, (row + .5) * TILE));
         mini.appendChild(btn);
         this.miniCells.push(btn);
       }
     }
-    // The miniature is assembled from the SAME world ground and placed scenery,
-    // rather than a second hand-painted map that can drift out of sync.
+    // The miniature copies the rendered material layer and reuses every placed sprite.
+    const miniGround = document.createElement("canvas");
+    miniGround.className = "minimap-ground";
+    miniGround.setAttribute("aria-hidden", "true");
+    mini.appendChild(miniGround);
+    new GroundPainter(groundCanvas, miniGround, battle.terrain);
     const miniArt = document.createElement("div");
     miniArt.className = "minimap-scenery";
     miniArt.setAttribute("aria-hidden", "true");
-    for (const [file, x, y, w, h, alpha] of sceneSprites) {
-      const img = imgAsset(file, x, y, w, h, alpha);
+    for (const prop of sceneSprites) {
+      const img = imgAsset(prop.file, prop.x, prop.y, prop.width, prop.height);
       img.classList.add("minimap-scene-sprite");
-      img.style.left = (x / WORLD_WIDTH * 100) + "%";
-      img.style.top = (y / WORLD_HEIGHT * 100) + "%";
-      img.style.width = (w / WORLD_WIDTH * 100) + "%";
-      img.style.height = (h / WORLD_HEIGHT * 100) + "%";
+      img.dataset.assetId = prop.id;
+      img.style.left = (prop.x / WORLD_WIDTH * 100) + "%";
+      img.style.top = (prop.y / WORLD_HEIGHT * 100) + "%";
+      img.style.width = (prop.width / WORLD_WIDTH * 100) + "%";
+      img.style.height = (prop.height / WORLD_HEIGHT * 100) + "%";
       miniArt.appendChild(img);
     }
     mini.appendChild(miniArt);
-    // Compact rendition of the same world plate, above SVG fallback map but
-    // below camera frame, minimap unit pins and the tactical outline.
-    const miniPainting = document.createElement("img");
-    miniPainting.className = "minimap-ai-painting";
-    miniPainting.src = sceneAsset("ai/forest-cliff-river-minimap.webp");
-    miniPainting.alt = "";
-    miniPainting.draggable = false;
-    miniPainting.setAttribute("aria-hidden", "true");
-    miniPainting.addEventListener("error", () => miniPainting.remove(), {once: true});
-    mini.appendChild(miniPainting);
     const tacticalOutline = document.createElement("div");
     tacticalOutline.className = "minimap-tactical-outline";
     tacticalOutline.setAttribute("aria-hidden", "true");

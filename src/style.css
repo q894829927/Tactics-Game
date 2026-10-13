@@ -34,7 +34,7 @@ button:disabled { cursor: not-allowed; }
   box-shadow: inset 0 0 95px 18px rgba(2,10,17,.6);
 }
 .map-viewport {
-  position: absolute; inset: 0; overflow: hidden; touch-action: none;
+  position: absolute; inset: 0; overflow: clip; touch-action: none;
   outline: none; cursor: grab;
 }
 .map-viewport:active { cursor: grabbing; }
@@ -368,16 +368,23 @@ button:disabled { cursor: not-allowed; }
 .map-world.world-stage {
   background: #355542;
   border: 1px solid #284637;
-  overflow: hidden;
+  overflow: clip;
 }
 .world-layer {
   position: absolute; inset: 0;
   pointer-events: none;
 }
 .world-ground {
-  display: grid;
+  display: block;
   background: #345543;
+  z-index: 10;
 }
+.world-environment { z-index: 20; }
+.world-decal { z-index: 30; }
+.tactical-hit-grid { z-index: 40; }
+.tactical-highlight { z-index: 45; }
+.world-units { z-index: 50; }
+.world-foreground { z-index: 60; }
 .stage-ground-cell { min-width: 0; min-height: 0; border: 0; }
 .stage-terrain-plain, .stage-zone-grass {
   background: radial-gradient(ellipse at 21% 26%, #63805588, transparent 52%),
@@ -584,37 +591,20 @@ button:disabled { cursor: not-allowed; }
 .world-units .unit-ground-mark.is-selected { border-color: #fff0c0; box-shadow: 0 0 16px #f9da7b; }
 
 
-/* A2-2 redraw: original AI-generated full-resolution environmental plate.
-   The plate is a world-space scenic image ONLY, not an interactive screenshot. */
-.world-ground .ai-terrain-painting {
+/* Modular material canvas; environment trees/rocks are independent DOM sprites. */
+.map-ground-canvas, .minimap-ground {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
-  object-fit: fill;
   pointer-events: none;
   user-select: none;
-  z-index: 2;
+  z-index: 1;
   image-rendering: auto;
 }
-.world-stage.has-ai-scenery .world-environment,
-.world-stage.has-ai-scenery .world-decal,
-.world-stage.has-ai-scenery .world-foreground {
-  visibility: hidden;
-}
 .world-stage .battle-cell.is-blocked {
-  background: repeating-linear-gradient(135deg, #2739443c 0 8px, #7c9b9752 8px 10px) !important;
-  box-shadow: inset 0 0 0 1.5px #c9c5a8a8 !important;
+  background: #13272018 !important;
+  box-shadow: inset 0 0 0 1.5px #c9c5a878 !important;
   cursor: not-allowed;
-}
-.minimap-ai-painting {
-  position: absolute;
-  z-index: 3;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: fill;
-  pointer-events: none;
-  user-select: none;
 }
 .minimap-tactical-outline { z-index: 4; }

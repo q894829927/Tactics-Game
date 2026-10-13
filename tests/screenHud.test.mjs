@@ -35,9 +35,9 @@ test("unit labels and minimap positions remain synchronized across zoom and batt
 });
 
 test("minimap shares ground resource decisions and ornamental sprite placement", () => {
-  assert.match(board, /sceneAsset\(groundAsset\(col, row, inside, terrain\)\)/);
-  assert.match(board, /for \(const \[file, x, y, w, h, alpha\] of sceneSprites\)/);
-  assert.match(board, /img\.style\.left = \(x \/ WORLD_WIDTH \* 100\)/);
+  assert.match(board, /new GroundPainter\(groundCanvas, miniGround, battle\.terrain\)/);
+  assert.match(board, /for \(const prop of sceneSprites\)/);
+  assert.match(board, /img\.style\.left = \(prop\.x \/ WORLD_WIDTH \* 100\)/);
   assert.match(board, /this\.minimapUnits\.appendChild\(pin\)/);
   assert.match(board, /this\.viewportMarker\.style\.left = frame\.left \* 100/);
   assert.match(board, /mini\.addEventListener\("pointermove"/);
