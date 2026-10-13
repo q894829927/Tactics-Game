@@ -57,7 +57,7 @@ test("UI uses dynamic tracked inspection for enemy threats, labels, sidebar", ()
   const main=readFileSync(new URL("../src/main.ts", import.meta.url),"utf8");
   assert.match(board,/this\.inspection = new InspectionState\(battle\)/);
   assert.match(board,/get inspectionCell\(\): Point \| null \{ return this\.inspection\.cell; \}/);
-  assert.match(board,/const inspectedCell = this\.inspectionCell/);
+  assert.match(board,/const inspectedCell=this\.inspectionCell/);
   assert.match(board,/this\.battle\.enemyThreat\(focus\)/);
   assert.doesNotMatch(board,/this\.inspectedCell/);
   assert.match(main,/const inspected = board\.inspectionCell/);

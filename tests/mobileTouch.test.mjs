@@ -25,7 +25,7 @@ test("pinch keeps world position under midpoint while scaling, and supports tran
 test("finger route supports tap and single-drag, suppresses click after a pinch",()=>{
   assert.match(view,/touchPoints = new Map<number,Contact>/);
   assert.match(view,/viewport\.addEventListener\("pointerdown", event => this\.pointerDown\(event\)\)/);
-  assert.match(view,/viewport\.addEventListener\("pointermove", event => this\.pointerMove\(event\)\)/);
+  assert.match(view,/viewport\.addEventListener\("pointermove", event => \{[\s\S]*?this\.pointerMove\(event\);[\s\S]*?this\.trackPointerHover\(event\);/);
   assert.match(view,/this\.touchPoints\.size===2/);
   assert.match(view,/pinchCamera\(this\.pinchOrigin,/);
   assert.match(view,/this\.suppressClick=true;/);
