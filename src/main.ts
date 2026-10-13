@@ -29,14 +29,25 @@ const terrainInfo: Record<string, { name: string; icon: string; defense: number;
 };
 
 function renderSelection(): void {
-  const selected = battle.selected;
+  const inspected = board.inspectionCell;
+  const selected = inspected ? battle.occupant(inspected.x, inspected.y) : battle.selected;
+  const terrainCode = inspected ? battle.tile(inspected.x, inspected.y)
+    : selected ? battle.tile(selected.x, selected.y) : null;
+  const terrain = terrainCode ? terrainInfo[terrainCode]! : null;
   get("team-count").textContent = "我方 " + battle.alive("ally").length +
     " / 敌军 " + battle.alive("enemy").length;
-  get("selection-name").textContent = selected?.name ?? "尚未选择单位";
-  get("selection-role").textContent = selected ? roleNames[selected.role] + " · 我方单位" : "点击蓝色友军查看属性";
+  get("selection-title").textContent = selected ? "选中单位" : inspected ? "地形详情" : "选中单位";
+  get("selection-name").textContent = selected?.name ??
+    (inspected ? String.fromCharCode(65 + inspected.x) + (inspected.y + 1) + " · " + terrain?.name : "尚未选择单位");
+  get("selection-role").textContent = selected ? roleNames[selected.role] +
+    (selected.team === "enemy" ? " · 敌方单位" : " · 我方单位") :
+    inspected ? "空地 / 地形信息" : "左键查看单位或地形";
   get("unit-portrait").textContent = selected
     ? ({ sword: "⚔", lancer: "♞", archer: "➶", mage: "✦", raider: "⚔", commander: "♜" }[selected.role])
-    : "♜";
+    : inspected ? terrain?.icon ?? "◇" : "♜";
+  get("unit-portrait").classList.toggle("portrait-enemy", selected?.team === "enemy");
+  get("unit-portrait").classList.toggle("portrait-terrain", !selected && !!inspected);
+  get("hp-fill").classList.toggle("hp-enemy", selected?.team === "enemy");
   get("hp-text").textContent = selected ? selected.hp + " / " + selected.maxHp : "— / —";
   get("hp-fill").style.width = selected ? (selected.hp / selected.maxHp * 100) + "%" : "0%";
   get("stat-attack").textContent = selected ? String(selected.attack) : "—";
@@ -45,21 +56,24 @@ function renderSelection(): void {
     ? selected.minRange === selected.maxRange ? String(selected.minRange)
       : selected.minRange + "–" + selected.maxRange : "—";
   get("stat-move").textContent = selected ? String(selected.move) : "—";
-  const terrain = selected ? terrainInfo[battle.tile(selected.x, selected.y)]! : null;
   get("terrain-icon").textContent = terrain?.icon ?? "♠";
   get("terrain-name").textContent = terrain?.name ?? "地形信息";
   get("terrain-hint").textContent = terrain
-    ? terrain.defense ? "地形防御加成" : "无地形防御加成" : "选择单位后显示";
+    ? terrainCode === "#" ? "不可通行" : terrain.defense ? "地形防御加成" : "无地形防御加成"
+    : "左键选择地形查看";
   get("terrain-defense").textContent = "防御 +" + (terrain?.defense ?? "—");
   get("terrain-cost").textContent = "移动消耗 " + (terrain?.cost ?? "—");
   get("weapon-name").textContent = selected ? weapons[selected.role] : "—";
   get("weapon-range").textContent = selected
     ? selected.minRange + (selected.maxRange !== selected.minRange ? "–" + selected.maxRange : "") + " 格" : "—";
-  get("selection-hint").textContent = selected
-    ? selected.spent ? "本回合已结束行动" : selected.moved
-      ? "已移动：可攻击射程内敌军，或选择待机"
-      : "蓝色格子可移动；点击单位旁菜单选择攻击或待机"
-    : "点击我方单位，选择移动格或使用行动菜单。";
+  get("selection-hint").textContent = selected?.team === "enemy"
+    ? "敌军信息仅供查看；选中我方单位后右键打开行动菜单"
+    : selected
+      ? selected.spent ? "本回合已结束行动"
+        : selected.moved ? "已移动：右键该单位选择攻击或待机"
+        : "左键选中与移动；右键该单位打开攻击、道具等指令"
+      : inspected ? "当前地形：" + terrain?.name + "。左键查看其他格子，右键拖动地图。"
+      : "左键查看地形或选择单位；右键点击友军打开指令。";
   button("settings-end-turn").disabled = battle.result !== "playing";
 }
 
@@ -86,6 +100,7 @@ function refresh(): void {
 battle.onChange = refresh;
 board.onZoomChange = percent => { get("zoom-value").textContent = percent + "%"; };
 board.onHint = message => { get("viewport-hint").textContent = message; };
+board.onInspectionChange = renderSelection;
 
 button("zoom-in").addEventListener("click", () => board.zoomBy(1.18));
 button("zoom-out").addEventListener("click", () => board.zoomBy(1 / 1.18));

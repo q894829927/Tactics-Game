@@ -606,3 +606,23 @@ button:disabled { cursor: not-allowed; }
   cursor: not-allowed;
 }
 .minimap-tactical-outline { z-index: 4; }
+
+/* v0.1.6.0: inspection is independent of selecting an actionable ally. */
+.world-stage .battle-cell.is-inspected {
+  box-shadow: inset 0 0 0 2px #ecd39cc9 !important;
+}
+.world-stage .range-cell.is-inspected:not(.is-selected) {
+  outline: 2px solid #e4ce99;
+  outline-offset: -3px;
+}
+.screen-unit-label.label-inspected .screen-label-emblem {
+  box-shadow: 0 0 0 2px #ead399, 0 0 12px #f0d79199;
+}
+.unit-portrait.portrait-enemy {
+  border-color: #c77b79;
+  background: radial-gradient(ellipse at 25% 16%, #6a3b46, #301e31 68%, #161e2a);
+}
+.unit-portrait.portrait-terrain {
+  background: radial-gradient(ellipse at 25% 16%, #486d5b, #1e3a3e 68%, #122731);
+}
+.hp-fill.hp-enemy { background: linear-gradient(90deg,#a83a49,#f18c87); }

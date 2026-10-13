@@ -1,4 +1,5 @@
-import { Battle, MAP_HEIGHT, MAP_WIDTH, key, type Unit } from "../engine/battle.ts";
+import { Battle, MAP_HEIGHT, MAP_WIDTH, key, type Point, type Unit } from "../engine/battle.ts";
+import { leftClickIntent, rightClickIntent } from "./interactionPolicy.ts";
 import { clampCameraOffset } from "./cameraBounds.ts";
 import { buildMapScenery } from "./mapScenery.ts";
 import { GroundPainter } from "./GroundPainter.ts";
@@ -59,13 +60,16 @@ export class BoardView {
   private offsetY = 0;
   private zoom = 1;
   private initialized = false;
-  private drag: { x: number; y: number; offsetX: number; offsetY: number; moved: boolean } | null = null;
+  private drag: { pointerId: number; button: number; x: number; y: number; offsetX: number; offsetY: number; moved: boolean } | null = null;
+  private inspectedCell: Point | null = null;
   private suppressClick = false;
   private menuVisible = false;
   private attackMode = false;
   private previousSelection: string | null = null;
   onZoomChange: ((percent: number) => void) | null = null;
   onHint: ((message: string) => void) | null = null;
+  onInspectionChange: (() => void) | null = null;
+  get inspectionCell(): Point | null { return this.inspectedCell; }
 
   constructor(private readonly battle: Battle, private readonly viewport: HTMLElement) {
     viewport.classList.add("map-viewport");
@@ -261,16 +265,17 @@ export class BoardView {
     viewport.addEventListener("pointerdown", event => this.startDrag(event));
     viewport.addEventListener("pointermove", event => this.moveDrag(event));
     viewport.addEventListener("pointerup", event => this.finishDrag(event));
-    viewport.addEventListener("pointercancel", event => this.finishDrag(event));
+    viewport.addEventListener("pointercancel", event => this.finishDrag(event, true));
     viewport.addEventListener("click", event => {
       if (!this.suppressClick) return;
       event.preventDefault();
       event.stopImmediatePropagation();
       this.suppressClick = false;
     }, true);
-    viewport.addEventListener("contextmenu", event => {
-      event.preventDefault();
-      this.cancelAction();
+    // Native context menus must not interrupt right-drag or close a newly opened command menu.
+    viewport.addEventListener("contextmenu", event => event.preventDefault());
+    viewport.addEventListener("auxclick", event => {
+      if (event.button === 1 || event.button === 2) event.preventDefault();
     });
     new ResizeObserver(() => {
       if (!this.initialized && viewport.clientWidth && viewport.clientHeight) {
@@ -299,7 +304,7 @@ export class BoardView {
   cancelAction(): boolean {
     if (this.attackMode) {
       this.attackMode = false;
-      this.menuVisible = true;
+      this.menuVisible = false;
       this.refresh();
       return true;
     }
@@ -320,7 +325,8 @@ export class BoardView {
     const selectedId = selected?.id ?? null;
     if (selectedId !== this.previousSelection) {
       this.attackMode = false;
-      this.menuVisible = selectedId !== null && this.battle.result === "playing";
+      // Selecting with the left button only inspects; only a right-click opens commands.
+      this.menuVisible = false;
       this.previousSelection = selectedId;
     }
     const reachable = selected && !selected.moved && !selected.spent
@@ -365,11 +371,13 @@ export class BoardView {
         const targeted = this.attackMode && targets.has(coord);
         cell.className = "battle-cell"
           + (terrain === "#" ? " is-blocked" : "")
-          + (actor?.id === this.battle.selectedId ? " is-selected" : "");
+          + (actor?.id === this.battle.selectedId ? " is-selected" : "")
+          + (this.inspectedCell?.x === x && this.inspectedCell.y === y ? " is-inspected" : "");
         cell.title = terrain === "#" ? "峭壁 · 不可通行" : (terrainNames[terrain] ?? "平地");
         overlay.className = [
           "range-cell", accessible ? "can-move" : "", targeted ? "can-attack" : "",
           actor?.id === this.battle.selectedId ? "is-selected" : "",
+          this.inspectedCell?.x === x && this.inspectedCell.y === y ? "is-inspected" : "",
         ].filter(Boolean).join(" ");
         cell.setAttribute("aria-label",
           String.fromCharCode(65 + x) + (y + 1) + " " + terrainNames[terrain] +
@@ -382,32 +390,42 @@ export class BoardView {
     this.applyCamera();
   }
 
+  private inspectCell(x: number, y: number): void {
+    this.inspectedCell = {x, y};
+    this.onInspectionChange?.();
+  }
+
   private onCellClick(x: number, y: number): void {
     if (this.battle.result !== "playing") return;
-    const actor = this.battle.occupant(x, y);
-    if (actor?.team === "ally") {
-      this.attackMode = false;
-      this.menuVisible = !actor.spent;
+    this.inspectCell(x, y);
+    const intent = leftClickIntent(this.battle, x, y, this.attackMode);
+    // Left clicks are selection, inspection or movement, never a context-menu trigger.
+    this.menuVisible = false;
+    this.attackMode = false;
+    if (intent === "select-ally" || intent === "move" || intent === "attack") {
       this.battle.click(x, y);
-      this.refresh();
-      return;
+    } else {
+      // Inspection alone cannot leave a hidden ally selected and ready to attack.
+      this.battle.selectedId = null;
     }
-    if (!this.battle.selected) return;
-    if (actor?.team === "enemy") {
-      if (!this.attackMode) {
-        this.onHint?.("请先从单位行动菜单选择「攻击」");
-        return;
-      }
-      this.battle.click(x, y);
-      this.refresh();
-      return;
-    }
-    if (this.attackMode) {
-      this.onHint?.("攻击模式：选择红色敌方单位，或右键取消");
-      return;
-    }
-    this.battle.click(x, y);
     this.refresh();
+    this.onInspectionChange?.();
+  }
+
+  private onRightCellClick(x: number, y: number): void {
+    if (this.battle.result !== "playing") return;
+    this.inspectCell(x, y);
+    const intent = rightClickIntent(this.battle, x, y);
+    this.attackMode = false;
+    this.menuVisible = false;
+    if (intent === "open-menu") {
+      this.battle.click(x, y);
+      this.menuVisible = true;
+    } else {
+      this.battle.selectedId = null;
+    }
+    this.refresh();
+    this.onInspectionChange?.();
   }
 
   private renderMenu(): void {
@@ -437,7 +455,7 @@ export class BoardView {
         } else if (cmd.key === "attack") {
           this.menuVisible = false;
           this.attackMode = true;
-          this.onHint?.("攻击模式：点击红色目标，右键或 Esc 取消");
+          this.onHint?.("攻击模式：左键点击红色目标；Esc 或右键空地取消");
           this.refresh();
         }
       });
@@ -477,6 +495,7 @@ export class BoardView {
     label.className = "screen-unit-label " + (unit.team === "ally" ? "label-ally" : "label-enemy");
     if (unit.spent) label.classList.add("label-spent");
     if (unit.id === this.battle.selectedId) label.classList.add("label-selected");
+    if (this.inspectedCell?.x === unit.x && this.inspectedCell.y === unit.y) label.classList.add("label-inspected");
     const emblem = document.createElement("span");
     emblem.className = "screen-label-emblem";
     emblem.textContent = roleNames[unit.role] ?? "兵";
@@ -493,12 +512,15 @@ export class BoardView {
   }
 
   private startDrag(e: PointerEvent): void {
-    if (e.button !== 0 && e.button !== 1) return;
+    if (e.button !== 0 && e.button !== 1 && e.button !== 2) return;
     if ((e.target as HTMLElement).closest(".unit-command-menu")) return;
-    this.drag = { x: e.clientX, y: e.clientY, offsetX: this.offsetX, offsetY: this.offsetY, moved: false };
+    if (this.drag) return;
+    // Right mouse dragging pans the map exactly like left dragging.
+    this.drag = { pointerId: e.pointerId, button: e.button, x: e.clientX, y: e.clientY,
+      offsetX: this.offsetX, offsetY: this.offsetY, moved: false };
   }
   private moveDrag(e: PointerEvent): void {
-    if (!this.drag) return;
+    if (!this.drag || this.drag.pointerId !== e.pointerId) return;
     const dx = e.clientX - this.drag.x;
     const dy = e.clientY - this.drag.y;
     if (!this.drag.moved && Math.hypot(dx, dy) < 7) return;
@@ -510,13 +532,20 @@ export class BoardView {
     this.offsetY = this.drag.offsetY + dy;
     this.applyCamera();
   }
-  private finishDrag(e: PointerEvent): void {
-    if (!this.drag) return;
-    this.suppressClick = this.drag.moved;
+  private finishDrag(e: PointerEvent, cancelled = false): void {
+    const drag = this.drag;
+    if (!drag || drag.pointerId !== e.pointerId) return;
     this.drag = null;
+    this.suppressClick = drag.button === 0 && drag.moved;
+    if (this.viewport.hasPointerCapture(e.pointerId)) this.viewport.releasePointerCapture(e.pointerId);
+    if (!cancelled && drag.button === 2 && !drag.moved) {
+      const rect = this.viewport.getBoundingClientRect();
+      const tile = this.hitTestScreen(e.clientX - rect.left, e.clientY - rect.top);
+      if (tile) this.onRightCellClick(tile.x, tile.y);
+      else this.hideCommandMenu();
+    }
     // A completed drag may not dispatch click in all browsers.
     window.setTimeout(() => { this.suppressClick = false; }, 0);
-    if (this.viewport.hasPointerCapture(e.pointerId)) this.viewport.releasePointerCapture(e.pointerId);
   }
   private zoomAt(value: number, px: number, py: number): void {
     const next = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, value));
