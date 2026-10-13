@@ -8,7 +8,13 @@ REPO="/opt/tactics-game/repo"
 WWW="/var/www/tactics-game"
 RELEASES="$WWW/releases"
 LIVE="$WWW/current"
+# Leave the verified origin remote unchanged, using SSH only for actual reads.
 GITHUB="https://github.com/q894829927/Tactics-Game.git"
+SSH_GITHUB="ssh://git@ssh.github.com:443/q894829927/Tactics-Game.git"
+# ProtectHome=true hides /root/.ssh from the systemd deployment service.
+SSH_IDENTITY="/etc/tactics-game/ssh/tactics_game_deploy"
+SSH_HOSTS="/etc/tactics-game/ssh/tactics_known_hosts"
+SSH_COMMAND="ssh -i $SSH_IDENTITY -o IdentitiesOnly=yes -o BatchMode=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile=$SSH_HOSTS -o ConnectTimeout=8 -o ConnectionAttempts=1"
 API="https://api.github.com/repos/q894829927/Tactics-Game/actions/workflows/publish-site.yml/runs"
 HOST="${TACTICS_HOST:-47.119.122.133}"
 log() { printf '[Tactics Deploy] %s\n' "$*"; }
@@ -19,6 +25,41 @@ for cmd in curl git tar flock python3 cmp timeout; do command -v "$cmd" >/dev/nu
 [[ -d "$REPO/.git" && -d "$RELEASES" ]] || die "Installer has not prepared the repository"
 [[ "$(git -C "$REPO" remote get-url origin)" == "$GITHUB" ]] || die "Unexpected GitHub remote URL"
 [[ -s /opt/tactics-game/bin/check-publish.py ]] || die "Missing deployed CI approval helper"
+ssh_enabled=0
+if [[ -f "$SSH_IDENTITY" && -s "$SSH_IDENTITY" &&
+      -f "$SSH_HOSTS" && -s "$SSH_HOSTS" &&
+      ! -L "$SSH_IDENTITY" && ! -L "$SSH_HOSTS" ]]; then
+  command -v ssh >/dev/null || die "SSH credentials installed but ssh is unavailable"
+  ssh_enabled=1
+  log "Git transport: SSH 443 primary, HTTPS fallback"
+else
+  log "Git transport: HTTPS (SSH deploy credentials not installed)"
+fi
+
+# This transports Git data over SSH, independently of the origin remote.
+git_remote_ref() {
+  local branch="$1" line=""
+  if (( ssh_enabled )); then
+    if line="$(timeout 30 env GIT_SSH_COMMAND="$SSH_COMMAND" \
+      git -C "$REPO" ls-remote "$SSH_GITHUB" "refs/heads/$branch")"; then
+      printf '%s\n' "$line"
+      return 0
+    fi
+    log "WARN: SSH 443 lookup for $branch failed; using HTTPS fallback" >&2
+  fi
+  timeout 45 git -C "$REPO" ls-remote "$GITHUB" "refs/heads/$branch"
+}
+git_fetch_site() {
+  if (( ssh_enabled )); then
+    if timeout 90 env GIT_SSH_COMMAND="$SSH_COMMAND" \
+      git -C "$REPO" fetch --no-tags --depth 1 "$SSH_GITHUB" refs/heads/site; then
+      log "site branch fetched over SSH 443"
+      return 0
+    fi
+    log "WARN: SSH 443 site fetch failed; using HTTPS fallback" >&2
+  fi
+  timeout 90 git -C "$REPO" fetch --no-tags --depth 1 "$GITHUB" refs/heads/site
+}
 exec 9>/run/lock/tactics-game-deploy.lock
 flock -n 9 || { log "Deployment already running; skip"; exit 0; }
 
@@ -43,13 +84,13 @@ cleanup() {
 trap cleanup EXIT
 
 # Fetch only after exact main SHA and matching publish CI are approved.
-main_line="$(timeout 45 git -C "$REPO" ls-remote origin refs/heads/main)" ||
-  die "GitHub main unreachable, leaving current site as is"
+main_line="$(git_remote_ref main)" ||
+  die "GitHub main unreachable over SSH and HTTPS; existing site preserved"
 main_sha="$(printf '%s\n' "$main_line" | awk '{print $1}')"
 [[ "$main_sha" =~ ^[0-9a-f]{40}$ ]] || die "Invalid remote main commit"
 
-site_line="$(timeout 45 git -C "$REPO" ls-remote origin refs/heads/site)" ||
-  die "Static site branch not yet published"
+site_line="$(git_remote_ref site)" ||
+  die "GitHub site branch unreachable over SSH and HTTPS; existing site preserved"
 site_sha="$(printf '%s\n' "$site_line" | awk '{print $1}')"
 [[ "$site_sha" =~ ^[0-9a-f]{40}$ ]] || die "Invalid remote site commit"
 
@@ -77,8 +118,7 @@ if [[ "$status" != approved ]]; then
   exit 0
 fi
 
-timeout 90 git -C "$REPO" fetch --no-tags --depth 1 origin refs/heads/site ||
-  die "Static branch fetch failed"
+git_fetch_site || die "Static branch fetch failed over SSH and HTTPS; existing site preserved"
 fetched="$(git -C "$REPO" rev-parse FETCH_HEAD)"
 [[ "$fetched" == "$site_sha" ]] || die "site branch changed during poll, retry next cycle"
 

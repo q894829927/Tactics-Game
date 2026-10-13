@@ -2,6 +2,19 @@
 
 从 **v0.1.0.0** 开始记录游戏的四段式版本。**每次完整开发更新都必须升级版本并填写具体改动**；不按单个 Git 提交或 ECS 轮询次数累计版本。按版本号从新到旧排列。
 
+## v0.1.19.5 — 2026-10-14
+
+**类型：** 修订（ECS SSH 443 优先拉取，HTTPS 容灾）
+
+### 变更内容
+
+- 自动部署脚本在检测到位于 /etc/tactics-game/ssh 的只读 Deploy Key 和已核验 known_hosts 后，使用 ssh.github.com:443 查询 main/site 并获取 site 构建产物，SSH 443 失败时自动回退 HTTPS。未配置凭据时继续使用原 HTTPS，不会使旧版部署失效。
+- 解决 systemd ProtectHome=true 隐藏 root 家目录造成 SSH 私钥不可用的问题：服务改为读取 /etc 下严格权限的凭据副本；使用 StrictHostKeyChecking、BatchMode 和连接超时，避免服务交互等待。
+- 保留原有 HTTPS origin 的仓库一致性保护，不更改已安装 Git 仓库 remote、systemd timer、CI 发布审批验证、产物 main/site SHA 验证、Nginx、旧站点保护及失败回滚。
+- 将 Git 分支不可达与静态分支尚未发布区分，避免网络超时造成误报。
+- 更新 ECS 部署文档，包括密钥安全复制、GitHub SSH 指纹核验、按现有 root 安装服务脚本、验证和回退步骤。特别提示 GitHub Actions API 仍依赖 HTTPS。
+- 增加 shell 语法及 SSH 优先、HTTPS 备用、systemd 凭据路径、版本检查不被绕过的回归测试。
+
 ## v0.1.19.4 — 2026-10-14
 
 **类型：** 修订（地图图层结构回归测试适配）

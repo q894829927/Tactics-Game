@@ -4,7 +4,7 @@
 
 - GitHub `Tactics-Game/main`：游戏源码和版本。
 - GitHub Actions `Publish Tactics static site`：在 GitHub Runner 完成依赖安装、TypeScript 检查、规则测试和生产构建，将产物写入 `site` 分支（每个产物附带源代码 SHA）。
-- ECS 的 `tactics-game-deploy.timer`：每约 5 分钟检查 `main` 和 `site`，验证针对对应 `main` SHA 的发布工作流已成功，再下载构建产物。
+- ECS 的 `tactics-game-deploy.timer`：按服务器当前 timer 配置周期检查 `main` 和 `site`，验证针对对应 `main` SHA 的发布工作流已成功，再下载构建产物。
 - ECS 网站路径 `/games/tactics/`：Nginx 只托管静态游戏文件，无需新增 Node 服务。
 - `Game-Portal` 在 `/`，原 `Rift-Resonance` 在 `/games/rift/`；这些服务与定时器不改动。
 
@@ -98,3 +98,69 @@ mv -Tf /var/www/tactics-game/.manual-rollback /var/www/tactics-game/current
 ## 范围与限制
 
 这一步部署的是当前 T0/T1 玩法原型：4vs6、10×8 地图、移动、攻击反击、AI 和关卡结算。还没有角色经验成长、完整武器克制、剧情章节或正式美术。GitHub CI 可以证实自动构建/规则测试通过，但仍需在 ECS 部署后直接用浏览器体验和验收玩法。无需本地测试。
+
+## SSH 443 主用、HTTPS 备用（2026-10-14）
+
+本机实测 GitHub HTTPS 443 多次超时，而 ssh.github.com:443 连续 20 次连通，并已用只读 Deploy Key 成功读取 main/site 两个分支。新的 ECS 部署脚本在专用服务凭据齐备时优先使用 SSH 443 执行 Git ls-remote 和 fetch；SSH 失败才尝试原 HTTPS。没有部署专用凭据时仍按原有 HTTPS 方式执行。
+
+**不要修改 /opt/tactics-game/repo 的 origin**：脚本仍验证 origin 为原 GitHub HTTPS 仓库，但实际 Git 传输会使用单独的 SSH URL。不要重跑 install-ecs.sh 或 resume-ecs.sh，不要重新部署 Nginx 或其他游戏。
+
+部署 service 使用 ProtectHome=true，无法直接读取 /root/.ssh。必须先将已经过认证的 Deploy Key 和 known_hosts 复制到 /etc 路径（不要提交任何密钥）：
+
+~~~bash
+install -d -o root -g root -m 0700 /etc/tactics-game/ssh
+install -o root -g root -m 0600 /root/.ssh/tactics_game_deploy \
+  /etc/tactics-game/ssh/tactics_game_deploy
+install -o root -g root -m 0644 /root/.ssh/tactics_known_hosts \
+  /etc/tactics-game/ssh/tactics_known_hosts
+ssh-keygen -lf /etc/tactics-game/ssh/tactics_known_hosts
+~~~
+
+GitHub SSH Ed25519 官方指纹应为 SHA256:+DiY3wvvV6TuJJhbpZisF/zLDA0zPMSvHdkr4UvCOqU，核对不一致则停止。另需检查 /etc/tactics-game/ssh 文件归 root 且私钥权限为 0600。
+
+通过 /etc 中的副本预先测试实际服务使用的身份验证：
+
+~~~bash
+GIT_SSH_COMMAND='ssh -i /etc/tactics-game/ssh/tactics_game_deploy -o IdentitiesOnly=yes -o BatchMode=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile=/etc/tactics-game/ssh/tactics_known_hosts -o ConnectTimeout=8' \
+  git -C /opt/tactics-game/repo ls-remote \
+  ssh://git@ssh.github.com:443/q894829927/Tactics-Game.git \
+  refs/heads/main refs/heads/site
+~~~
+
+### 将仓库的新部署脚本安装到运行中的 ECS
+
+服务器已安装并运行的 /opt/tactics-game/bin/deploy.sh **不会因为 main 合并而自动更新**。以下仅更新此脚本；不修改 systemd 的 2 分钟 OnCalendar 自定义配置、Nginx、已有站点目录以及其他游戏服务。
+
+如 /root/Tactics-Game 的 HTTPS git pull 因网络不稳定失败，可直接通过已验证的 root SSH 密钥提取代码，仍无需修改 origin：
+
+~~~bash
+cd /root/Tactics-Game
+GIT_SSH_COMMAND='ssh -i /root/.ssh/tactics_game_deploy -o IdentitiesOnly=yes -o BatchMode=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile=/root/.ssh/tactics_known_hosts -o ConnectTimeout=8' \
+  git fetch ssh://git@ssh.github.com:443/q894829927/Tactics-Game.git main
+git merge --ff-only FETCH_HEAD
+bash -n scripts/deploy-ecs.sh
+
+systemctl stop tactics-game-deploy.timer
+while systemctl is-active --quiet tactics-game-deploy.service; do sleep 2; done
+
+backup="/opt/tactics-game/bin/deploy.sh.before-ssh-$(date +%Y%m%d-%H%M%S)"
+cp -p /opt/tactics-game/bin/deploy.sh "$backup"
+install -o root -g root -m 0755 scripts/deploy-ecs.sh /opt/tactics-game/bin/deploy.sh.next
+mv -f /opt/tactics-game/bin/deploy.sh.next /opt/tactics-game/bin/deploy.sh
+systemctl start tactics-game-deploy.service
+journalctl -u tactics-game-deploy.service -n 45 --no-pager
+systemctl start tactics-game-deploy.timer
+systemctl list-timers --all tactics-game-deploy.timer
+cat /var/www/tactics-game/current/.source-sha
+~~~
+
+若服务的本轮 GitHub Actions API 请求失败，旧站点应保持不变；检查 journal 而不是重跑安装脚本。恢复备份的旧 HTTPS-only 脚本：
+
+~~~bash
+systemctl stop tactics-game-deploy.timer
+while systemctl is-active --quiet tactics-game-deploy.service; do sleep 2; done
+cp -p /opt/tactics-game/bin/deploy.sh.before-ssh-实际备份时间戳 /opt/tactics-game/bin/deploy.sh
+systemctl start tactics-game-deploy.timer
+~~~
+
+**尚未解决的依赖：** GitHub Actions 工作流验证依旧请求 api.github.com 的 HTTPS API，不能仅靠 SSH 443 修复。如果 API 也频繁超时，应单独排查并保持发布审批验证，不能为了网络可用而跳过批准检查。两个 Git 传输途径均保留原有 main/site SHA、CI 状态校验、分阶段发布和原子回滚。
