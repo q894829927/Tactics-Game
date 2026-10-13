@@ -469,3 +469,116 @@ button:disabled { cursor: not-allowed; }
 .world-environment, .world-foreground, .world-ground { pointer-events: none !important; }
 .world-decal .stage-terrain-mark { opacity: .15; }
 .world-stage .tactical-hit-grid { isolation: isolate; }
+
+/* A2-3: scene-synced miniature assembled from the same ground/scenery assets. */
+.minimap-grid { touch-action: none; cursor: crosshair; }
+.minimap-grid .mini-cell {
+  background-position: center;
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  min-width: 0;
+  min-height: 0;
+  border: 0;
+}
+.minimap-scenery,
+.minimap-units {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.minimap-scenery { z-index: 2; overflow: hidden; }
+.minimap-scene-sprite { pointer-events: none; }
+.minimap-units { z-index: 5; }
+.minimap-unit-pin {
+  position: absolute;
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  border: 1px solid #effbff;
+  transform: translate(-50%, -50%);
+  box-shadow: 0 0 0 1px #091723, 0 0 6px #10242f;
+}
+.mini-pin-ally { background: #35b9fb; }
+.mini-pin-enemy { background: #f25c5d; }
+.mini-pin-selected { outline: 2px solid #eed58c; outline-offset: 2px; }
+.minimap-viewport { z-index: 6; }
+
+/* Screen-space labels: no parent camera scale, so names, emblems and HP remain sharp. */
+.screen-unit-labels {
+  position: absolute;
+  inset: 0;
+  z-index: 19;
+  pointer-events: none;
+  overflow: hidden;
+}
+.screen-unit-label {
+  position: absolute;
+  width: 94px;
+  height: 81px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  pointer-events: none;
+  font-size: 12px;
+  color: #f3f7fa;
+  text-shadow: 0 1px 3px #081321;
+}
+.screen-label-emblem {
+  display: grid;
+  place-items: center;
+  width: 43px; height: 43px;
+  flex: 0 0 43px;
+  border-radius: 50%;
+  border: 2px solid #e1f1ff;
+  font-size: 22px;
+  font-weight: 800;
+  background: radial-gradient(circle at 28% 22%, #8ce1fc, #1e7ea8 62%, #124460);
+  box-shadow: 0 4px 8px #0009;
+}
+.label-enemy .screen-label-emblem {
+  background: radial-gradient(circle at 30% 20%, #ffb3a0, #b63b43 62%, #692533);
+}
+.label-selected .screen-label-emblem {
+  box-shadow: 0 0 0 2px #f7d58d, 0 0 16px #55b7f9, 0 4px 10px #000a;
+}
+.label-spent { opacity: .62; filter: grayscale(.65); }
+.screen-label-hp {
+  display: block;
+  width: 49px; height: 7px;
+  margin-top: 4px;
+  background: #081922;
+  border: 1px solid #071521;
+  border-radius: 7px;
+  overflow: hidden;
+  box-shadow: 0 0 0 1px #a9bcc9aa;
+}
+.screen-label-hp span { display: block; height: 100%; background: #39d5af; }
+.label-enemy .screen-label-hp span { background: #f07073; }
+.screen-label-name {
+  margin-top: 3px;
+  max-width: 120px;
+  padding: 1px 5px;
+  border-radius: 2px;
+  background: #071a2cc9;
+  white-space: nowrap;
+  font-size: 12px;
+  font-weight: 700;
+}
+.label-compact .screen-label-name {
+  opacity: .88;
+  font-size: 11px;
+}
+.world-units .unit-ground-mark.world-unit {
+  position: absolute;
+  display: block;
+  width: 58px; height: 22px;
+  transform: translate(-50%, -25%);
+  border-radius: 50%;
+  background: #103c56a8;
+  border: 2px solid #59aacf5c;
+  box-shadow: 0 6px 8px #0008;
+  pointer-events: none;
+}
+.world-units .unit-ground-mark.has-enemy { background: #68293299; border-color: #c366686e; }
+.world-units .unit-ground-mark.is-selected { border-color: #fff0c0; box-shadow: 0 0 16px #f9da7b; }

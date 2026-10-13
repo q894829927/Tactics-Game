@@ -2,7 +2,7 @@ import { Battle, MAP_HEIGHT, MAP_WIDTH, key, type Unit } from "../engine/battle.
 import { clampCameraOffset } from "./cameraBounds.ts";
 import {
   TILE, WORLD_COLS, WORLD_ROWS, WORLD_WIDTH, WORLD_HEIGHT, TACTICAL_X, TACTICAL_Y,
-  MIN_ZOOM, MAX_ZOOM, tileWorld, minimapFrame, screenTile,
+  MIN_ZOOM, MAX_ZOOM, tileWorld, worldScreen, minimapFrame, screenTile,
 } from "./worldGeometry.ts";
 
 // The A2-2 vertical slice consists of original, reusable SVG assets in public/.
@@ -28,6 +28,15 @@ const terrainGlyphs: Record<string, string> = { ".": "", F: "♠♠", H: "▲", 
 const roleNames: Record<string, string> = {
   sword: "剑", lancer: "枪", archer: "弓", mage: "术", raider: "兵", commander: "将",
 };
+/** Shared asset choice for main ground and the miniature; both use the same scene. */
+function groundAsset(col: number, row: number, inside: boolean, terrain: string | null): string {
+  if (!inside && zoneAt(col, row) === "river") return "river-flow-a.svg";
+  if (!inside && zoneAt(col, row) === "camp") return "ground-path-a.svg";
+  if (terrain === "H" || terrain === "#" || (!inside && zoneAt(col, row) === "forest")) return "ground-grass-b.svg";
+  if (inside && terrain === "." && (col * 7 + row * 5) % 11 === 0) return "ground-path-a.svg";
+  return (col * 13 + row * 3) % 5 === 0 ? "ground-grass-b.svg" : "ground-grass-a.svg";
+}
+
 
 type ArtZone = "forest" | "camp" | "river" | "cliff" | "grass";
 function zoneAt(worldCol: number, worldRow: number): ArtZone {
@@ -44,6 +53,11 @@ export class BoardView {
   private readonly miniCells: HTMLButtonElement[] = [];
   private readonly stage: HTMLDivElement;
   private readonly unitLayer: HTMLDivElement;
+  private readonly labelLayer: HTMLDivElement;
+  private readonly labelNodes = new Map<string, HTMLDivElement>();
+  private readonly minimapUnits: HTMLDivElement;
+  private miniDrag: { pointerId: number; x: number; y: number; moved: boolean } | null = null;
+  private suppressMiniClick = false;
   private readonly menu: HTMLDivElement;
   private readonly minimap: HTMLElement;
   private readonly viewportMarker: HTMLDivElement;
@@ -92,13 +106,7 @@ export class BoardView {
         tile.setAttribute("aria-hidden", "true");
         // Every cell uses a reusable terrain asset, never a screenshot of the entire map.
         // The background gradient in CSS remains visible if an SVG fails to load.
-        let groundFile = "ground-grass-a.svg";
-        if (zoneAt(col, row) === "river" && !inside) groundFile = "river-flow-a.svg";
-        else if (!inside && zoneAt(col, row) === "camp") groundFile = "ground-path-a.svg";
-        else if (terrain === "H" || terrain === "#" || (!inside && zoneAt(col, row) === "forest")) groundFile = "ground-grass-b.svg";
-        else if (inside && terrain === "." && (col * 7 + row * 5) % 11 === 0) groundFile = "ground-path-a.svg";
-        else if ((col * 13 + row * 3) % 5 === 0) groundFile = "ground-grass-b.svg";
-        tile.style.backgroundImage = 'url("' + sceneAsset(groundFile) + '")';
+        tile.style.backgroundImage = 'url("' + sceneAsset(groundAsset(col, row, inside, terrain)) + '")';
         ground.appendChild(tile);
       }
     }
@@ -183,12 +191,15 @@ export class BoardView {
     foreground.appendChild(imgAsset("fog-low-a.svg", 17, 38, 450, 220, .5));
     foreground.appendChild(imgAsset("fog-low-a.svg", 1090, 584, 330, 175, .3));
 
-    // S70: contextual menu stays screen-space and remains sharp when zooming.
+    // S70: names, class glyphs and HP are screen-space, not scaled world text.
+    this.labelLayer = document.createElement("div");
+    this.labelLayer.className = "screen-unit-labels";
+    this.labelLayer.setAttribute("aria-hidden", "true");
     this.menu = document.createElement("div");
     this.menu.className = "unit-command-menu";
     this.menu.setAttribute("aria-label", "单位行动指令");
     this.menu.hidden = true;
-    viewport.replaceChildren(backdrop, world, this.menu);
+    viewport.replaceChildren(backdrop, world, this.labelLayer, this.menu);
 
     // Full 16x12 stage minimap, not the old 10x8 grid.
     this.minimap = document.getElementById("minimap-grid")!;
@@ -206,20 +217,72 @@ export class BoardView {
           : "mini-zone-" + zoneAt(col, row));
         btn.title = inside ? String.fromCharCode(65 + col - 3) + (row - 1) + " · " + terrainNames[terrain!] : "场景装饰区";
         btn.setAttribute("aria-label", "镜头定位：" + btn.title);
+        btn.style.backgroundImage = 'url("' + sceneAsset(groundAsset(col, row, inside, terrain)) + '")';
         btn.addEventListener("click", () => this.centerOnWorld((col + .5) * TILE, (row + .5) * TILE));
         mini.appendChild(btn);
         this.miniCells.push(btn);
       }
     }
+    // The miniature is assembled from the SAME world ground and placed scenery,
+    // rather than a second hand-painted map that can drift out of sync.
+    const miniArt = document.createElement("div");
+    miniArt.className = "minimap-scenery";
+    miniArt.setAttribute("aria-hidden", "true");
+    for (const [file, x, y, w, h, alpha] of sceneSprites) {
+      const img = imgAsset(file, x, y, w, h, alpha);
+      img.classList.add("minimap-scene-sprite");
+      img.style.left = (x / WORLD_WIDTH * 100) + "%";
+      img.style.top = (y / WORLD_HEIGHT * 100) + "%";
+      img.style.width = (w / WORLD_WIDTH * 100) + "%";
+      img.style.height = (h / WORLD_HEIGHT * 100) + "%";
+      miniArt.appendChild(img);
+    }
+    mini.appendChild(miniArt);
     const tacticalOutline = document.createElement("div");
     tacticalOutline.className = "minimap-tactical-outline";
     tacticalOutline.setAttribute("aria-hidden", "true");
     mini.appendChild(tacticalOutline);
+    this.minimapUnits = document.createElement("div");
+    this.minimapUnits.className = "minimap-units";
+    this.minimapUnits.setAttribute("aria-hidden", "true");
+    mini.appendChild(this.minimapUnits);
     this.viewportMarker = document.createElement("div");
     this.viewportMarker.className = "minimap-viewport";
     this.viewportMarker.setAttribute("aria-hidden", "true");
     mini.appendChild(this.viewportMarker);
     document.getElementById("map-size")!.textContent = MAP_WIDTH + " × " + MAP_HEIGHT;
+
+    // Dragging the miniature pans the camera; keyboard/click on any cell remains accessible.
+    mini.addEventListener("pointerdown", event => {
+      if (event.button !== 0) return;
+      this.miniDrag = {pointerId: event.pointerId, x: event.clientX, y: event.clientY, moved: false};
+    });
+    mini.addEventListener("pointermove", event => {
+      const drag = this.miniDrag;
+      if (!drag || drag.pointerId !== event.pointerId) return;
+      if (!drag.moved && Math.hypot(event.clientX-drag.x, event.clientY-drag.y) < 5) return;
+      if (!drag.moved) { drag.moved = true; mini.setPointerCapture(event.pointerId); }
+      const rect = mini.getBoundingClientRect();
+      this.centerOnWorld(
+        Math.min(1, Math.max(0, (event.clientX - rect.left) / rect.width)) * WORLD_WIDTH,
+        Math.min(1, Math.max(0, (event.clientY - rect.top) / rect.height)) * WORLD_HEIGHT,
+      );
+    });
+    const endMiniDrag = (event: PointerEvent) => {
+      if (!this.miniDrag || this.miniDrag.pointerId !== event.pointerId) return;
+      this.suppressMiniClick = this.miniDrag.moved;
+      this.miniDrag = null;
+      if (mini.hasPointerCapture(event.pointerId)) mini.releasePointerCapture(event.pointerId);
+      window.setTimeout(() => { this.suppressMiniClick = false; }, 0);
+    };
+    mini.addEventListener("pointerup", endMiniDrag);
+    mini.addEventListener("pointercancel", endMiniDrag);
+    mini.addEventListener("click", event => {
+      if (!this.suppressMiniClick) return;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      this.suppressMiniClick = false;
+    }, true);
 
     viewport.addEventListener("wheel", event => {
       event.preventDefault();
@@ -298,15 +361,28 @@ export class BoardView {
       ? this.battle.targets(selected).map(key) : []);
 
     this.unitLayer.replaceChildren();
+    this.labelLayer.replaceChildren();
+    this.labelNodes.clear();
+    this.minimapUnits.replaceChildren();
     for (const unit of this.battle.units.filter(u => u.hp > 0)) {
-      const sprite = this.unitElement(unit);
       const point = tileWorld(unit.x, unit.y);
-      sprite.classList.add("world-unit", unit.team === "ally" ? "has-ally" : "has-enemy");
-      if (unit.spent) sprite.classList.add("is-spent");
-      if (unit.id === this.battle.selectedId) sprite.classList.add("is-selected");
-      sprite.style.left = point.x + "px";
-      sprite.style.top = point.y + "px";
-      this.unitLayer.appendChild(sprite);
+      const mark = this.unitElement(unit);
+      mark.classList.add("world-unit", unit.team === "ally" ? "has-ally" : "has-enemy");
+      if (unit.spent) mark.classList.add("is-spent");
+      if (unit.id === this.battle.selectedId) mark.classList.add("is-selected");
+      mark.style.left = point.x + "px";
+      mark.style.top = point.y + "px";
+      this.unitLayer.appendChild(mark);
+
+      const label = this.createScreenLabel(unit);
+      this.labelLayer.appendChild(label);
+      this.labelNodes.set(unit.id, label);
+      const pin = document.createElement("span");
+      pin.className = "minimap-unit-pin " + (unit.team === "ally" ? "mini-pin-ally" : "mini-pin-enemy");
+      if (unit.id === this.battle.selectedId) pin.classList.add("mini-pin-selected");
+      pin.style.left = point.x / WORLD_WIDTH * 100 + "%";
+      pin.style.top = point.y / WORLD_HEIGHT * 100 + "%";
+      this.minimapUnits.appendChild(pin);
     }
 
     for (let y = 0; y < MAP_HEIGHT; y++) {
@@ -328,14 +404,6 @@ export class BoardView {
           String.fromCharCode(65 + x) + (y + 1) + " " + terrainNames[terrain] + " " +
           (actor ? actor.name + " 生命 " + actor.hp + "/" + actor.maxHp :
            accessible ? "可移动" : targeted ? "可攻击" : ""));
-      }
-    }
-    for (let y = 0; y < MAP_HEIGHT; y++) {
-      for (let x = 0; x < MAP_WIDTH; x++) {
-        const cell = this.miniCells[(y + 2) * WORLD_COLS + (x + 3)]!;
-        const actor = this.battle.occupant(x, y);
-        cell.classList.toggle("mini-ally", actor?.team === "ally");
-        cell.classList.toggle("mini-enemy", actor?.team === "enemy");
       }
     }
     this.renderMenu();
@@ -422,22 +490,34 @@ export class BoardView {
     this.menu.style.top = y + "px";
   }
 
+  /** W50: world-space ground marker. All readable unit UI is drawn by S70. */
   private unitElement(unit: Unit): HTMLSpanElement {
-    const body = document.createElement("span");
-    body.className = "battle-unit";
+    const mark = document.createElement("span");
+    mark.className = "unit-ground-mark";
+    mark.setAttribute("aria-hidden", "true");
+    mark.title = unit.name;
+    return mark;
+  }
+
+  /** S70 DOM text stays at its native CSS pixel resolution at every camera zoom. */
+  private createScreenLabel(unit: Unit): HTMLDivElement {
+    const label = document.createElement("div");
+    label.className = "screen-unit-label " + (unit.team === "ally" ? "label-ally" : "label-enemy");
+    if (unit.spent) label.classList.add("label-spent");
+    if (unit.id === this.battle.selectedId) label.classList.add("label-selected");
     const emblem = document.createElement("span");
-    emblem.className = "unit-emblem";
+    emblem.className = "screen-label-emblem";
     emblem.textContent = roleNames[unit.role] ?? "兵";
     const hp = document.createElement("span");
-    hp.className = "unit-health";
-    const fill = document.createElement("span");
-    fill.style.width = (100 * unit.hp / unit.maxHp) + "%";
-    hp.appendChild(fill);
+    hp.className = "screen-label-hp";
+    const hpFill = document.createElement("span");
+    hpFill.style.width = (100 * unit.hp / unit.maxHp) + "%";
+    hp.appendChild(hpFill);
     const name = document.createElement("span");
-    name.className = "unit-name";
+    name.className = "screen-label-name";
     name.textContent = unit.name;
-    body.append(emblem, hp, name);
-    return body;
+    label.append(emblem, hp, name);
+    return label;
   }
 
   private startDrag(e: PointerEvent): void {
@@ -490,6 +570,18 @@ export class BoardView {
     this.offsetY = clampCameraOffset(this.offsetY, h, vh);
     this.stage.style.transform =
       "translate3d(" + this.offsetX + "px," + this.offsetY + "px,0) scale(" + this.zoom + ")";
+    // Project labels from world footpoints to viewport pixels, without CSS world scaling.
+    const camera = {x: this.offsetX, y: this.offsetY, zoom: this.zoom};
+    for (const unit of this.battle.units.filter(u => u.hp > 0)) {
+      const label = this.labelNodes.get(unit.id);
+      if (!label) continue;
+      const point = tileWorld(unit.x, unit.y);
+      const screen = worldScreen(point.x, point.y, camera);
+      label.style.left = screen.x + "px";
+      label.style.top = screen.y + "px";
+      label.hidden = screen.x < -75 || screen.y < -85 || screen.x > vw + 75 || screen.y > vh + 95;
+      label.classList.toggle("label-compact", this.zoom < .80);
+    }
     this.onZoomChange?.(this.zoomPercent);
     const frame = minimapFrame({x: this.offsetX, y: this.offsetY, zoom: this.zoom}, vw, vh);
     this.viewportMarker.style.left = frame.left * 100 + "%";

@@ -13,7 +13,7 @@
 
 ## 目标图四阶段落地计划
 
-根据已确定的战场目标 UI，将视觉与交互落地分为：**A 地图美术重建 → B 角色及右侧状态栏 → C 战斗交互反馈 → D 细节打磨与综合验收**。详细任务、交付物、验收门槛及版本规划见 [docs/VISUAL-IMPLEMENTATION-PLAN.md](docs/VISUAL-IMPLEMENTATION-PLAN.md)。这是待执行计划，不代表这些内容已经完成。**A1 的坐标、12 项资源清单与图层规范已定稿；A2-1 世界舞台/独立命中层已提交（A2-2 已接入 12 项独立 SVG 美术原型，未进行正式画质与浏览器验收）**：[查看 A1 设计文档](docs/A1-MAP-ART-SPEC.md)；12 项矢量场景素材可在 public/assets/maps/red-banner/ 查看，正式美术仍待继续。
+根据已确定的战场目标 UI，将视觉与交互落地分为：**A 地图美术重建 → B 角色及右侧状态栏 → C 战斗交互反馈 → D 细节打磨与综合验收**。详细任务、交付物、验收门槛及版本规划见 [docs/VISUAL-IMPLEMENTATION-PLAN.md](docs/VISUAL-IMPLEMENTATION-PLAN.md)。这是待执行计划，不代表这些内容已经完成。**A1 的坐标、12 项资源清单与图层规范已定稿；A2-1 世界舞台/独立命中层已提交（A2-2 已接入 12 项独立 SVG 美术原型，未进行正式画质与浏览器验收）**：[查看 A1 设计文档](docs/A1-MAP-ART-SPEC.md)；12 项 SVG 为临时原型，视觉未达到目标参考图；见 [A2 美术质量重做门槛](docs/A2-ART-QUALITY-GATE.md)。
 
 ## 第一版范围
 
