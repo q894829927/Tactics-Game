@@ -55,6 +55,7 @@ export class BoardView {
   private readonly pinNodes = new Map<string, HTMLSpanElement>();
   private animationLocked = false;
   private combatPlaying = false;
+  private combatSkipRemaining = false;
   private combatEpoch = 0;
   private skipCombatStep: (()=>void) | null = null;
   private combatOverlay: HTMLDivElement;
@@ -820,6 +821,7 @@ export class BoardView {
     this.cancelCombatPerformance();
     const token = ++this.combatEpoch;
     this.combatPlaying = true;
+    this.combatSkipRemaining = false;
     this.combatOverlay.hidden = false;
     // Display initial HP inferred from the first relevant strike, not final engine HP.
     const hp = new Map<string,number>();
@@ -864,12 +866,17 @@ export class BoardView {
         else to.bar.style.width=(100*event.toHpAfter/defender.maxHp)+"%";
         await new Promise<void>(resolve=>{
           let done=false;
-          const duration=reduced?0:650;
+          const duration=reduced||this.combatSkipRemaining?0:650;
           const finish=()=>{if(done)return;done=true;window.clearTimeout(timer);
             window.removeEventListener("click",skip,true);this.skipCombatStep=null;resolve();};
-          const skip=(click:MouseEvent)=>{click.preventDefault();click.stopImmediatePropagation();finish();};
+          const skip=(click:MouseEvent)=>{
+            click.preventDefault();click.stopImmediatePropagation();
+            // One click skips the entire animation, never the combat result.
+            this.combatSkipRemaining=true;
+            finish();
+          };
           const timer=window.setTimeout(finish,duration);
-          window.addEventListener("click",skip,true);
+          if(duration>0) window.addEventListener("click",skip,true);
           this.skipCombatStep=finish;
         });
       }
@@ -884,8 +891,8 @@ export class BoardView {
   }
 
   skipEntireCombat(): void {
+    this.combatSkipRemaining=true;
     this.skipCombatStep?.();
-    // Remaining steps play without wait when Escape is held is intentionally not simulated.
   }
 
   cancelCombatPerformance(): void {
@@ -893,6 +900,7 @@ export class BoardView {
     this.skipCombatStep?.();
     this.skipCombatStep=null;
     this.combatPlaying=false;
+    this.combatSkipRemaining=false;
     if(this.combatOverlay){this.combatOverlay.hidden=true;this.combatOverlay.replaceChildren();}
   }
 

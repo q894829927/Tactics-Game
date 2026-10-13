@@ -64,3 +64,10 @@ test("player and enemy use same playback and restart cancels animations",()=>{
  assert.match(view,/is-dodging/);
  assert.match(view,/is-striking/);
 });
+
+test("one click skips the entire combat presentation, never a second resolution",()=>{
+ const board=readFileSync(new URL("../src/scene/BoardView.ts",import.meta.url),"utf8");
+ assert.match(board,/this\.combatSkipRemaining=true;/);
+ assert.match(board,/reduced\|\|this\.combatSkipRemaining\?0:650/);
+ assert.match(board,/this\.skipCombatStep\?\.\(\)/);
+});
