@@ -1,4 +1,4 @@
-import { Battle, MAP_HEIGHT, MAP_WIDTH, key, type Point, type Unit, type AttackForecast, type EnemyActionPlan } from "../engine/battle.ts";
+import { Battle, MAP_HEIGHT, MAP_WIDTH, key, type Point, type Unit, type AttackForecast, type EnemyActionPlan, type CombatEvent } from "../engine/battle.ts";
 import { combatPreviewView } from "./combatPreviewView.ts";
 import { TERRAIN_INFO, movementCostLabel } from "../engine/terrain.ts";
 import { leftClickIntent, rightClickIntent } from "./interactionPolicy.ts";
@@ -54,9 +54,14 @@ export class BoardView {
   private readonly markNodes = new Map<string, HTMLSpanElement>();
   private readonly pinNodes = new Map<string, HTMLSpanElement>();
   private animationLocked = false;
+  private combatPlaying = false;
+  private combatEpoch = 0;
+  private skipCombatStep: (()=>void) | null = null;
+  private combatOverlay: HTMLDivElement;
+  onCombatCommitted: (()=>void) | null = null;
   private animationEpoch = 0;
   private animationPose: {id: string; x: number; y: number} | null = null;
-  get isAnimating(): boolean { return this.animationLocked; }
+  get isAnimating(): boolean { return this.animationLocked || this.combatPlaying; }
   private readonly minimapUnits: HTMLDivElement;
   private miniDrag: { pointerId: number; x: number; y: number; moved: boolean } | null = null;
   private suppressMiniClick = false;
@@ -179,6 +184,11 @@ export class BoardView {
     this.menu.setAttribute("aria-label", "单位行动指令");
     this.menu.hidden = true;
     this.forecastPanel = document.getElementById("attack-forecast")!;
+    this.combatOverlay = document.createElement("div");
+    this.combatOverlay.className = "combat-performance";
+    this.combatOverlay.hidden = true;
+    this.combatOverlay.setAttribute("aria-label","战斗演出");
+    document.querySelector(".battlefield")!.appendChild(this.combatOverlay);
     document.getElementById("forecast-confirm")!.addEventListener("click", () => this.confirmAttack());
     document.getElementById("forecast-cancel")!.addEventListener("click", () => this.cancelAction());
     viewport.replaceChildren(backdrop, world, this.labelLayer, this.menu);
@@ -445,7 +455,7 @@ export class BoardView {
   }
 
   private onCellClick(x: number, y: number): void {
-    if (this.battle.result !== "playing" || this.battle.phase !== "player" || this.animationLocked) return;
+    if (this.battle.result !== "playing" || this.battle.phase !== "player" || this.isAnimating) return;
     this.inspectCell(x, y);
     const intent = leftClickIntent(this.battle, x, y, this.attackMode);
     if (intent === "attack") {
@@ -478,7 +488,7 @@ export class BoardView {
   }
 
   private onRightCellClick(x: number, y: number): void {
-    if (this.battle.result !== "playing" || this.battle.phase !== "player" || this.animationLocked) return;
+    if (this.battle.result !== "playing" || this.battle.phase !== "player" || this.isAnimating) return;
     const actor = this.battle.occupant(x, y);
     if (this.forecastTargetId || this.attackMode) {
       this.forecastTargetId = null;
@@ -610,7 +620,7 @@ export class BoardView {
   }
 
   private confirmAttack(): void {
-    if (this.animationLocked || this.battle.phase !== "player") return;
+    if (this.isAnimating || this.battle.phase !== "player") return;
     const attacker = this.battle.selected;
     const target = this.battle.units.find(u => u.id === this.forecastTargetId && u.hp > 0);
     if (!attacker || !target || !this.battle.forecastAttack(attacker, target)) {
@@ -623,6 +633,8 @@ export class BoardView {
     this.menuVisible = false;
     this.inspectCell(target.x, target.y);
     this.battle.click(target.x, target.y);
+    void this.playCombatEvents(this.battle.lastCombatEvents);
+    this.onCombatCommitted?.();
     this.refresh();
     this.onInspectionChange?.();
   }
@@ -652,7 +664,7 @@ export class BoardView {
       button.disabled = !cmd.enabled;
       button.title = cmd.enabled ? cmd.text : cmd.key === "attack" ? "当前射程内没有可攻击的目标，可先移动" : "后续版本开放";
       button.addEventListener("click", () => {
-        if (this.animationLocked || this.battle.phase !== "player") return;
+        if (this.isAnimating || this.battle.phase !== "player") return;
         if (cmd.key === "wait") {
           this.battle.waitSelected();
           this.menuVisible = false;
@@ -802,7 +814,90 @@ export class BoardView {
     }
   }
 
+  /** Visual playback never mutates Battle; all RNG, XP and win/loss were committed once. */
+  async playCombatEvents(events: readonly CombatEvent[]): Promise<void> {
+    if (!events.length) return;
+    this.cancelCombatPerformance();
+    const token = ++this.combatEpoch;
+    this.combatPlaying = true;
+    this.combatOverlay.hidden = false;
+    // Display initial HP inferred from the first relevant strike, not final engine HP.
+    const hp = new Map<string,number>();
+    for (const event of events) {
+      if (!hp.has(event.fromId)) hp.set(event.fromId,event.fromHpAfter);
+      if (!hp.has(event.toId)) hp.set(event.toId,event.toHpAfter+event.damage);
+    }
+    try {
+      for (const event of events) {
+        if (token!==this.combatEpoch) return;
+        const actor = this.battle.units.find(u=>u.id===event.fromId)!;
+        const defender = this.battle.units.find(u=>u.id===event.toId)!;
+        this.combatOverlay.replaceChildren();
+        const side = (u: Unit, role: "attacker"|"defender") => {
+          const node = document.createElement("div");
+          node.className = "combat-performer "+role+" "+(u.team==="ally"?"ally":"enemy");
+          const name = document.createElement("strong"); name.textContent=u.name;
+          const badge = document.createElement("div");badge.className="combat-performer-emblem";
+          badge.textContent=roleNames[u.role]??"兵";
+          const meter = document.createElement("div");meter.className="combat-performer-hp";
+          const bar = document.createElement("span");
+          bar.style.width=(100*(hp.get(u.id)??u.hp)/u.maxHp)+"%";
+          meter.appendChild(bar);node.append(name,badge,meter);
+          return {node,bar};
+        };
+        const from=side(actor,"attacker"), to=side(defender,"defender");
+        const number=document.createElement("div");
+        number.className="combat-floating-number "+(event.missed?"miss":event.critical?"critical":"");
+        number.textContent=event.missed?"MISS":event.critical?"必杀 "+event.damage:
+          event.damage===0?"0":"−"+event.damage;
+        const row=document.createElement("div");row.className="combat-performers";
+        row.append(from.node,number,to.node);
+        this.combatOverlay.appendChild(row);
+        const attackerBadge=from.node.querySelector(".combat-performer-emblem")!;
+        const defenderBadge=to.node.querySelector(".combat-performer-emblem")!;
+        attackerBadge.classList.add("is-striking");
+        defenderBadge.classList.add(event.missed?"is-dodging":"is-hit");
+        hp.set(event.toId,event.toHpAfter);
+        const reduced=window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        // The HP bar animates after the strike motion; skip immediately sets final width.
+        if(!reduced) requestAnimationFrame(()=>{to.bar.style.width=(100*event.toHpAfter/defender.maxHp)+"%";});
+        else to.bar.style.width=(100*event.toHpAfter/defender.maxHp)+"%";
+        await new Promise<void>(resolve=>{
+          let done=false;
+          const duration=reduced?0:650;
+          const finish=()=>{if(done)return;done=true;window.clearTimeout(timer);
+            window.removeEventListener("click",skip,true);this.skipCombatStep=null;resolve();};
+          const skip=(click:MouseEvent)=>{click.preventDefault();click.stopImmediatePropagation();finish();};
+          const timer=window.setTimeout(finish,duration);
+          window.addEventListener("click",skip,true);
+          this.skipCombatStep=finish;
+        });
+      }
+    } finally {
+      if(token===this.combatEpoch){
+        this.combatPlaying=false;
+        this.combatOverlay.hidden=true;
+        this.combatOverlay.replaceChildren();
+        this.refresh();
+      }
+    }
+  }
+
+  skipEntireCombat(): void {
+    this.skipCombatStep?.();
+    // Remaining steps play without wait when Escape is held is intentionally not simulated.
+  }
+
+  cancelCombatPerformance(): void {
+    this.combatEpoch++;
+    this.skipCombatStep?.();
+    this.skipCombatStep=null;
+    this.combatPlaying=false;
+    if(this.combatOverlay){this.combatOverlay.hidden=true;this.combatOverlay.replaceChildren();}
+  }
+
   cancelAnimation(): void {
+    this.cancelCombatPerformance();
     this.cancelEnemyCombatPreview();
     this.animationEpoch++;
     this.animationPose = null;

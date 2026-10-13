@@ -14,6 +14,7 @@ const button = (id: string): HTMLButtonElement => get(id) as HTMLButtonElement;
 get("game-version").textContent = GAME_VERSION;
 const battle = new Battle();
 const board = new BoardView(battle, get("game"));
+board.onCombatCommitted=()=>renderSelection();
 let endingTurn = false;
 let turnRunId = 0;
 
@@ -177,6 +178,8 @@ button("settings-end-turn").addEventListener("click", () => {
       if (run !== turnRunId) return;
       board.releaseUnitHold();
       if (!battle.commitEnemyAction(plan)) break;
+      if (plan.targetId) await board.playCombatEvents(battle.lastCombatEvents);
+      if (run !== turnRunId) return;
       // Show each enemy's finished move/attack before the next enemy acts.
       await pause(320);
     }

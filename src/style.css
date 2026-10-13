@@ -846,3 +846,24 @@ button:disabled { cursor: not-allowed; }
 /* Enemy-initiated combat: reuse the player-facing duel panel without action buttons. */
 .attack-forecast.enemy-auto-forecast .forecast-actions { display: none !important; }
 .attack-forecast.enemy-auto-forecast { cursor: pointer; }
+
+.combat-performance{position:absolute;inset:0;z-index:67;display:grid;align-items:center;pointer-events:none;background:radial-gradient(ellipse at center,#061322ad,#0613223b 60%,transparent);color:#fff}
+.combat-performance[hidden]{display:none!important}
+.combat-performers{display:flex;align-items:center;justify-content:space-evenly;gap:14px;padding:25px}
+.combat-performer{display:grid;justify-items:center;gap:9px;min-width:95px;text-shadow:0 2px 4px #000}
+.combat-performer-emblem{width:76px;height:90px;display:grid;place-items:center;font-size:39px;font-weight:800;border:2px solid #afcfdb;background:#183a57;border-radius:12px}
+.combat-performer.enemy .combat-performer-emblem{background:#5b2733;border-color:#d8877b}
+.combat-performer-hp{height:13px;width:105px;background:#131d23;border:1px solid #d0c1a2;overflow:hidden}
+.combat-performer-hp span{display:block;height:100%;background:#39c4e7;transition:width 350ms ease}
+.combat-performer.enemy .combat-performer-hp span{background:#e7606c}
+.combat-floating-number{font-weight:900;font-size:clamp(30px,6vw,65px);color:#ffedb6;animation:combat-number 550ms ease-out}
+.combat-floating-number.miss{color:#beeaff}
+.combat-floating-number.critical{color:#ff656d;text-shadow:0 0 14px #f21b30}
+.is-striking{animation:combat-lunge 320ms ease-in-out}
+.is-hit{animation:combat-hit 400ms ease-out}
+.is-dodging{animation:combat-dodge 370ms ease-out}
+@keyframes combat-lunge{50%{transform:translateX(27px) scale(1.12)}}
+@keyframes combat-hit{25%{filter:brightness(2);transform:translateX(8px)}60%{transform:translateX(-7px)}}
+@keyframes combat-dodge{50%{transform:translateX(35px);opacity:.45}}
+@keyframes combat-number{0%{opacity:0;transform:translateY(25px) scale(.6)}45%{opacity:1;transform:translateY(-15px) scale(1.15)}100%{transform:translateY(-25px)}}
+@media(prefers-reduced-motion:reduce){.combat-performance *{animation:none!important;transition:none!important}}

@@ -23,6 +23,14 @@ export type EnemyThreat = {
   attack: Set<string>;
 };
 
+export type CombatEvent = {
+  kind: "attack" | "counter" | "follow-up";
+  fromId: string; toId: string;
+  missed: boolean; critical: boolean; damage: number;
+  fromHpAfter: number; toHpAfter: number;
+  defeated: boolean;
+};
+
 export type AttackForecast = {
   damage:number; counterDamage:number; canCounter:boolean;
   attackerHpAfter:number; defenderHpAfter:number;
@@ -70,6 +78,8 @@ export class Battle {
   phase: "player" | "enemy" = "player";
   result: GameResult = "playing";
   log: string[] = [];
+  /** Immutable copies of the most recent completed combat's ordered strikes. */
+  lastCombatEvents: CombatEvent[] = [];
   onChange: (() => void) | null = null;
   private moveOrigin: Point | null = null;
   private enemyQueue: string[] = [];
@@ -108,6 +118,7 @@ export class Battle {
     this.selectedId = null;
     this.moveOrigin = null;
     this.log = [];
+    this.lastCombatEvents = [];
     this.emit();
   }
 
@@ -454,13 +465,21 @@ export class Battle {
     const forecast=this.forecastAttack(actor,defender);
     if(!forecast)return {damage:0,counterDamage:0,defenderFell:false,attackerFell:false,detail:""};
     let damage=0,counterDamage=0,misses=0,crits=0,countered=false;
+    const events: CombatEvent[] = [];
+    this.lastCombatEvents = [];
+    let strikeIndex=0;
     const hit=(from:Unit,to:Unit):number=>{
       if(from.hp<=0||to.hp<=0)return 0;
-      if(!this.roll(this.hitChance(from,to))){misses++;return 0;}
-      const critical=this.roll(this.criticalChance(from,to));
-      if(critical)crits++;
-      const amount=this.damage(from,to)*(critical?3:1);
+      const missed=!this.roll(this.hitChance(from,to));
+      if(missed) misses++;
+      const critical=!missed && this.roll(this.criticalChance(from,to));
+      if(critical) crits++;
+      const amount=missed?0:this.damage(from,to)*(critical?3:1);
       to.hp=Math.max(0,to.hp-amount);
+      events.push({kind: strikeIndex++===0?"attack":from.id===actor.id?"follow-up":
+        events.some(e=>e.fromId===from.id)?"follow-up":"counter",
+        fromId:from.id,toId:to.id,missed,critical,damage:amount,
+        fromHpAfter:from.hp,toHpAfter:to.hp,defeated:to.hp===0});
       return amount;
     };
     damage+=hit(actor,defender);
@@ -473,6 +492,7 @@ export class Battle {
         countered=true;counterDamage+=hit(defender,actor);
       }
     }
+    this.lastCombatEvents = events.map(event=>({...event}));
     let levelNote="";
     if(actor.team==="ally"&&actor.hp>0){
       if(awardExperience(actor,10+(defender.hp===0?25:0),()=>this.nextRandom()))
