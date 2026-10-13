@@ -194,6 +194,8 @@ export class BoardView {
     const routeLayer=layer("tactical-route");
     routeLayer.style.left=TACTICAL_X+"px";
     routeLayer.style.top=TACTICAL_Y+"px";
+    routeLayer.style.width=(MAP_WIDTH*TILE)+"px";
+    routeLayer.style.height=(MAP_HEIGHT*TILE)+"px";
     const svg=document.createElementNS("http://www.w3.org/2000/svg","svg");
     svg.classList.add("route-preview-svg");
     svg.setAttribute("viewBox","0 0 "+(MAP_WIDTH*TILE)+" "+(MAP_HEIGHT*TILE));
@@ -562,7 +564,7 @@ export class BoardView {
 
   private drawRoute(path: readonly Point[]|null): void {
     const isReal=!!path && path.length>1;
-    this.routeSvg.hidden=!isReal;
+    this.routeSvg.classList.toggle("is-hidden",!isReal);
     if(!isReal){this.routeLine.removeAttribute("d");this.routeOutline.removeAttribute("d");return;}
     const first=path[0]!;
     const parts=["M "+((first.x+.5)*TILE)+" "+((first.y+.5)*TILE)];

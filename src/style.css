@@ -1036,3 +1036,5 @@ button:disabled { cursor: not-allowed; }
 .world-stage .tactical-highlight .range-cell.route-step {
   outline:2px solid rgba(255,232,166,.64);outline-offset:-4px
 }
+
+.route-preview-svg.is-hidden{display:none!important}

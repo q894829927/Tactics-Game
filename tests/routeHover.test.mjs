@@ -24,7 +24,13 @@ test("enemy and ally previews return only a real weighted Dijkstra route",()=>{
       spent+=TERRAIN_INFO[b.tile(result.path[i].x,result.path[i].y)].moveCost;
     }
     assert.equal(spent,b.reachable(unit).get(point));
-    assert.deepEqual(result.attack,b.projectedThreat?.attack ?? result.attack); // no mutation
+    for(const target of result.attack){
+      const [tx,ty]=target.split(",").map(Number);
+      const d=distance({x,y},{x:tx,y:ty});
+      assert.ok(d>=unit.weapon.minRange&&d<=unit.weapon.maxRange);
+      assert.notEqual(b.tile(tx,ty),"#");
+      assert.notEqual(b.occupant(tx,ty)?.team,unit.team);
+    }
   }
 });
 
