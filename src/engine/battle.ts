@@ -326,6 +326,12 @@ export class Battle {
 
   beginEnemyTurn(): boolean {
     if (this.phase !== "player" || this.result !== "playing") return false;
+    // Resolve pre-existing terminal states (e.g. the final ally already at 0 HP).
+    this.resolve();
+    if (this.result !== "playing") {
+      this.emit();
+      return false;
+    }
     this.phase = "enemy";
     this.selectedId = null;
     this.moveOrigin = null;
