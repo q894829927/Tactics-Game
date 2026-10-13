@@ -265,33 +265,44 @@ export class Battle {
     return best;
   }
 
-  /**
-   * Computes legal movement endpoints and all tiles attackable from those endpoints.
-   * Uses the same weighted reachable() algorithm as the enemy AI, the same
-   * Manhattan min/max range as inAttackRange, and never changes the battle.
-   */
-  enemyThreat(enemy: Unit): EnemyThreat {
+  /** Shared, read-only projection for both teams based on equipped weapon. */
+  private projectedThreat(unit: Unit, endpoints: Iterable<string>): EnemyThreat {
     const move = new Set<string>();
     const attack = new Set<string>();
-    if (this.result !== "playing" || enemy.team !== "enemy" || enemy.hp <= 0) {
-      return {move, attack};
-    }
-    for (const position of this.reachable(enemy).keys()) {
-      move.add(position); // Includes standing still / a stationary attack.
+    for (const position of endpoints) {
+      move.add(position);
       const [px, py] = position.split(",").map(Number);
-      for (let dy = -enemy.weapon.maxRange; dy <= enemy.weapon.maxRange; dy++) {
-        for (let dx = -enemy.weapon.maxRange; dx <= enemy.weapon.maxRange; dx++) {
+      for (let dy = -unit.weapon.maxRange; dy <= unit.weapon.maxRange; dy++) {
+        for (let dx = -unit.weapon.maxRange; dx <= unit.weapon.maxRange; dx++) {
           const d = Math.abs(dx) + Math.abs(dy);
-          if (d < enemy.weapon.minRange || d > enemy.weapon.maxRange) continue;
-          const x = px! + dx;
-          const y = py! + dy;
+          if (d < unit.weapon.minRange || d > unit.weapon.maxRange) continue;
+          const x = px! + dx, y = py! + dy;
           if (!inBounds(x, y) || this.tile(x, y) === "#") continue;
-          if (this.occupant(x, y)?.team === enemy.team) continue;
+          if (this.occupant(x, y)?.team === unit.team) continue;
           attack.add(key({x, y}));
         }
       }
     }
     return {move, attack};
+  }
+
+  /** Enemy move/attack zone; inspection only, no combat mutation. */
+  enemyThreat(enemy: Unit): EnemyThreat {
+    if (this.result !== "playing" || enemy.team !== "enemy" || enemy.hp <= 0)
+      return {move: new Set(), attack: new Set()};
+    return this.projectedThreat(enemy, this.reachable(enemy).keys());
+  }
+
+  /** Before move: attacks from all weighted movement endpoints.
+   * After move: attacks from present tile only. Spent units are hidden.
+   */
+  allyThreat(ally: Unit): EnemyThreat {
+    if (this.phase !== "player" || this.result !== "playing" ||
+        ally.team !== "ally" || ally.hp <= 0 || ally.spent || ally.acted ||
+        !this.units.includes(ally))
+      return {move: new Set(), attack: new Set()};
+    return this.projectedThreat(ally,
+      ally.moved ? [key(ally)] : this.reachable(ally).keys());
   }
 
   /** Returns a minimum movement-cost path, including origin and destination.

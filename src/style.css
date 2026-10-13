@@ -986,3 +986,23 @@ button:disabled { cursor: not-allowed; }
   .unit-command-menu {max-height:calc(100dvh - 96px);overflow-y:auto;overscroll-behavior:contain}
   .weapon-picker {max-height:calc(100dvh - 96px);overscroll-behavior:contain}
 }
+
+/* Ally previews share the enemy projection rules but have their own colors:
+   blue movement, red potential attack, blue fill/red edge when overlapping. */
+.world-stage .tactical-highlight .range-cell.ally-threat-move {
+  background: rgba(40, 143, 246, .34);
+  box-shadow: inset 0 0 0 1px rgba(135, 200, 255, .75);
+}
+.world-stage .tactical-highlight .range-cell.ally-threat-attack {
+  background: rgba(224, 69, 65, .43);
+  box-shadow: inset 0 0 0 2px rgba(255, 145, 120, .86);
+}
+.world-stage .tactical-highlight .range-cell.ally-threat-overlap {
+  background: rgba(40, 143, 246, .37);
+  box-shadow: inset 0 0 0 2px rgba(255, 121, 107, .96),
+    inset 0 0 0 5px rgba(55, 158, 255, .20);
+}
+.world-stage .tactical-highlight .range-cell.ally-threat-overlap.is-selected,
+.world-stage .tactical-highlight .range-cell.ally-threat-attack.is-selected {
+  box-shadow: inset 0 0 0 3px #f0f6ff, 0 0 20px #6ac1ff;
+}

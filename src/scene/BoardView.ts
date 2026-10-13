@@ -405,6 +405,10 @@ export class BoardView {
       ? this.battle.occupant(inspectedCell.x, inspectedCell.y) : undefined;
     const threat = inspected?.team === "enemy" && !this.attackMode && !this.forecastTargetId
       ? this.battle.enemyThreat(inspected) : null;
+    // Threat markers are hypothetical: selecting the actual attack action
+    // remains necessary to choose a weapon and a legal target.
+    const allyPreview = !threat && selected && !this.attackMode && !this.forecastTargetId
+      ? this.battle.allyThreat(selected) : null;
     const reachable = !threat && selected && !selected.moved && !selected.spent
       ? this.battle.reachable(selected) : new Map<string, number>();
     const targets = new Set(selected && !selected.acted && !selected.spent
@@ -451,6 +455,8 @@ export class BoardView {
         const targeted = this.attackMode && targets.has(coord);
         const enemyMove = threat?.move.has(coord) ?? false;
         const enemyAttack = threat?.attack.has(coord) ?? false;
+        const allyMove = allyPreview?.move.has(coord) ?? false;
+        const allyAttack = allyPreview?.attack.has(coord) ?? false;
         cell.className = "battle-cell"
           + (terrain === "#" ? " is-blocked" : "")
           + (actor?.id === this.battle.selectedId ? " is-selected" : "")
@@ -461,6 +467,8 @@ export class BoardView {
           "range-cell", accessible ? "can-move" : "", targeted ? "can-attack" : "",
           enemyMove ? "enemy-threat-move" : "",
           enemyAttack ? (enemyMove ? "enemy-threat-overlap" : "enemy-threat-attack") : "",
+          allyMove && accessible ? "ally-threat-move" : "",
+          allyAttack ? (allyMove && accessible ? "ally-threat-overlap" : "ally-threat-attack") : "",
           actor?.id === this.battle.selectedId ? "is-selected" : "",
           this.inspectionCell?.x === x && this.inspectionCell.y === y ? "is-inspected" : "",
         ].filter(Boolean).join(" ");
@@ -468,9 +476,11 @@ export class BoardView {
           String.fromCharCode(65 + x) + (y + 1) + " " + TERRAIN_INFO[terrain].name +
           (terrain === "#" ? " 不可通行 " : " ") +
           (actor ? actor.name + " 生命 " + actor.hp + "/" + actor.maxHp :
-           accessible ? "可移动" : targeted ? "可攻击" :
+           targeted ? "可攻击目标" :
            enemyAttack && enemyMove ? "敌军移动及攻击范围" :
-           enemyAttack ? "敌军攻击范围" : enemyMove ? "敌军移动范围" : ""));
+           enemyAttack ? "敌军攻击范围" : enemyMove ? "敌军移动范围" :
+           allyAttack && accessible ? "我方移动与攻击预测范围" :
+           allyAttack ? "我方攻击预测范围" : accessible ? "我方移动范围" : ""));
       }
     }
     this.renderMenu();
