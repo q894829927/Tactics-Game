@@ -1,9 +1,10 @@
 import { MAP_HEIGHT, MAP_WIDTH } from "../engine/battle.ts";
 import { TILE, WORLD_COLS, WORLD_ROWS, TACTICAL_X, TACTICAL_Y } from "./worldGeometry.ts";
+import { MAP_ASSET_FILES } from "./mapAssetFiles.ts";
 
 export type ScenerySprite = {
   id: string;
-  file: "modular/tree-spruce.png" | "modular/cliff-moss.png";
+  file: typeof MAP_ASSET_FILES.tree | typeof MAP_ASSET_FILES.cliff;
   x: number; y: number; width: number; height: number;
   footY: number;
   terrainCell: { x: number; y: number } | null;
@@ -26,7 +27,7 @@ export function buildMapScenery(terrain: readonly string[]): ScenerySprite[] {
   const sprites: ScenerySprite[] = [];
   const add = (id: string, tree: boolean, x: number, y: number, width: number, height: number,
     terrainCell: ScenerySprite["terrainCell"] = null) => {
-    sprites.push({id, file: tree ? "modular/tree-spruce.png" : "modular/cliff-moss.png",
+    sprites.push({id, file: tree ? MAP_ASSET_FILES.tree : MAP_ASSET_FILES.cliff,
       x, y, width, height, footY: y + height * .87, terrainCell});
   };
   for (let row = 0; row < WORLD_ROWS; row++) {

@@ -2,6 +2,7 @@ import { Battle, MAP_HEIGHT, MAP_WIDTH, key, type Unit } from "../engine/battle.
 import { clampCameraOffset } from "./cameraBounds.ts";
 import { buildMapScenery } from "./mapScenery.ts";
 import { GroundPainter } from "./GroundPainter.ts";
+import { loadMapAsset, MAP_ASSET_FILES, type MapAssetFile } from "./mapAssets.ts";
 import {
   TILE, WORLD_COLS, WORLD_ROWS, WORLD_WIDTH, WORLD_HEIGHT, TACTICAL_X, TACTICAL_Y,
   MIN_ZOOM, MAX_ZOOM, tileWorld, worldScreen, minimapFrame, screenTile,
@@ -9,10 +10,10 @@ import {
 
 // Independent ground/tree/rock assets share world coordinates with the tactical grid.
 // Respect Vite's sub-directory base (/games/tactics/) rather than absolute /assets paths.
-const sceneAsset = (name: string): string => import.meta.env.BASE_URL + "assets/maps/red-banner/" + name;
-const imgAsset = (name: string, x: number, y: number, w: number, h: number, opacity=1): HTMLImageElement => {
+const imgAsset = (name: MapAssetFile, x: number, y: number, w: number, h: number, opacity=1): HTMLImageElement => {
   const sprite = document.createElement("img");
-  sprite.src = sceneAsset(name);
+  sprite.decoding = "async";
+  void loadMapAsset(name).then(url => { sprite.src = url; });
   sprite.alt = "";
   sprite.setAttribute("aria-hidden", "true");
   sprite.className = "scene-art-sprite";
@@ -92,6 +93,8 @@ export class BoardView {
     groundCanvas.className = "map-ground-canvas";
     groundCanvas.setAttribute("aria-hidden", "true");
     ground.appendChild(groundCanvas);
+    // Start the visible ground material before constructing repeated tree/rock nodes.
+    void loadMapAsset(MAP_ASSET_FILES.ground);
 
     // W20: each tree/rock is independently positioned, always below highlights and units.
     const environment = layer("world-environment");

@@ -1,0 +1,31 @@
+{
+  "version": "v0.1.5.1",
+  "date": "2026-10-13",
+  "warm_cache": [
+    {
+      "file": "ground-grass.ab0a48efd6ac.webp",
+      "fromDiskCache": true,
+      "servedFromCache": false,
+      "networkBytes": 0
+    },
+    {
+      "file": "tree-spruce.85c73f984762.webp",
+      "fromDiskCache": true,
+      "servedFromCache": false,
+      "networkBytes": 0
+    },
+    {
+      "file": "cliff-moss.4585ec7cd2b1.webp",
+      "fromDiskCache": true,
+      "servedFromCache": false,
+      "networkBytes": 0
+    }
+  ],
+  "visual_check": {
+    "blobURLs": 2,
+    "loadedProps": 94,
+    "material": "loaded",
+    "version": "v0.1.5.1",
+    "zoom": "−\n          185%\n          ＋"
+  }
+}

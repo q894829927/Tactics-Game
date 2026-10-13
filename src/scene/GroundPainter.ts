@@ -1,6 +1,7 @@
 import { MAP_HEIGHT, MAP_WIDTH } from "../engine/battle.ts";
 import { TILE, WORLD_WIDTH, WORLD_HEIGHT, TACTICAL_X, TACTICAL_Y, tileWorld } from "./worldGeometry.ts";
 import { artNoise, riverBankX } from "./mapScenery.ts";
+import { loadMapAsset, MAP_ASSET_FILES } from "./mapAssets.ts";
 
 /** Only the reusable ground material is painted here. Trees/rocks stay separate sprites. */
 export class GroundPainter {
@@ -11,9 +12,13 @@ export class GroundPainter {
     mini.width = 512; mini.height = 384;
     this.paint();
     const texture = new Image();
-    texture.addEventListener("load", () => { this.texture = texture; this.paint(); }, {once:true});
+    texture.decoding = "async";
+    texture.addEventListener("load", async () => {
+      await texture.decode().catch(() => {});
+      this.texture = texture; this.paint();
+    }, {once:true});
     texture.addEventListener("error", () => { canvas.dataset.material = "fallback"; }, {once:true});
-    texture.src = import.meta.env.BASE_URL + "assets/maps/red-banner/modular/ground-grass.png";
+    void loadMapAsset(MAP_ASSET_FILES.ground).then(url => { texture.src = url; });
   }
 
   private paint(): void {
