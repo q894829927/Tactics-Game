@@ -53,13 +53,13 @@ test("terrain adjacency responds to map changes without modifying battle rules",
   assert.equal(grassEdgeMask(terrain,worldCol,worldRow),0);
 });
 
-test("shoreline props and water remain east of playable grid; full scene deterministic", () => {
+test("rejected shoreline props are absent, playable grid and terrain remain unchanged", () => {
   const terrain=new Battle().terrain,scene=buildMapScenery(terrain);
   assert.deepEqual(scene,buildMapScenery(terrain));
   const shore=scene.filter(p=>p.id.startsWith("shore-"));
-  assert.equal(shore.filter(p=>p.id.startsWith("shore-rock-")).length,8);
-  assert.equal(shore.filter(p=>p.id.startsWith("shore-spruce-")).length,3);
-  assert.ok(shore.some(p=>p.y>=M1_SLICE.row*TILE&&p.y<(M1_SLICE.row+M1_SLICE.rows)*TILE));
+  // This repeated light stone sprite failed the visual review; use no props
+  // until a unified set of riverbank assets receives art approval.
+  assert.equal(shore.length,0);
   for(const p of shore) {
     assert.equal(p.terrainCells.length,0);
     assert.ok(p.x>=TACTICAL_X+TACTICAL_WIDTH,p.id);
@@ -73,8 +73,7 @@ test("art overlays do not steal pointer events or alter the only tactical hit gr
   const painter=readFileSync(new URL("../src/scene/GroundPainter.ts",import.meta.url),"utf8");
   const board=readFileSync(new URL("../src/scene/BoardView.ts",import.meta.url),"utf8");
   const css=readFileSync(new URL("../src/style.css",import.meta.url),"utf8");
-  assert.match(painter,/this\.microDetail\(ctx,earth\)/);
-  assert.match(painter,/this\.microDetail\(layer,grass\)/);
+  assert.doesNotMatch(painter,/this\.microDetail\(/, "Do not ship unapproved repeated texture overlays");
   assert.match(painter,/preview\.drawImage\(this\.canvas,0,0,512,384\)/);
   assert.match(board,/grid\.appendChild\(cell\)/);
   assert.match(board,/world\.appendChild\(element\)/);

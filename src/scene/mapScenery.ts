@@ -61,26 +61,5 @@ export function buildMapScenery(terrain: readonly string[]): ScenerySprite[] {
       }
     }
   }
-
-  // M1 right-bank 6x5 slice: independent riverbank stones and vegetation.
-  // The very same placement rules extend along the full first-map bank (M2).
-  // All shore objects lie EAST of the tactical rectangle and cannot intercept
-  // inputs; reuse existing transparent, cacheable spruce/rock WebP sources.
-  const tacticalRight = TACTICAL_X + MAP_WIDTH*TILE;
-  for (let row=2;row<10;row++) {
-    const seed=artNoise(row+610);
-    const cy=(row+.17+seed*.69)*TILE;
-    const bank=riverBankX(cy);
-    const width=30+artNoise(row+430)*28;
-    const x=Math.max(tacticalRight+6,bank-43-artNoise(row+540)*23);
-    add(`shore-rock-${row}`,false,x,cy-width*.45,width,width*(.65+seed*.16));
-    // Interleave trees irregularly rather than at every second identical row.
-    if (row===2 || row===5 || row===8) {
-      const treeWidth=43+artNoise(row+932)*19;
-      const tx=tacticalRight+6+artNoise(row+1103)*9;
-      const ty=(row+.13+artNoise(row+1200)*.33)*TILE;
-      add(`shore-spruce-${row}`,true,tx,ty,treeWidth,treeWidth);
-    }
-  }
   return sprites.sort((a,b) => a.footY-b.footY || a.id.localeCompare(b.id));
 }
