@@ -7,7 +7,7 @@ const main=readFileSync(new URL("../src/main.ts",import.meta.url),"utf8");
 test("player control is restored when combat animation finishes or is skipped",()=>{
   assert.match(board,/onCombatPresentationEnded: \(\(\)=>void\) \| null = null/);
   assert.match(board,/this\.combatPlaying=false;[\s\S]*?this\.refresh\(\);[\s\S]*?this\.onCombatPresentationEnded\?\.\(\)/);
-  assert.match(main,/board\.onCombatPresentationEnded=\(\)=>renderSelection\(\)/);
+  assert.match(main,/board\.onCombatPresentationEnded=\(\)=>\{[\s\S]*?renderSelection\(\);[\s\S]*?maybeAutoEndTurn\(\);[\s\S]*?\};/);
   assert.match(main,/battle\.phase !== "player" \|\| endingTurn \|\| board\.isAnimating/);
 });
 
