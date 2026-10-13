@@ -65,7 +65,7 @@ test("world layers and tactical hit cells remain separated in the DOM constructi
   assert.match(source, /grid\.style\.left = TACTICAL_X/);
   assert.match(source, /grid\.style\.top = TACTICAL_Y/);
   assert.match(source, /grid\.appendChild\(cell\)/);
-  assert.match(source, /this\.unitLayer\.appendChild\(sprite\)/);
+  assert.match(source, /this\.unitLayer\.appendChild\(mark\)/);
   assert.match(source, /this\.minimapUnits\.appendChild\(pin\)/);
   assert.match(source, /this\.labelLayer\.appendChild\(label\)/);
 });
