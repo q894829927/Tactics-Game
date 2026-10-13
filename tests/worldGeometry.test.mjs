@@ -59,9 +59,12 @@ test("minimap frame covers full world and clamps around camera", () => {
 
 test("world layers and tactical hit cells remain separated in the DOM construction", () => {
   const source = readFileSync(new URL("../src/scene/BoardView.ts", import.meta.url), "utf8");
-  for (const layer of ["world-ground", "world-environment", "world-decal", "tactical-hit-grid", "tactical-highlight", "world-units", "world-foreground"]) {
+  for (const layer of ["world-ground", "world-environment", "world-decal", "tactical-hit-grid", "tactical-route", "world-units", "world-foreground"]) {
     assert.ok(source.includes('layer("' + layer + '")'), layer);
   }
+  assert.match(source,/const moveLayer=makeHighlight\("move"\)/);
+  assert.match(source,/const attackLayer=makeHighlight\("attack"\)/);
+  assert.match(source,/layer\("tactical-highlight tactical-highlight-"\+kind\)/);
   assert.match(source, /grid\.style\.left = TACTICAL_X/);
   assert.match(source, /grid\.style\.top = TACTICAL_Y/);
   assert.match(source, /grid\.appendChild\(cell\)/);
