@@ -63,6 +63,30 @@ try {
         "mobile camera should frame the initial allied deployment");
     }
     await page.screenshot({path:`${out}/${name}.png`,animations:"disabled"});
+    // End-to-end: first click selects, destination click opens commands AFTER
+    // animation, right-click/mobile back safely restores the original tile.
+    if (name === "desktop-1920x1080" || isMobile) {
+      assert.equal(await page.locator(".unit-command-menu").isVisible(),false,
+        "initial selection must not open commands");
+      await page.locator('.battle-cell[data-x="2"][data-y="5"]').evaluate(el => el.click());
+      await page.locator(".unit-command-menu").waitFor({state:"visible",timeout:6500});
+      assert.ok(await page.locator(".unit-command-menu").getByText("取消移动",{exact:false}).count());
+      if(isMobile) {
+        await page.locator("#mobile-back").click();
+      } else {
+        const target=await page.locator('.battle-cell[data-x="2"][data-y="5"]').boundingBox();
+        assert.ok(target);
+        await page.mouse.click(target.x+target.width/2,target.y+target.height/2,{button:"right"});
+      }
+      await page.waitForFunction(() =>
+        !!document.querySelector('.battle-cell[data-x="1"][data-y="5"].is-selected'));
+      assert.equal(await page.locator(".unit-command-menu").isVisible(),false,
+        "undo must close commands and restore the selected original cell");
+      await page.locator('.battle-cell[data-x="1"][data-y="5"]').evaluate(el => el.click());
+      await page.locator(".unit-command-menu").waitFor({state:"visible",timeout:3000});
+      assert.equal(await page.locator(".unit-command-menu").getByText("取消移动",{exact:false}).count(),0,
+        "confirming stay must not offer movement rollback");
+    }
     if(name==="desktop-1920x1080") {
       // Capture the M1 6x5 world-grid slice including independent transparent
       // scenery, never crop and reuse a flattened AI background.

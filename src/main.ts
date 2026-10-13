@@ -114,16 +114,18 @@ function renderSelection(): void {
   paint("growth-attributes",GROWTH_KEYS.map(k=>
     [GROWTH_LABELS[k],selected?selected.growths[k]+"%":"—"] as const));
   get("selection-hint").textContent = selected?.team === "enemy"
-    ? "敌军信息仅供查看；选中我方单位后右键打开行动菜单"
+    ? "敌军仅供查看；选中友军后点击合法目的格"
     : selected
       ? selected.spent ? "本回合已结束行动"
-        : selected.moved ? "已移动：右键该单位选择攻击或待机"
-        : "左键选中与移动；右键该单位打开指令，移动后可取消"
+        : selected.moved ? "已移动：选择攻击、背包或待机；右键可撤回试移动"
+        : "点击蓝色目的格移动；再次点当前角色确认原地行动"
       : inspected ? "当前地形：" + terrain?.name + "。左键查看其他格子，右键拖动地图。"
-      : "左键查看地形或选择单位；右键点击友军打开指令。";
+      : "选中友军，再点目的地移动；右键撤回移动。";
   button("settings-end-turn").disabled =
     battle.result !== "playing" || battle.phase !== "player" || endingTurn || board.isAnimating;
   mobileEndTurn.disabled=button("settings-end-turn").disabled;
+  mobileCommands.textContent = battle.selected?.team==="ally" && !battle.selected.moved &&
+    !battle.selected.spent ? "◎ 原地行动" : "⚔ 指令";
   mobileCommands.disabled=!(battle.selected?.team==="ally" && !battle.selected.spent &&
     battle.phase==="player" && battle.result==="playing" && !endingTurn && !board.isAnimating);
   mobileBack.disabled=battle.phase!=="player" || endingTurn || board.isAnimating;

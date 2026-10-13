@@ -11,6 +11,8 @@ test("left mouse selects allies without opening actions and inspects enemies", (
   battle.click(1, 5);
   assert.equal(leftClickIntent(battle, 7, 1, false), "inspect");
   assert.equal(leftClickIntent(battle, 7, 1, true), "attack");
+  assert.equal(leftClickIntent(battle, 1, 5, false), "confirm-stay");
+  assert.equal(leftClickIntent(battle, 1, 5, true), "select-ally");
 });
 
 test("empty tiles show terrain, except an actual valid move", () => {
@@ -25,15 +27,19 @@ test("empty tiles show terrain, except an actual valid move", () => {
   assert.equal(leftClickIntent(battle, 2, 5, false), "inspect");
 });
 
-test("right click only shows action menu on actionable allied units", () => {
-  const battle = new Battle();
-  assert.equal(rightClickIntent(battle, 1, 5), "open-menu");
-  assert.equal(rightClickIntent(battle, 7, 1), "inspect");
-  assert.equal(rightClickIntent(battle, 6, 5), "inspect");
-  assert.equal(rightClickIntent(battle, 3, 2), "inspect");
-  battle.click(1, 5);
+test("right-click cancels selection or undoes a staged move from any cell", () => {
+  const battle=new Battle();
+  assert.equal(rightClickIntent(battle,1,5),"cancel");
+  battle.click(1,5);
+  assert.equal(rightClickIntent(battle,1,5),"cancel");
+  battle.click(2,5);
+  assert.equal(rightClickIntent(battle,2,5),"undo-move");
+  assert.equal(rightClickIntent(battle,-1,-1),"undo-move");
+  assert.equal(rightClickIntent(battle,7,1),"undo-move");
+  assert.equal(battle.cancelMove(),true);
+  assert.equal(rightClickIntent(battle,1,5),"cancel");
   battle.waitSelected();
-  assert.equal(rightClickIntent(battle, 1, 5), "inspect");
+  assert.equal(rightClickIntent(battle,1,5),"cancel");
 });
 
 test("board routes right drag and right release separately from left inspection", () => {
@@ -47,6 +53,10 @@ test("board routes right drag and right release separately from left inspection"
   assert.doesNotMatch(board, /this\.menuVisible = !actor\.spent/);
   assert.match(board, /this\.menuVisible = false;/);
   assert.match(board, /this\.inspectCell\(x, y\)/);
+  assert.match(board, /this\.showConfirmedCommands\(touched!\.id\)/);
+  assert.match(board, /this\.animateMovement\(mover\.id, path\)\.then/);
+  assert.match(board, /this\.undoTentativeMove\(\)/);
+  assert.match(main, /◎ 原地行动/);
   assert.match(main, /const inspected = board\.inspectionCell/);
   assert.match(main, /selected\.team === "enemy"/);
   assert.match(html, /id="selection-title"/);

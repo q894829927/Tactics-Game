@@ -71,10 +71,11 @@ test("enemy turns record one completed action per unit and never selection noise
   assert.ok(game.log.every(x=>!x.includes("选择了") && !x.startsWith("—")));
 });
 
-test("right-click toggles menu and forecast has confirm/cancel buttons", () => {
+test("right-click undo and combat forecast retain explicit confirm/cancel", () => {
   const view=readFileSync(new URL("../src/scene/BoardView.ts",import.meta.url),"utf8");
   const html=readFileSync(new URL("../index.html",import.meta.url),"utf8");
-  assert.match(view,/this\.menuVisible && actor\?\.id === this\.battle\.selectedId/);
+  assert.match(view,/rightClickIntent\(this\.battle,x,y\) === "undo-move"/);
+  assert.match(view,/this\.showConfirmedCommands\(mover\.id\)/);
   assert.match(view,/this\.forecastTargetId = target\.id/);
   assert.match(view,/this\.battle\.forecastAttack\(selected, target\)/);
   assert.match(view,/this\.battle\.click\(target\.x, target\.y\)/);

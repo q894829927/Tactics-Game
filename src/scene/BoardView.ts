@@ -411,6 +411,34 @@ export class BoardView {
     this.offsetY = (h - WORLD_HEIGHT * this.zoom) / 2;
     this.applyCamera();
   }
+  /** Undo the selected ally's tentative move without spending an action. */
+  private undoTentativeMove(): boolean {
+    if (this.isAnimating || !this.battle.canCancelMove) return false;
+    this.menuVisible = false;
+    this.attackMode = false;
+    this.pickerMode = null;
+    this.forecastTargetId = null;
+    if (!this.battle.cancelMove()) return false;
+    const actor = this.battle.selected!;
+    this.inspectCell(actor.x, actor.y);
+    this.refresh();
+    return true;
+  }
+
+  /** In-place confirmation or post-walk commands, never on first selection. */
+  private showConfirmedCommands(unitId: string): void {
+    const actor = this.battle.selected;
+    if (!actor || actor.id !== unitId || actor.team !== "ally" || actor.spent ||
+        this.battle.phase !== "player" || this.battle.result !== "playing" ||
+        this.isAnimating) return;
+    this.pickerMode = null;
+    this.forecastTargetId = null;
+    this.attackMode = false;
+    this.menuVisible = true;
+    this.refresh();
+    this.onInspectionChange?.();
+  }
+
   cancelAction(): boolean {
     if (this.isAnimating || this.battle.phase !== "player") return false;
     if (this.forecastTargetId) {
@@ -433,18 +461,12 @@ export class BoardView {
       return true;
     }
     if (this.menuVisible) {
+      if (this.battle.canCancelMove) return this.undoTentativeMove();
       this.menuVisible = false;
       this.refresh();
       return true;
     }
-    if (this.battle.canCancelMove) {
-      if (this.battle.cancelMove()) {
-        const unit = this.battle.selected!;
-        this.inspectCell(unit.x, unit.y);
-        this.refresh();
-        return true;
-      }
-    }
+    if (this.battle.canCancelMove) return this.undoTentativeMove();
     return false;
   }
   hideCommandMenu(): void {
@@ -462,7 +484,7 @@ export class BoardView {
       this.pickerMode = null;
       this.attackMode = false;
       this.forecastTargetId = null;
-      // Selecting with the left button only inspects; only a right-click opens commands.
+      // Commands appear only after choosing a destination or confirming stay.
       this.menuVisible = false;
       this.previousSelection = selectedId;
     }
@@ -618,17 +640,21 @@ export class BoardView {
 
   private onCellClick(x: number, y: number): void {
     if (this.battle.result !== "playing" || this.battle.phase !== "player" || this.isAnimating) return;
-    // A second tap on an already selected ally replaces desktop right-click.
-    // In targeting mode a tap still chooses the target, not the command menu.
     const touched = this.battle.occupant(x,y);
-    if (window.matchMedia("(pointer: coarse)").matches &&
-        touched?.team==="ally" && touched.id===this.battle.selectedId &&
-        !this.attackMode && !this.pickerMode && !this.forecastTargetId) {
-      this.onRightCellClick(x,y);
+    const intent = leftClickIntent(this.battle, x, y, this.attackMode);
+    // The second click commits staying in place on desktop and mobile.
+    if (intent === "confirm-stay" && !this.pickerMode && !this.forecastTargetId) {
+      this.inspectCell(x,y);
+      this.showConfirmedCommands(touched!.id);
+      return;
+    }
+    if (intent === "select-ally" && touched?.id === this.battle.selectedId &&
+        touched.moved && !this.attackMode && !this.pickerMode && !this.forecastTargetId) {
+      this.inspectCell(x,y);
+      this.showConfirmedCommands(touched.id);
       return;
     }
     this.inspectCell(x, y);
-    const intent = leftClickIntent(this.battle, x, y, this.attackMode);
     if (intent === "attack") {
       const selected = this.battle.selected;
       const target = this.battle.occupant(x, y);
@@ -650,7 +676,10 @@ export class BoardView {
       this.battle.click(x, y);
       if (mover && path && path.length > 1 && mover.x === x && mover.y === y) {
         // Logic is committed first; display travels one real path cell per segment.
-        void this.animateMovement(mover.id, path);
+        // Let the unit finish the visual walk before opening any commands.
+        void this.animateMovement(mover.id, path).then(() => {
+          if (mover.moved) this.showConfirmedCommands(mover.id);
+        });
       }
     } else if (!this.battle.canCancelMove) {
       this.battle.selectedId = null;
@@ -659,41 +688,25 @@ export class BoardView {
     this.onInspectionChange?.();
   }
 
-  /** Mobile toolbar alternative to right-click. */
+  /** Mobile allows explicitly confirming an in-place action via the dock. */
   openMobileCommands(): boolean {
     const unit=this.battle.selected;
     if(!unit || unit.team!=="ally" || unit.spent || this.isAnimating ||
        this.battle.phase!=="player" || this.battle.result!=="playing") return false;
-    this.onRightCellClick(unit.x,unit.y);
+    this.showConfirmedCommands(unit.id);
     return true;
   }
 
+  /** Right-click short press undoes movement; right-drag still pans the map. */
   private onRightCellClick(x: number, y: number): void {
     if (this.battle.result !== "playing" || this.battle.phase !== "player" || this.isAnimating) return;
-    const actor = this.battle.occupant(x, y);
-    if (this.forecastTargetId || this.attackMode || this.pickerMode) {
-      this.pickerMode = null;
-      this.forecastTargetId = null;
-      this.attackMode = false;
-      this.menuVisible = false;
-      this.refresh();
-      return;
-    }
-    // A second right-click on the same ally toggles the command menu off.
-    if (this.menuVisible && actor?.id === this.battle.selectedId) {
-      this.menuVisible = false;
-      this.refresh();
-      return;
-    }
-    this.inspectCell(x, y);
-    const intent = rightClickIntent(this.battle, x, y);
+    if (rightClickIntent(this.battle,x,y) === "undo-move" && this.undoTentativeMove()) return;
+    this.pickerMode = null;
+    this.forecastTargetId = null;
+    this.attackMode = false;
     this.menuVisible = false;
-    if (intent === "open-menu") {
-      this.battle.click(x, y);
-      this.menuVisible = true;
-    } else if (!this.battle.canCancelMove) {
-      this.battle.selectedId = null;
-    }
+    this.battle.selectedId = null;
+    this.inspection.clear();
     this.refresh();
     this.onInspectionChange?.();
   }
@@ -854,12 +867,7 @@ export class BoardView {
           this.menuVisible = false;
           this.refresh();
         } else if (cmd.key === "undo") {
-          this.menuVisible = false;
-          if (this.battle.cancelMove()) {
-            const restored = this.battle.selected!;
-            this.inspectCell(restored.x, restored.y);
-          }
-          this.refresh();
+          this.undoTentativeMove();
         } else if (cmd.key === "attack" || cmd.key === "item") {
           this.menuVisible = false;
           this.forecastTargetId = null;
@@ -1075,8 +1083,7 @@ export class BoardView {
     if (!cancelled && !this.isAnimating && drag.button === 2 && !drag.moved) {
       const rect = this.viewport.getBoundingClientRect();
       const tile = this.hitTestScreen(e.clientX - rect.left, e.clientY - rect.top);
-      if (tile) this.onRightCellClick(tile.x, tile.y);
-      else this.hideCommandMenu();
+      this.onRightCellClick(tile?.x ?? -1, tile?.y ?? -1);
     }
     // A completed drag may not dispatch click in all browsers.
     window.setTimeout(() => { this.suppressClick = false; }, 0);

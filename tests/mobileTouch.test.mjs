@@ -32,8 +32,8 @@ test("finger route supports tap and single-drag, suppresses click after a pinch"
   assert.match(view,/this\.startDrag\(e\)/);
   assert.match(view,/this\.moveDrag\(e\)/);
   assert.match(view,/this\.finishDrag\(e,cancelled\)/);
-  assert.match(view,/window\.matchMedia\("\(pointer: coarse\)"\)\.matches/);
-  assert.match(view,/this\.onRightCellClick\(x,y\)/);
+  assert.match(view,/this\.onRightCellClick\(tile\?\.x \?\? -1, tile\?\.y \?\? -1\)/);
+  assert.match(view,/this\.showConfirmedCommands\(unit\.id\)/);
 });
 
 test("mobile UI has command, back, info drawer and real end-turn action",()=>{
