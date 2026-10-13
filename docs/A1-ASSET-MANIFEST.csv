@@ -11,3 +11,8 @@ river_bank_a,river-bank-a.svg,W20,east-outside-playable,552x368,"0.5;1",yes,orig
 bridge_wood_a,bridge-wood-a.svg,W20,east-outside-playable,736x368,"0.5;0.5",yes,original_vector,project_original,,integrated
 camp_platform_a,camp-platform-a.svg,W20,northeast-outside-playable,736x552,"0.5;1",yes,original_vector,project_original,,integrated
 fog_low_a,fog-low-a.svg,W60,forest-and-river-decor,736x368,"0.5;0.5",yes,original_vector,project_original,,integrated
+ai_forest_cliff_river_stage,ai/forest-cliff-river-stage.webp,W10,world-stage-forest-cliff-river,1472x1104,"0;0",no,ai_generated,project_ai_generated,,integrated
+ai_forest_cliff_river_minimap,ai/forest-cliff-river-minimap.webp,S80,world-minimap,512x384,"0;0",no,ai_generated,project_ai_generated,,integrated
+ai_forest_reference,ai/forest-reference.webp,reference,forest,512x512,"0;0",no,ai_generated,project_ai_generated,,in_review
+ai_cliff_reference,ai/cliff-reference.webp,reference,cliff,512x512,"0;0",no,ai_generated,project_ai_generated,,in_review
+ai_riverbank_reference,ai/riverbank-reference.webp,reference,riverbank,512x512,"0;0",no,ai_generated,project_ai_generated,,in_review

@@ -93,7 +93,8 @@ export class BoardView {
       return element;
     };
 
-    // W10: separate decorative ground. Logic terrain merely drives placeholders in A2-1.
+    // W10: AI-authored raster environment plate. The existing SVG tiles remain as a
+    // genuine fallback if the WebP fails, while W40/W45/W50 stay fully interactive.
     const ground = layer("world-ground");
     ground.style.gridTemplateColumns = "repeat(" + WORLD_COLS + ", " + TILE + "px)";
     ground.style.gridTemplateRows = "repeat(" + WORLD_ROWS + ", " + TILE + "px)";
@@ -110,6 +111,16 @@ export class BoardView {
         ground.appendChild(tile);
       }
     }
+
+    // This asset is environment art ONLY: no UI, units, pathfinding or click targets baked in.
+    // Coordinates: AI plate is exactly WORLD_WIDTH x WORLD_HEIGHT (A1 16x12 world).
+    const paintedScene = imgAsset("ai/forest-cliff-river-stage.webp", 0, 0, WORLD_WIDTH, WORLD_HEIGHT);
+    paintedScene.classList.add("ai-terrain-painting");
+    ground.appendChild(paintedScene);
+    paintedScene.addEventListener("load", () => {
+      // The new raster plate replaces old simple SVG illustrations after real load success.
+      this.stage.classList.add("has-ai-scenery");
+    }, {once: true});
 
     // W20: independent scenic SVGs. The water, bridge and fort remain outside playable cells.
     const environment = layer("world-environment");
@@ -238,6 +249,16 @@ export class BoardView {
       miniArt.appendChild(img);
     }
     mini.appendChild(miniArt);
+    // Compact rendition of the same world plate, above SVG fallback map but
+    // below camera frame, minimap unit pins and the tactical outline.
+    const miniPainting = document.createElement("img");
+    miniPainting.className = "minimap-ai-painting";
+    miniPainting.src = sceneAsset("ai/forest-cliff-river-minimap.webp");
+    miniPainting.alt = "";
+    miniPainting.draggable = false;
+    miniPainting.setAttribute("aria-hidden", "true");
+    miniPainting.addEventListener("error", () => miniPainting.remove(), {once: true});
+    mini.appendChild(miniPainting);
     const tacticalOutline = document.createElement("div");
     tacticalOutline.className = "minimap-tactical-outline";
     tacticalOutline.setAttribute("aria-hidden", "true");
@@ -395,7 +416,9 @@ export class BoardView {
         const coord = key({ x, y });
         const accessible = !actor && reachable.has(coord);
         const targeted = this.attackMode && targets.has(coord);
-        cell.className = "battle-cell" + (actor?.id === this.battle.selectedId ? " is-selected" : "");
+        cell.className = "battle-cell"
+          + (terrain === "#" ? " is-blocked" : "")
+          + (actor?.id === this.battle.selectedId ? " is-selected" : "");
         overlay.className = [
           "range-cell", accessible ? "can-move" : "", targeted ? "can-attack" : "",
           actor?.id === this.battle.selectedId ? "is-selected" : "",
