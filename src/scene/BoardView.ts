@@ -765,14 +765,24 @@ export class BoardView {
     back.addEventListener("click",()=>{this.pickerMode=null;this.menuVisible=true;this.refresh();});
     this.weaponPicker.appendChild(back);
     this.weaponPicker.hidden=false;
+    this.positionWeaponPicker(actor);
+  }
+
+  /** Called both when opening the picker and whenever the camera changes.
+   * Move the floating screen-space panel without rebuilding its contents or state.
+   */
+  private positionWeaponPicker(actor: Unit): void {
     const point=tileWorld(actor.x,actor.y);
-    const w=205;
-    const x=Math.max(8,Math.min(this.viewport.clientWidth-w-8,
-      this.offsetX+(point.x+TILE/2)*this.zoom+10));
-    const y=Math.max(8,Math.min(this.viewport.clientHeight-245-8,
-      this.offsetY+(point.y-TILE/2)*this.zoom-20));
-    this.weaponPicker.style.left=x+"px";
-    this.weaponPicker.style.top=y+"px";
+    const width=205;
+    const height=Math.min(320,Math.max(0,this.viewport.clientHeight*0.8));
+    const right=this.offsetX+(point.x+TILE/2)*this.zoom+10;
+    const left=this.offsetX+(point.x-TILE/2)*this.zoom-width-10;
+    const preferredX=right+width>this.viewport.clientWidth-8 ? left : right;
+    const preferredY=this.offsetY+(point.y-TILE/2)*this.zoom-20;
+    this.weaponPicker.style.left=Math.max(8,Math.min(
+      this.viewport.clientWidth-width-8,preferredX))+"px";
+    this.weaponPicker.style.top=Math.max(8,Math.min(
+      this.viewport.clientHeight-height-8,preferredY))+"px";
   }
 
   private positionMenu(actor: Unit): void {
@@ -1064,6 +1074,9 @@ export class BoardView {
     this.viewportMarker.style.width = frame.width * 100 + "%";
     this.viewportMarker.style.height = frame.height * 100 + "%";
     if (!this.menu.hidden && this.battle.selected) this.positionMenu(this.battle.selected);
+    if (!this.weaponPicker.hidden && this.battle.selected) {
+      this.positionWeaponPicker(this.battle.selected);
+    }
   }
 
   /** Used by future pointer hit mapping and by contract tests; decorative area is non-playable. */
