@@ -1,0 +1,38 @@
+name: Map Browser Acceptance
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  browser-map:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Install project dependencies
+        run: npm install --no-audit --no-fund
+      - name: Install isolated browser test dependency and Chromium
+        run: |
+          npm install --no-save --no-audit --no-fund playwright@1.56.1
+          npx playwright install --with-deps chromium
+      - name: Build game under ECS subdirectory
+        run: npm run build
+      - name: Start local preview and run browser map acceptance
+        run: |
+          npm run preview -- --host 127.0.0.1 --port 4173 > /tmp/tactics-preview.log 2>&1 &
+          node tests/browserMapAcceptance.mjs
+      - name: Upload map screenshot evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: m1-m2-map-browser-evidence
+          path: browser-artifacts/*.png
+          if-no-files-found: warn
+          retention-days: 14
