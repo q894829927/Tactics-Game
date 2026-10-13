@@ -33,7 +33,9 @@ test("interactive board exposes zoom, map movement and contextual commands", () 
   assert.match(board, /addEventListener\("wheel"/);
   assert.match(board, /passive: false/);
   assert.match(board, /setPointerCapture/);
-  assert.match(board, /centerOn\(x, y\)/);
+  assert.match(board, /this\.centerOnWorld\(/);
+  assert.match(board, /this\.miniCells/);
+  assert.match(board, /tactical-hit-grid/);
   assert.match(board, /renderMenu\(\)/);
   assert.match(board, /this\.battle\.click\(x, y\)/);
   assert.match(board, /this\.battle\.waitSelected\(\)/);
