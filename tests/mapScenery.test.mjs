@@ -35,10 +35,10 @@ test("forest and rock sprites cover their actual terrain, without covering walka
 
 test("a joined rock obstacle preserves blocked coverage and cannot bridge a walkable gap", () => {
   const scenery=buildMapScenery(new Battle().terrain);
-  const rocks=scenery.filter(s=>s.file===MAP_ASSET_FILES.cliff);
+  const rocks=scenery.filter(s=>s.file===MAP_ASSET_FILES.cliff && s.terrainCells.length);
   assert.equal(rocks.length,1);
   assert.deepEqual(rocks[0].terrainCells,[{x:3,y:2},{x:4,y:2}]);
-  const separated=buildMapScenery(["...#.#...."]).filter(s=>s.file===MAP_ASSET_FILES.cliff);
+  const separated=buildMapScenery(["...#.#...."]).filter(s=>s.file===MAP_ASSET_FILES.cliff && s.terrainCells.length);
   assert.equal(separated.length,2);
   for(const prop of separated) {
     assert.equal(prop.terrainCells.length,1);

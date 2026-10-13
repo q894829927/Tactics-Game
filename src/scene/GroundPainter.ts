@@ -3,6 +3,7 @@ import { TILE, WORLD_COLS, WORLD_ROWS, WORLD_WIDTH, WORLD_HEIGHT, TACTICAL_X, ti
 import { artNoise, riverBankX } from "./mapScenery.ts";
 import { loadMapAsset, MAP_ASSET_FILES, type MapAssetFile } from "./mapAssets.ts";
 import { groundSurfaceAt } from "./groundSurface.ts";
+import { MICRO_COLS, MICRO_ROWS, MICRO_TILE, microTileSeed } from "./terrainTransitions.ts";
 
 const LAND_FILES = [MAP_ASSET_FILES.ground, MAP_ASSET_FILES.groundVariant,
   MAP_ASSET_FILES.grass, MAP_ASSET_FILES.grassVariant] as const;
@@ -48,7 +49,7 @@ export class GroundPainter {
     ctx.fillStyle = "#927551";
     ctx.fillRect(0,0,WORLD_WIDTH,WORLD_HEIGHT);
     const earth = this.available([MAP_ASSET_FILES.ground,MAP_ASSET_FILES.groundVariant]);
-    if (earth.length) this.material(ctx,earth);
+    if (earth.length) { this.material(ctx,earth); this.microDetail(ctx,earth); }
     else {
       // Immediate low-cost fallback, including when an asset cannot be loaded.
       for (let i=0; i<7500; i++) {
@@ -110,6 +111,51 @@ export class GroundPainter {
     }
   }
 
+
+  /**
+   * Add independent 46-unit material fragments over the feathered 384-unit
+   * base. Every fragment has soft alpha on all four sides, so it blends with
+   * its neighbours instead of exposing 46/92px square seams. Texture source
+   * offsets and selection depend only on absolute microtile coordinates.
+   */
+  private microDetail(ctx: CanvasRenderingContext2D, textures: readonly HTMLImageElement[]): void {
+    if(!textures.length)return;
+    const patch=document.createElement("canvas");
+    patch.width=patch.height=124; // 62 world units at the existing 2x DPR.
+    const brush=patch.getContext("2d");
+    if(!brush)return;
+    const feather=document.createElement("canvas");
+    feather.width=feather.height=124;
+    const mask=feather.getContext("2d");
+    if(!mask)return;
+    mask.fillStyle="#fff";
+    mask.fillRect(0,0,124,124);
+    mask.globalCompositeOperation="destination-in";
+    const xFade=mask.createLinearGradient(0,0,124,0);
+    xFade.addColorStop(0,"#fff0");xFade.addColorStop(.15,"#fff");xFade.addColorStop(.85,"#fff");xFade.addColorStop(1,"#fff0");
+    mask.fillStyle=xFade;mask.fillRect(0,0,124,124);
+    const yFade=mask.createLinearGradient(0,0,0,124);
+    yFade.addColorStop(0,"#fff0");yFade.addColorStop(.15,"#fff");yFade.addColorStop(.85,"#fff");yFade.addColorStop(1,"#fff0");
+    mask.fillStyle=yFade;mask.fillRect(0,0,124,124);
+    ctx.save();
+    ctx.globalAlpha=.44;
+    for(let row=0;row<MICRO_ROWS;row++) for(let col=0;col<MICRO_COLS;col++) {
+      const seed=microTileSeed(col,row);
+      const image=textures[Math.min(textures.length-1,Math.floor(seed*textures.length))]!;
+      const side=Math.min(image.naturalWidth,image.naturalHeight)*.23;
+      if(!side)continue;
+      const sx=microTileSeed(col+193,row)*Math.max(0,image.naturalWidth-side);
+      const sy=microTileSeed(col,row+307)*Math.max(0,image.naturalHeight-side);
+      brush.clearRect(0,0,124,124);
+      brush.globalCompositeOperation="source-over";
+      brush.drawImage(image,sx,sy,side,side,0,0,124,124);
+      brush.globalCompositeOperation="destination-in";
+      brush.drawImage(feather,0,0);
+      ctx.drawImage(patch,col*MICRO_TILE-8,row*MICRO_TILE-8,62,62);
+    }
+    ctx.restore();
+  }
+
   private createGrassMask(): HTMLCanvasElement {
     const hard=document.createElement("canvas"),soft=document.createElement("canvas");
     hard.width=soft.width=WORLD_WIDTH;hard.height=soft.height=WORLD_HEIGHT;
@@ -161,7 +207,7 @@ export class GroundPainter {
     layer.clearRect(0,0,WORLD_WIDTH,WORLD_HEIGHT);
     layer.fillStyle="#56643b";layer.fillRect(0,0,WORLD_WIDTH,WORLD_HEIGHT);
     const grass=this.available([MAP_ASSET_FILES.grass,MAP_ASSET_FILES.grassVariant]);
-    if(grass.length)this.material(layer,grass);
+    if(grass.length) { this.material(layer,grass); this.microDetail(layer,grass); }
     layer.globalCompositeOperation="destination-in";
     layer.drawImage(this.grassMask,0,0,WORLD_WIDTH,WORLD_HEIGHT);
     layer.globalCompositeOperation="source-over";
@@ -181,9 +227,22 @@ export class GroundPainter {
     depth.addColorStop(0,"#82967650");depth.addColorStop(.5,"#38534a15");depth.addColorStop(1,"#153b4640");
     ctx.fillStyle=depth;ctx.fillRect(0,0,WORLD_WIDTH,WORLD_HEIGHT);
     ctx.restore();
-    // A narrow earth edge and scattered gravel replace the uniform striped embankment.
-    boundary();ctx.strokeStyle="#293c3280";ctx.lineWidth=7;ctx.stroke();
-    boundary();ctx.strokeStyle="#85836b58";ctx.lineWidth=2;ctx.stroke();
+    // The narrow shore is fully decorative (east of the 10x8 hit grid):
+    // wet earth shelf, broken stone edge, and soft water highlights.
+    const bank=(offset:number)=>{ctx.beginPath();ctx.moveTo(riverBankX(0)+offset,0);
+      for(let y=0;y<=WORLD_HEIGHT;y+=4)ctx.lineTo(riverBankX(y)+offset,y);};
+    bank(-22);ctx.strokeStyle="#665d4660";ctx.lineWidth=18;ctx.stroke();
+    bank(-10);ctx.strokeStyle="#8e856b73";ctx.lineWidth=9;ctx.stroke();
+    bank(-3);ctx.strokeStyle="#293c3280";ctx.lineWidth=7;ctx.stroke();
+    bank(2);ctx.strokeStyle="#c7c9ae57";ctx.lineWidth=1.8;ctx.stroke();
+    for(let i=0;i<110;i++) {
+      const y=artNoise(i+1320)*WORLD_HEIGHT;
+      const x=riverBankX(y)+7+artNoise(i+350)*20;
+      const length=5+artNoise(i+475)*22;
+      ctx.strokeStyle=i%3===0?"#d9ddc541":"#d3e3df29";
+      ctx.lineWidth=.7+artNoise(i+670);
+      ctx.beginPath();ctx.moveTo(x,y);ctx.quadraticCurveTo(x+length*.45,y-1.4,x+length,y);ctx.stroke();
+    }
     for(let i=0;i<430;i++) {
       const y=artNoise(i+600)*WORLD_HEIGHT,x=riverBankX(y)-3-artNoise(i+750)*17;
       const size=1+artNoise(i+850)*2.5;
