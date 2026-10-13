@@ -6,14 +6,14 @@
   <meta name="description" content="Wildfield Tactics：原创奇幻战棋，可缩放的战场地图与回合制战斗。"/>
   <meta name="theme-color" content="#071522"/>
   <title>Wildfield Tactics · 赤旗要塞</title>
-  <script type="module" crossorigin src="/games/tactics/assets/index-CO0q2Phz.js"></script>
+  <script type="module" crossorigin src="/games/tactics/assets/index-BGtkn8Em.js"></script>
   <link rel="stylesheet" crossorigin href="/games/tactics/assets/index-1TjJWCBA.css">
 </head>
 <body>
   <div id="app" class="battle-shell">
     <main class="battle-layout">
       <section class="battlefield" aria-label="战棋地图">
-        <div id="game" class="map-viewport" tabindex="0" aria-label="战场：手机轻点选中，双击选中友军打开指令，单指拖动地图，双指缩放；桌面支持右键与滚轮"></div>
+        <div id="game" class="map-viewport" tabindex="0" aria-label="战场：点选友军，再点目的地移动，动画结束自动显示指令；再次点击选中友军可原地行动。桌面右键撤回移动，手机使用返回，拖动平移、双指缩放"></div>
         <button id="settings-button" class="corner-settings" type="button" aria-label="打开设置" aria-haspopup="dialog" aria-expanded="false">⚙</button>
         <div id="viewport-hint" class="sr-only" aria-live="polite"></div>
         <div class="minimap" aria-label="战场小地图" title="点击定位，拖动地图">
@@ -129,7 +129,7 @@
           <div class="equipment-row"><span>⚔ 当前武装</span><strong id="weapon-name">—</strong></div>
           <div class="equipment-row"><span>◈ 攻击距离</span><strong id="weapon-range">—</strong></div>
           <div id="inventory-list" class="inventory-list" aria-label="角色背包"></div>
-          <p id="selection-hint" class="equipment-note">左键查看；右键友军打开行动菜单。</p>
+          <p id="selection-hint" class="equipment-note">点选友军，再点目的格移动；右键撤回移动。</p>
         </section>
         <section class="sidebar-section combat-log">
           <h2 class="section-title"><span class="title-icon">▤</span>战斗日志 <span class="section-aside">最近记录</span></h2>
@@ -146,7 +146,7 @@
         <button id="reset-view" type="button">重置地图视角</button>
         <button id="restart-button" type="button">重新开始关卡</button>
         <a href="/" class="settings-link">← 返回游戏大厅</a>
-        <small>电脑：滚轮缩放 · 右键指令／拖动；手机：轻点选中 · 再点友军开指令 · 单指拖动 · 双指缩放 · 底部快捷按钮</small>
+        <small>电脑：左键选角色 → 点目的格 → 自动出现指令；右键短按撤回移动、右键拖动平移。手机：点角色 → 点目的格 → 自动指令；点同一角色或“原地行动”可原地操作，返回撤回移动、双指缩放</small>
       </div>
     </div>
   </div>
