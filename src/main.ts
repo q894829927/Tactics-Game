@@ -3,6 +3,7 @@ import { TERRAIN_INFO, movementCostLabel } from "./engine/terrain.ts";
 import { BoardView } from "./scene/BoardView.ts";
 import { GAME_VERSION } from "./version.ts";
 import {BASIC_KEYS,BASIC_LABELS,GROWTH_KEYS,GROWTH_LABELS} from "./engine/attributes.ts";
+import {WEAPON_LIBRARY,weaponRange} from "./engine/weapons.ts";
 import "./style.css";
 
 const get = (id: string): HTMLElement => {
@@ -64,6 +65,28 @@ function renderSelection(): void {
   get("terrain-defense").textContent = "防御 +" + (terrain?.defense ?? "—");
   get("terrain-cost").textContent = "移动消耗 " + (terrainCode ? movementCostLabel(terrainCode) : "—");
   get("weapon-name").textContent = selected ? selected.weapon.name : "—";
+  const bag=get("inventory-list");
+  bag.replaceChildren();
+  if(selected){
+    const editable=selected.team==="ally"&&battle.selected?.id===selected.id&&
+      !selected.spent&&battle.phase==="player"&&!board.isAnimating;
+    selected.inventory.forEach((id,index)=>{
+      const weapon=WEAPON_LIBRARY[id];
+      const item=document.createElement("button");
+      item.type="button";
+      item.className="inventory-entry"+(index===selected.equippedIndex?" equipped":"");
+      item.disabled=!editable;
+      const label=document.createElement("span");
+      label.textContent=(index===selected.equippedIndex?"◆ ":"")+weapon.name;
+      const spec=document.createElement("small");
+      spec.textContent="威"+weapon.might+" 重"+weapon.weight+" 射"+weaponRange(weapon);
+      item.append(label,spec);
+      item.addEventListener("click",()=>{
+        if(battle.equipWeapon(selected,index)){board.refresh();renderSelection();}
+      });
+      bag.appendChild(item);
+    });
+  }
   get("weapon-range").textContent = combat ? combat.range+" 格" : "—";
   const paint=(id:string,rows:readonly (readonly [string,string])[])=>{
     const root=get(id);root.replaceChildren();

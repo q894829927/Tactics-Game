@@ -1,5 +1,6 @@
 import { Battle, MAP_HEIGHT, MAP_WIDTH, key, type Point, type Unit, type AttackForecast, type EnemyActionPlan, type CombatEvent } from "../engine/battle.ts";
 import { combatPreviewView } from "./combatPreviewView.ts";
+import {WEAPON_LIBRARY,weaponRange} from "../engine/weapons.ts";
 import { TERRAIN_INFO, movementCostLabel } from "../engine/terrain.ts";
 import { leftClickIntent, rightClickIntent } from "./interactionPolicy.ts";
 import { clampCameraOffset } from "./cameraBounds.ts";
@@ -69,6 +70,8 @@ export class BoardView {
   private miniDrag: { pointerId: number; x: number; y: number; moved: boolean } | null = null;
   private suppressMiniClick = false;
   private readonly menu: HTMLDivElement;
+  private readonly weaponPicker: HTMLDivElement;
+  private pickerMode: "attack"|"equip"|null=null;
   private readonly minimap: HTMLElement;
   private readonly viewportMarker: HTMLDivElement;
   private offsetX = 0;
@@ -192,6 +195,10 @@ export class BoardView {
     this.menu.className = "unit-command-menu";
     this.menu.setAttribute("aria-label", "单位行动指令");
     this.menu.hidden = true;
+    this.weaponPicker=document.createElement("div");
+    this.weaponPicker.className="weapon-picker";
+    this.weaponPicker.setAttribute("aria-label","武器选择");
+    this.weaponPicker.hidden=true;
     this.forecastPanel = document.getElementById("attack-forecast")!;
     this.combatOverlay = document.createElement("div");
     this.combatOverlay.className = "combat-performance";
@@ -200,7 +207,7 @@ export class BoardView {
     document.querySelector(".battlefield")!.appendChild(this.combatOverlay);
     document.getElementById("forecast-confirm")!.addEventListener("click", () => this.confirmAttack());
     document.getElementById("forecast-cancel")!.addEventListener("click", () => this.cancelAction());
-    viewport.replaceChildren(backdrop, world, this.labelLayer, this.menu);
+    viewport.replaceChildren(backdrop, world, this.labelLayer, this.menu, this.weaponPicker);
 
     // Full 16x12 stage minimap, not the old 10x8 grid.
     this.minimap = document.getElementById("minimap-grid")!;
@@ -343,7 +350,14 @@ export class BoardView {
     }
     if (this.attackMode) {
       this.attackMode = false;
+      this.pickerMode = "attack";
       this.menuVisible = false;
+      this.refresh();
+      return true;
+    }
+    if (this.pickerMode) {
+      this.pickerMode = null;
+      this.menuVisible = true;
       this.refresh();
       return true;
     }
@@ -363,6 +377,7 @@ export class BoardView {
     return false;
   }
   hideCommandMenu(): void {
+    this.pickerMode = null;
     this.forecastTargetId = null;
     this.attackMode = false;
     this.menuVisible = false;
@@ -373,6 +388,7 @@ export class BoardView {
     const selected = this.battle.selected;
     const selectedId = selected?.id ?? null;
     if (selectedId !== this.previousSelection) {
+      this.pickerMode = null;
       this.attackMode = false;
       this.forecastTargetId = null;
       // Selecting with the left button only inspects; only a right-click opens commands.
@@ -455,6 +471,7 @@ export class BoardView {
       }
     }
     this.renderMenu();
+    this.renderWeaponPicker();
     this.renderForecast();
     this.applyCamera();
   }
@@ -482,6 +499,7 @@ export class BoardView {
     this.forecastTargetId = null;
     this.menuVisible = false;
     this.attackMode = false;
+    this.pickerMode = null;
     if (intent === "select-ally" || intent === "move") {
       const mover = intent === "move" ? this.battle.selected : undefined;
       const path = mover ? this.battle.movementPath(mover, {x, y}) : null;
@@ -500,7 +518,8 @@ export class BoardView {
   private onRightCellClick(x: number, y: number): void {
     if (this.battle.result !== "playing" || this.battle.phase !== "player" || this.isAnimating) return;
     const actor = this.battle.occupant(x, y);
-    if (this.forecastTargetId || this.attackMode) {
+    if (this.forecastTargetId || this.attackMode || this.pickerMode) {
+      this.pickerMode = null;
       this.forecastTargetId = null;
       this.attackMode = false;
       this.menuVisible = false;
@@ -609,7 +628,9 @@ export class BoardView {
     byId("forecast-attacker").textContent = view.ally.unit.name;
     byId("forecast-defender").textContent = view.enemy.unit.name;
     byId("forecast-ally-role").textContent = roleNames[view.ally.unit.role] ?? "兵";
+    byId("forecast-ally-weapon").textContent = view.ally.unit.weapon.name;
     byId("forecast-enemy-role").textContent = roleNames[view.enemy.unit.role] ?? "兵";
+    byId("forecast-enemy-weapon").textContent = view.enemy.unit.weapon.name;
     byId("forecast-ally-emblem").textContent = roleNames[view.ally.unit.role] ?? "兵";
     byId("forecast-enemy-emblem").textContent = roleNames[view.enemy.unit.role] ?? "兵";
     byId("forecast-ally-hp").textContent = view.ally.unit.hp + " → " + view.ally.hpAfter;
@@ -652,13 +673,13 @@ export class BoardView {
   private renderMenu(): void {
     const actor = this.battle.selected;
     this.menu.replaceChildren();
-    if (!actor || !this.menuVisible || this.attackMode || actor.spent || this.battle.result !== "playing") {
+    if (!actor || !this.menuVisible || this.attackMode || this.pickerMode || actor.spent || this.battle.result !== "playing") {
       this.menu.hidden = true;
       return;
     }
     const commands = [
-      { text: "攻击", icon: "⚔", enabled: !actor.acted && this.battle.targets(actor).length > 0, key: "attack" },
-      { text: "道具", icon: "▣", enabled: false, key: "item" },
+      { text: "攻击", icon: "⚔", enabled: this.battle.availableAttackWeapons(actor).length > 0, key: "attack" },
+      { text: "背包", icon: "▣", enabled: true, key: "item" },
       { text: "术法", icon: "✦", enabled: false, key: "magic" },
       { text: "交换", icon: "⇄", enabled: false, key: "trade" },
       { text: "待机", icon: "⌛", enabled: true, key: "wait" },
@@ -686,11 +707,11 @@ export class BoardView {
             this.inspectCell(restored.x, restored.y);
           }
           this.refresh();
-        } else if (cmd.key === "attack") {
+        } else if (cmd.key === "attack" || cmd.key === "item") {
           this.menuVisible = false;
           this.forecastTargetId = null;
-          this.attackMode = true;
-          this.onHint?.("攻击模式：左键点击红色目标；Esc 或右键空地取消");
+          this.attackMode = false;
+          this.pickerMode = cmd.key === "attack" ? "attack" : "equip";
           this.refresh();
         }
       });
@@ -698,6 +719,60 @@ export class BoardView {
     }
     this.menu.hidden = false;
     this.positionMenu(actor);
+  }
+
+  private renderWeaponPicker(): void {
+    const actor=this.battle.selected;
+    const mode=this.pickerMode;
+    this.weaponPicker.replaceChildren();
+    if(!actor||!mode||this.isAnimating||this.battle.phase!=="player"||actor.spent){
+      this.weaponPicker.hidden=true;
+      return;
+    }
+    const title=document.createElement("div");
+    title.className="weapon-picker-title";
+    title.textContent=mode==="attack"?"选择攻击武器":"装备背包";
+    this.weaponPicker.appendChild(title);
+    const attackable=new Set(this.battle.availableAttackWeapons(actor));
+    actor.inventory.forEach((id,index)=>{
+      const item=WEAPON_LIBRARY[id];
+      const usable=mode==="equip"||attackable.has(index);
+      const entry=document.createElement("button");
+      entry.type="button";
+      entry.className="weapon-choice"+(actor.equippedIndex===index?" is-equipped":"");
+      const name=document.createElement("strong");
+      name.textContent=(actor.equippedIndex===index?"◆ ":"")+item.name;
+      const spec=document.createElement("small");
+      spec.textContent="威"+item.might+" 重"+item.weight+" 命"+item.hit+" 射"+weaponRange(item);
+      entry.append(name,spec);
+      entry.disabled=!usable;
+      entry.title=usable?item.name:"当前没有该武器射程内的目标";
+      entry.addEventListener("click",()=>{
+        if(this.isAnimating||this.battle.phase!=="player"||this.battle.selected?.id!==actor.id)return;
+        if(!this.battle.equipWeapon(actor,index))return;
+        this.pickerMode=null;
+        if(mode==="attack"){
+          this.attackMode=true;
+          this.onHint?.("选择红色攻击目标");
+        }else this.menuVisible=true;
+        this.refresh();
+        this.onInspectionChange?.();
+      });
+      this.weaponPicker.appendChild(entry);
+    });
+    const back=document.createElement("button");
+    back.type="button";back.className="weapon-back";back.textContent="返回";
+    back.addEventListener("click",()=>{this.pickerMode=null;this.menuVisible=true;this.refresh();});
+    this.weaponPicker.appendChild(back);
+    this.weaponPicker.hidden=false;
+    const point=tileWorld(actor.x,actor.y);
+    const w=205;
+    const x=Math.max(8,Math.min(this.viewport.clientWidth-w-8,
+      this.offsetX+(point.x+TILE/2)*this.zoom+10));
+    const y=Math.max(8,Math.min(this.viewport.clientHeight-245-8,
+      this.offsetY+(point.y-TILE/2)*this.zoom-20));
+    this.weaponPicker.style.left=x+"px";
+    this.weaponPicker.style.top=y+"px";
   }
 
   private positionMenu(actor: Unit): void {
@@ -749,7 +824,7 @@ export class BoardView {
   private startDrag(e: PointerEvent): void {
     if (this.isAnimating || this.battle.phase !== "player") return;
     if (e.button !== 0 && e.button !== 1 && e.button !== 2) return;
-    if ((e.target as HTMLElement).closest(".unit-command-menu")) return;
+    if ((e.target as HTMLElement).closest(".unit-command-menu, .weapon-picker")) return;
     if (this.drag) return;
     // Right mouse dragging pans the map exactly like left dragging.
     this.drag = { pointerId: e.pointerId, button: e.button, x: e.clientX, y: e.clientY,

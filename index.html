@@ -30,6 +30,7 @@
               <div class="forecast-identity">
                 <strong id="forecast-attacker">我方单位</strong>
                 <span id="forecast-ally-role">剑士</span>
+                <span id="forecast-ally-weapon">—</span>
                 <span id="forecast-ally-odds" class="forecast-odds">命中 — · 必杀 —</span>
               </div>
             </div>
@@ -49,6 +50,7 @@
               <div class="forecast-identity">
                 <strong id="forecast-defender">敌方单位</strong>
                 <span id="forecast-enemy-role">步兵</span>
+                <span id="forecast-enemy-weapon">—</span>
                 <span id="forecast-enemy-odds" class="forecast-odds">命中 — · 必杀 —</span>
               </div>
               <div class="forecast-emblem forecast-emblem-enemy" id="forecast-enemy-emblem" aria-hidden="true">兵</div>
@@ -114,6 +116,7 @@
           <h2 class="section-title"><span class="title-icon">⚔</span>战斗能力</h2>
           <div class="equipment-row"><span>⚔ 当前武装</span><strong id="weapon-name">—</strong></div>
           <div class="equipment-row"><span>◈ 攻击距离</span><strong id="weapon-range">—</strong></div>
+          <div id="inventory-list" class="inventory-list" aria-label="角色背包"></div>
           <p id="selection-hint" class="equipment-note">左键查看；右键友军打开行动菜单。</p>
         </section>
         <section class="sidebar-section combat-log">

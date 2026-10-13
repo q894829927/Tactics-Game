@@ -878,3 +878,26 @@ button:disabled { cursor: not-allowed; }
   box-shadow: 0 0 30px #ea464f7a;
 }
 .phase-banner.phase-enemy span { color: #ffd5ba; }
+
+/* v0.1.15.0 inventory and weapon selection on the same camera-independent UI layer. */
+.weapon-picker{position:absolute;z-index:72;width:205px;max-height:min(320px,80%);overflow-y:auto;
+  padding:8px;border:1px solid #cca56c;border-radius:5px;background:#0a2133f4;
+  box-shadow:0 10px 26px #000b;display:flex;flex-direction:column;gap:5px;pointer-events:auto;}
+.weapon-picker[hidden]{display:none!important}
+.weapon-picker-title{color:#f2d9a6;font-weight:700;padding:5px 6px 8px;border-bottom:1px solid #4b5d66}
+.weapon-choice,.weapon-back{background:#15344a;color:#eaf1f4;border:1px solid #4c6c7c;border-radius:3px;
+  text-align:left;padding:7px 9px;cursor:pointer}
+.weapon-choice{display:flex;flex-direction:column;gap:4px}
+.weapon-choice small{color:#aebfca;font-size:11px}
+.weapon-choice.is-equipped{border-color:#d5ae6c;background:#314459}
+.weapon-choice:disabled{opacity:.38;cursor:not-allowed}
+.weapon-choice:not(:disabled):hover,.weapon-back:hover{background:#275271}
+.weapon-back{text-align:center;color:#ddcda8}
+.inventory-list{display:flex;flex-direction:column;gap:4px;padding:7px 8px 10px}
+.inventory-entry{display:flex;align-items:center;justify-content:space-between;gap:5px;background:#102c40;
+  border:1px solid #3b5265;border-radius:3px;color:#e6f1f6;padding:7px 9px;text-align:left;font-size:12px}
+.inventory-entry.equipped{border-color:#cba468;background:#293a48}
+.inventory-entry small{color:#afc3ce;font-size:10px;white-space:nowrap}
+.inventory-entry:not(:disabled){cursor:pointer}
+.inventory-entry:not(:disabled):hover{background:#24526b}
+.inventory-entry:disabled{opacity:.8;cursor:default}

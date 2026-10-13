@@ -1,4 +1,5 @@
 import { TERRAIN_INFO, type Terrain } from "./terrain.ts";
+import {initialLoadout,weaponFor,canWield,MAX_INVENTORY,type WeaponId} from "./weapons.ts";
 import {createCharacter,deriveCombat,awardExperience,clampChance,
   type CharacterData,type CombatStats} from "./attributes.ts";
 export type { Terrain } from "./terrain.ts";
@@ -40,6 +41,9 @@ export type AttackForecast = {
 
 export type Unit = CharacterData & {
   id:string;name:string;role:Role;team:Team;x:number;y:number;
+  /** Weapon inventory, initially 3 role-compatible items, at most 5. */
+  inventory:WeaponId[]; equippedIndex:number;
+  /** Legacy mirrors for older client/tests; battle calculations read weapon directly. */
   minRange:number;maxRange:number;
   moved:boolean;acted:boolean;spent:boolean;
 };
@@ -57,9 +61,13 @@ const LAYOUT = [
 
 function unit(id:string,name:string,role:Role,team:Team,x:number,y:number,
   maxHp:number,attack:number,defense:number,move:number,minRange=1,maxRange=1):Unit {
+  const inventory=initialLoadout(role);
+  const equipped=weaponFor(inventory[0]!);
   return {id,name,role,team,x,y,
     ...createCharacter(role,maxHp,attack,defense,move,minRange,maxRange),
-    minRange,maxRange,moved:false,acted:false,spent:false};
+    weapon:equipped,inventory,equippedIndex:0,
+    minRange:equipped.minRange,maxRange:equipped.maxRange,
+    moved:false,acted:false,spent:false};
 }
 export function key(p: Point): string { return String(p.x) + "," + String(p.y); }
 export function distance(a: Point, b: Point): number {
@@ -120,6 +128,34 @@ export class Battle {
     this.log = [];
     this.lastCombatEvents = [];
     this.emit();
+  }
+
+  /** Equipping is reversible and does not spend movement, attack or log an action. */
+  equipWeapon(unit:Unit,index:number):boolean {
+    if(this.result!=="playing"||this.phase!=="player"||
+      unit.team!=="ally"||unit.hp<=0||unit.spent||this.selectedId!==unit.id||
+      !this.units.includes(unit)||!Number.isInteger(index)||index<0||
+      index>=unit.inventory.length||unit.inventory.length>MAX_INVENTORY)return false;
+    const id=unit.inventory[index]!;
+    if(!canWield(unit.role,id))return false;
+    unit.equippedIndex=index;
+    unit.weapon=weaponFor(id);
+    // Compatibility only: targeting, predictions and AI all use unit.weapon.
+    unit.minRange=unit.weapon.minRange;
+    unit.maxRange=unit.weapon.maxRange;
+    this.emit();
+    return true;
+  }
+
+  /** Has this ally any owned weapon that can hit an enemy from its present tile? */
+  availableAttackWeapons(unit:Unit):number[] {
+    if(this.result!=="playing"||this.phase!=="player"||unit.team!=="ally"||
+      unit.hp<=0||unit.spent||unit.acted)return [];
+    return unit.inventory.flatMap((id,index)=>{
+      if(!canWield(unit.role,id))return [];
+      const candidate={...unit,weapon:weaponFor(id)};
+      return this.targets(candidate).length ? [index] : [];
+    });
   }
 
   get selected(): Unit | undefined {
@@ -233,10 +269,10 @@ export class Battle {
     for (const position of this.reachable(enemy).keys()) {
       move.add(position); // Includes standing still / a stationary attack.
       const [px, py] = position.split(",").map(Number);
-      for (let dy = -enemy.maxRange; dy <= enemy.maxRange; dy++) {
-        for (let dx = -enemy.maxRange; dx <= enemy.maxRange; dx++) {
+      for (let dy = -enemy.weapon.maxRange; dy <= enemy.weapon.maxRange; dy++) {
+        for (let dx = -enemy.weapon.maxRange; dx <= enemy.weapon.maxRange; dx++) {
           const d = Math.abs(dx) + Math.abs(dy);
-          if (d < enemy.minRange || d > enemy.maxRange) continue;
+          if (d < enemy.weapon.minRange || d > enemy.weapon.maxRange) continue;
           const x = px! + dx;
           const y = py! + dy;
           if (!inBounds(x, y) || this.tile(x, y) === "#") continue;
@@ -275,7 +311,7 @@ export class Battle {
 
   inAttackRange(attacker: Unit, defender: Unit): boolean {
     const d = distance(attacker, defender);
-    return d >= attacker.minRange && d <= attacker.maxRange;
+    return d >= attacker.weapon.minRange && d <= attacker.weapon.maxRange;
   }
   targets(actor: Unit): Unit[] {
     return this.alive(actor.team === "ally" ? "enemy" : "ally")
@@ -454,7 +490,7 @@ export class Battle {
 
   private approachScore(from: Point, target: Unit): number {
     const d = distance(from, target);
-    return d > target.maxRange ? d : Math.max(0, d - 1) * 2;
+    return d > target.weapon.maxRange ? d : Math.max(0, d - 1) * 2;
   }
   private nearest(from: Point, candidates: Unit[]): Unit {
     return [...candidates].sort((a, b) => distance(from, a) - distance(from, b))[0]!;
