@@ -15,6 +15,7 @@ get("game-version").textContent = GAME_VERSION;
 const battle = new Battle();
 const board = new BoardView(battle, get("game"));
 board.onCombatCommitted=()=>renderSelection();
+board.onCombatPresentationEnded=()=>renderSelection();
 let endingTurn = false;
 let turnRunId = 0;
 

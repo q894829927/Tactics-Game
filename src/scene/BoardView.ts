@@ -60,6 +60,7 @@ export class BoardView {
   private skipCombatStep: (()=>void) | null = null;
   private combatOverlay: HTMLDivElement;
   onCombatCommitted: (()=>void) | null = null;
+  onCombatPresentationEnded: (()=>void) | null = null;
   private animationEpoch = 0;
   private animationPose: {id: string; x: number; y: number} | null = null;
   get isAnimating(): boolean { return this.animationLocked || this.combatPlaying; }
@@ -326,7 +327,7 @@ export class BoardView {
     this.applyCamera();
   }
   cancelAction(): boolean {
-    if (this.animationLocked || this.battle.phase !== "player") return false;
+    if (this.isAnimating || this.battle.phase !== "player") return false;
     if (this.forecastTargetId) {
       this.forecastTargetId = null;
       this.renderForecast();
@@ -738,7 +739,7 @@ export class BoardView {
   }
 
   private startDrag(e: PointerEvent): void {
-    if (this.animationLocked || this.battle.phase !== "player") return;
+    if (this.isAnimating || this.battle.phase !== "player") return;
     if (e.button !== 0 && e.button !== 1 && e.button !== 2) return;
     if ((e.target as HTMLElement).closest(".unit-command-menu")) return;
     if (this.drag) return;
@@ -747,7 +748,7 @@ export class BoardView {
       offsetX: this.offsetX, offsetY: this.offsetY, moved: false };
   }
   private moveDrag(e: PointerEvent): void {
-    if (!this.drag || this.drag.pointerId !== e.pointerId || this.animationLocked) return;
+    if (!this.drag || this.drag.pointerId !== e.pointerId || this.isAnimating) return;
     const dx = e.clientX - this.drag.x;
     const dy = e.clientY - this.drag.y;
     if (!this.drag.moved && Math.hypot(dx, dy) < 7) return;
@@ -765,7 +766,7 @@ export class BoardView {
     this.drag = null;
     this.suppressClick = drag.button === 0 && drag.moved;
     if (this.viewport.hasPointerCapture(e.pointerId)) this.viewport.releasePointerCapture(e.pointerId);
-    if (!cancelled && !this.animationLocked && drag.button === 2 && !drag.moved) {
+    if (!cancelled && !this.isAnimating && drag.button === 2 && !drag.moved) {
       const rect = this.viewport.getBoundingClientRect();
       const tile = this.hitTestScreen(e.clientX - rect.left, e.clientY - rect.top);
       if (tile) this.onRightCellClick(tile.x, tile.y);
@@ -886,6 +887,8 @@ export class BoardView {
         this.combatOverlay.hidden=true;
         this.combatOverlay.replaceChildren();
         this.refresh();
+        // Re-enable player actions (especially the end-turn control) after playback.
+        this.onCombatPresentationEnded?.();
       }
     }
   }
