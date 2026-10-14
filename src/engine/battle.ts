@@ -1,15 +1,18 @@
 import { TERRAIN_INFO, type Terrain } from "./terrain.ts";
 import { determineFollowUp } from "./followUp.ts";
 import {initialLoadout,weaponFor,canWield,MAX_INVENTORY,type WeaponId} from "./weapons.ts";
-import {createCharacter,deriveCombat,awardExperience,clampChance,
+import {deriveCombat,awardExperience,clampChance,
   type CharacterData,type CombatStats} from "./attributes.ts";
+import {CHARACTER_LIBRARY,createCharacter,type CharacterId} from "./characters.ts";
+import type {ClassId} from "./classes.ts";
 export type { Terrain } from "./terrain.ts";
 
 export const MAP_WIDTH = 10;
 export const MAP_HEIGHT = 8;
 export type Team = "ally" | "enemy";
 export type GameResult = "playing" | "victory" | "defeat";
-export type Role = "sword" | "lancer" | "archer" | "mage" | "raider" | "commander";
+/** Deprecated UI compatibility alias; classId is authoritative in gameplay. */
+export type Role = ClassId;
 export type Point = { x: number; y: number };
 /** Read-only movement plus potential attack preview for one enemy. */
 /** Single enemy action plan, created before animation and committed afterwards. */
@@ -41,8 +44,9 @@ export type AttackForecast = {
 };
 
 export type Unit = CharacterData & {
-  id:string;name:string;role:Role;team:Team;x:number;y:number;
-  /** Weapon inventory, initially 3 role-compatible items, at most 5. */
+  id:string;characterId:CharacterId;name:string;
+  classId:ClassId;role:Role;team:Team;x:number;y:number;
+  /** Weapon inventory, initially 3 character-specific items, at most 5. */
   inventory:WeaponId[]; equippedIndex:number;
   /** Legacy mirrors for older client/tests; battle calculations read weapon directly. */
   minRange:number;maxRange:number;
@@ -60,12 +64,17 @@ const LAYOUT = [
   "....GGG...",
 ] as const;
 
-function unit(id:string,name:string,role:Role,team:Team,x:number,y:number,
-  maxHp:number,attack:number,defense:number,move:number,minRange=1,maxRange=1):Unit {
-  const inventory=initialLoadout(role);
+function unit(id:CharacterId,team:Team,x:number,y:number):Unit {
+  const definition=CHARACTER_LIBRARY[id];
+  const classId=definition.startingClassId;
+  const inventory=initialLoadout(id);
+  if(inventory.length===0||inventory.length>MAX_INVENTORY||
+      !inventory.every(weaponId=>canWield(classId,weaponId))){
+    throw Error("Invalid starting equipment for character "+id);
+  }
   const equipped=weaponFor(inventory[0]!);
-  return {id,name,role,team,x,y,
-    ...createCharacter(role,maxHp,attack,defense,move,minRange,maxRange),
+  return {id,characterId:id,name:definition.name,classId,role:classId,team,x,y,
+    ...createCharacter(id),
     weapon:equipped,inventory,equippedIndex:0,
     minRange:equipped.minRange,maxRange:equipped.maxRange,
     moved:false,acted:false,spent:false};
@@ -108,16 +117,16 @@ export class Battle {
 
   restart(): void {
     this.units = [
-      unit("a1", "岚锋", "sword", "ally", 1, 5, 30, 11, 3, 3),
-      unit("a2", "槿卫", "lancer", "ally", 1, 6, 36, 10, 5, 2),
-      unit("a3", "霜羽", "archer", "ally", 2, 6, 24, 9, 2, 3, 2, 3),
-      unit("a4", "星烬", "mage", "ally", 0, 7, 23, 12, 1, 3, 1, 2),
-      unit("e1", "掠夺者 A", "raider", "enemy", 7, 1, 21, 8, 2, 3),
-      unit("e2", "长枪兵", "lancer", "enemy", 8, 2, 26, 9, 4, 2),
-      unit("e3", "弩手", "archer", "enemy", 7, 3, 20, 8, 2, 2, 2, 3),
-      unit("e4", "掠夺者 B", "raider", "enemy", 8, 4, 21, 8, 2, 3),
-      unit("e5", "掠夺者 C", "raider", "enemy", 9, 5, 21, 8, 2, 3),
-      unit("e6", "赤旗统领", "commander", "enemy", 9, 7, 38, 11, 5, 2),
+      unit("a1","ally",1,5),
+      unit("a2","ally",1,6),
+      unit("a3","ally",2,6),
+      unit("a4","ally",0,7),
+      unit("e1","enemy",7,1),
+      unit("e2","enemy",8,2),
+      unit("e3","enemy",7,3),
+      unit("e4","enemy",8,4),
+      unit("e5","enemy",9,5),
+      unit("e6","enemy",9,7),
     ];
     this.round = 1;
     this.phase = "player";
@@ -138,7 +147,7 @@ export class Battle {
       !this.units.includes(unit)||!Number.isInteger(index)||index<0||
       index>=unit.inventory.length||unit.inventory.length>MAX_INVENTORY)return false;
     const id=unit.inventory[index]!;
-    if(!canWield(unit.role,id))return false;
+    if(!canWield(unit.classId,id))return false;
     unit.equippedIndex=index;
     unit.weapon=weaponFor(id);
     // Compatibility only: targeting, predictions and AI all use unit.weapon.
@@ -153,7 +162,7 @@ export class Battle {
     if(this.result!=="playing"||this.phase!=="player"||unit.team!=="ally"||
       unit.hp<=0||unit.spent||unit.acted)return [];
     return unit.inventory.flatMap((id,index)=>{
-      if(!canWield(unit.role,id))return [];
+      if(!canWield(unit.classId,id))return [];
       const candidate={...unit,weapon:weaponFor(id)};
       return this.targets(candidate).length ? [index] : [];
     });

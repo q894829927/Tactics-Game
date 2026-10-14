@@ -1,9 +1,10 @@
-import { Battle, type Unit } from "./engine/battle.ts";
+import { Battle } from "./engine/battle.ts";
 import { TERRAIN_INFO, movementCostLabel } from "./engine/terrain.ts";
 import { BoardView } from "./scene/BoardView.ts";
 import { GAME_VERSION } from "./version.ts";
 import {BASIC_KEYS,BASIC_LABELS,GROWTH_KEYS,GROWTH_LABELS} from "./engine/attributes.ts";
 import {WEAPON_LIBRARY,weaponRange} from "./engine/weapons.ts";
+import {CLASS_LIBRARY} from "./engine/classes.ts";
 import "./style.css";
 
 const get = (id: string): HTMLElement => {
@@ -25,10 +26,6 @@ board.onCombatPresentationEnded=()=>{
 let endingTurn = false;
 let turnRunId = 0;
 
-const roleNames: Record<Unit["role"], string> = {
-  sword: "剑士", lancer: "枪卫", archer: "弓手",
-  mage: "术士", raider: "步兵", commander: "指挥官",
-};
 function renderSelection(): void {
   const inspected = board.inspectionCell;
   const selected = inspected ? battle.occupant(inspected.x, inspected.y) : battle.selected;
@@ -40,11 +37,11 @@ function renderSelection(): void {
   get("selection-title").textContent = selected ? "选中单位" : inspected ? "地形详情" : "选中单位";
   get("selection-name").textContent = selected?.name ??
     (inspected ? String.fromCharCode(65 + inspected.x) + (inspected.y + 1) + " · " + terrain?.name : "尚未选择单位");
-  get("selection-role").textContent = selected ? roleNames[selected.role] +
+  get("selection-role").textContent = selected ? CLASS_LIBRARY[selected.classId].name +
     (selected.team === "enemy" ? " · 敌方单位" : " · 我方单位") :
     inspected ? "空地 / 地形信息" : "左键查看单位或地形";
   get("unit-portrait").textContent = selected
-    ? ({ sword: "⚔", lancer: "♞", archer: "➶", mage: "✦", raider: "⚔", commander: "♜" }[selected.role])
+    ? CLASS_LIBRARY[selected.classId].portrait
     : inspected ? terrain?.icon ?? "◇" : "♜";
   get("unit-portrait").classList.toggle("portrait-enemy", selected?.team === "enemy");
   get("unit-portrait").classList.toggle("portrait-terrain", !selected && !!inspected);

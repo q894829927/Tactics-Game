@@ -1,6 +1,7 @@
 import { Battle, MAP_HEIGHT, MAP_WIDTH, key, type Point, type Unit, type AttackForecast, type EnemyActionPlan, type CombatEvent } from "../engine/battle.ts";
 import { combatPreviewView } from "./combatPreviewView.ts";
 import {WEAPON_LIBRARY,weaponRange} from "../engine/weapons.ts";
+import {CLASS_LIBRARY} from "../engine/classes.ts";
 import { TERRAIN_INFO, movementCostLabel } from "../engine/terrain.ts";
 import { leftClickIntent, rightClickIntent } from "./interactionPolicy.ts";
 import { clampCameraOffset } from "./cameraBounds.ts";
@@ -33,9 +34,6 @@ const imgAsset = (name: MapAssetFile, x: number, y: number, w: number, h: number
 };
 
 const terrainGlyphs: Record<string, string> = { ".": "", G: "", F: "♠♠", H: "", "#": "" };
-const roleNames: Record<string, string> = {
-  sword: "剑", lancer: "枪", archer: "弓", mage: "术", raider: "兵", commander: "将",
-};
 
 type ArtZone = "forest" | "camp" | "river" | "cliff" | "grass";
 function zoneAt(worldCol: number, worldRow: number): ArtZone {
@@ -806,12 +804,12 @@ export class BoardView {
     const byId = (id: string): HTMLElement => document.getElementById(id)!;
     byId("forecast-attacker").textContent = view.ally.unit.name;
     byId("forecast-defender").textContent = view.enemy.unit.name;
-    byId("forecast-ally-role").textContent = roleNames[view.ally.unit.role] ?? "兵";
+    byId("forecast-ally-role").textContent = CLASS_LIBRARY[view.ally.unit.classId].emblem;
     byId("forecast-ally-weapon").textContent = view.ally.unit.weapon.name;
-    byId("forecast-enemy-role").textContent = roleNames[view.enemy.unit.role] ?? "兵";
+    byId("forecast-enemy-role").textContent = CLASS_LIBRARY[view.enemy.unit.classId].emblem;
     byId("forecast-enemy-weapon").textContent = view.enemy.unit.weapon.name;
-    byId("forecast-ally-emblem").textContent = roleNames[view.ally.unit.role] ?? "兵";
-    byId("forecast-enemy-emblem").textContent = roleNames[view.enemy.unit.role] ?? "兵";
+    byId("forecast-ally-emblem").textContent = CLASS_LIBRARY[view.ally.unit.classId].emblem;
+    byId("forecast-enemy-emblem").textContent = CLASS_LIBRARY[view.enemy.unit.classId].emblem;
     byId("forecast-ally-hp").textContent = view.ally.unit.hp + " → " + view.ally.hpAfter;
     byId("forecast-enemy-hp").textContent = view.enemy.unit.hp + " → " + view.enemy.hpAfter;
     byId("forecast-ally-odds").textContent = view.ally.hitText;
@@ -997,7 +995,7 @@ export class BoardView {
     if (this.inspectionCell?.x === unit.x && this.inspectionCell.y === unit.y) label.classList.add("label-inspected");
     const emblem = document.createElement("span");
     emblem.className = "screen-label-emblem";
-    emblem.textContent = roleNames[unit.role] ?? "兵";
+    emblem.textContent = CLASS_LIBRARY[unit.classId].emblem;
     const hp = document.createElement("span");
     hp.className = "screen-label-hp";
     const hpFill = document.createElement("span");
@@ -1167,7 +1165,7 @@ export class BoardView {
           node.className = "combat-performer "+role+" "+(u.team==="ally"?"ally":"enemy");
           const name = document.createElement("strong"); name.textContent=u.name;
           const badge = document.createElement("div");badge.className="combat-performer-emblem";
-          badge.textContent=roleNames[u.role]??"兵";
+          badge.textContent=CLASS_LIBRARY[u.classId].emblem;
           const meter = document.createElement("div");meter.className="combat-performer-hp";
           const bar = document.createElement("span");
           bar.style.width=(100*(hp.get(u.id)??u.hp)/u.maxHp)+"%";
