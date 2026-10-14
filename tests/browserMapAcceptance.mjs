@@ -51,6 +51,27 @@ try {
       assert.ok(initialAttackCount>0,"mobile selection must show projected attack cells");
       assert.ok(await page.locator(".tactical-highlight-move .route-move-ally").count()>0,
         "mobile selection must retain movement cells");
+      // Each color is painted in a separate layer; merely checking that both
+      // classes exist would miss a full-screen red overlap regression.
+      const colorState=await page.evaluate(() => {
+        const blues=[...document.querySelectorAll(".tactical-highlight-move .range-cell")];
+        const reds=[...document.querySelectorAll(".tactical-highlight-attack .range-cell")];
+        const blue=blues.find(cell=>cell.classList.contains("route-move-ally"));
+        const red=reds.find(cell=>cell.classList.contains("route-attack"));
+        return {
+          overlap:blues.filter((cell,index)=>cell.classList.contains("route-move-ally") &&
+            reds[index]?.classList.contains("route-attack")).length,
+          blueColor:blue?getComputedStyle(blue).backgroundColor:null,
+          redColor:red?getComputedStyle(red).backgroundColor:null
+        };
+      });
+      assert.equal(colorState.overlap,0,"red union must not cover mobile blue movement");
+      const rgb=value=>value?.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/)?.slice(1,4).map(Number);
+      const blueRgb=rgb(colorState.blueColor),redRgb=rgb(colorState.redColor);
+      assert.ok(blueRgb && blueRgb[2]>blueRgb[0],
+        "mobile movement needs a visible blue background");
+      assert.ok(redRgb && redRgb[0]>redRgb[2],
+        "mobile attack-only cells need a visible red background");
     } else {
       assert.equal(initialAttackCount,0,"desktop selection must not show attack union");
     }
@@ -89,6 +110,13 @@ try {
         const movedAttacks=await page.locator(attackSelector).count();
         assert.ok(movedAttacks>0 && movedAttacks<initialAttackCount,
           "after movement red must cover only attacks from the new cell");
+        const overlapsAfterMove=await page.evaluate(() => {
+          const blues=[...document.querySelectorAll(".tactical-highlight-move .range-cell")];
+          const reds=[...document.querySelectorAll(".tactical-highlight-attack .range-cell")];
+          return blues.filter((cell,index)=>cell.classList.contains("route-move-ally") &&
+            reds[index]?.classList.contains("route-attack")).length;
+        });
+        assert.equal(overlapsAfterMove,0,"movement cell remains blue after moving");
       }
       if(isMobile) {
         await page.locator("#mobile-back").click();

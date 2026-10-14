@@ -581,7 +581,10 @@ export class BoardView {
         const coord=key({x,y});
         const canMove=move.has(coord);
         const moveFill=canMove && (!occupant || occupant.id===focus?.id);
-        const attack=attacks.has(coord);
+        // Touch projects attacks across all movement endpoints: keep legal
+        // movement cells blue rather than letting their red union cover them.
+        // Desktop single-destination hover retains red-on-blue precedence.
+        const attack=attacks.has(coord) && (!touchAttackUnion || !moveFill);
         const targeted=this.attackMode && targeting.has(coord);
         const inspectedHere=this.inspectionCell?.x===x && this.inspectionCell.y===y;
         cell.className="battle-cell"
@@ -612,7 +615,9 @@ export class BoardView {
            targeted?"可攻击目标":
            attack&&moveFill?"移动终点与该处攻击范围":
            attack?(touchAttackUnion?"我方移动后可攻击范围":"所选移动终点的攻击范围"):
-           moveFill?(focus?.team==="enemy"?"敌方可移动范围":"我方可移动范围"):""));
+           moveFill?(focus?.team==="enemy"?"敌方可移动范围":
+             touchAttackUnion && attacks.has(coord)
+               ?"我方可移动范围（同时属于可攻击覆盖区）":"我方可移动范围"):""));
       }
     }
   }

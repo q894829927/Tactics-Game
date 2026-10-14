@@ -46,6 +46,11 @@ test("touch-first range preview uses allyThreat attacks without a hover cursor",
   assert.match(view,/if\(event\.pointerType==="touch" \|\| this\.drag\?\.moved/);
 });
 
+test("touch attack projection cannot paint over blue movement cells",()=>{
+  assert.match(view,/const attack=attacks\.has\(coord\) && \(!touchAttackUnion \|\| !moveFill\)/);
+  assert.match(view,/moveFill && attack \? "route-under-attack":""/);
+});
+
 test("mobile UI has command, back, info drawer and real end-turn action",()=>{
   for(const id of ["mobile-commands","mobile-back","mobile-info","mobile-end-turn",
      "mobile-sidebar-close","unit-sidebar"]) assert.ok(html.includes('id="'+id+'"'),id);

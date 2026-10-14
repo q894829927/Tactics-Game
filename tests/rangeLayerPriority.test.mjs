@@ -45,6 +45,14 @@ test("attacking red is only in upper layer and cancels lower blue when overlappi
   assert.doesNotMatch(board,/this\.highlights/);
 });
 
+test("touch union keeps legal movement blue; desktop hover retains red precedence",()=>{
+  assert.match(board,/const attack=attacks\.has\(coord\) && \(!touchAttackUnion \|\| !moveFill\)/);
+  assert.match(board,/attack\?"route-attack"/);
+  assert.match(board,/moveFill \? \(focus\?\.team==="enemy" \? "route-move-enemy" : "route-move-ally"\)/);
+  assert.match(css,/\.world-stage \.tactical-highlight \.range-cell\.route-move-ally/);
+  assert.match(css,/\.world-stage \.tactical-highlight-attack \.range-cell\.route-attack,/);
+});
+
 test("neither overlay intercepts input and route line remains above both",()=>{
   assert.match(css,/\.world-stage \.tactical-highlight \{ pointer-events: none; \}/);
   assert.match(board,/const grid = layer\("tactical-hit-grid"\)/);
