@@ -7,7 +7,7 @@ import {WEAPON_LIBRARY,weaponRange,canWield} from "./engine/weapons.ts";
 import {weaponRankForExp,weaponExperienceText} from "./engine/proficiency.ts";
 import {weaponResourceText} from "./engine/combatResources.ts";
 import {CLASS_LIBRARY,effectiveClassStats,effectiveClassGrowths,type ClassId} from "./engine/classes.ts";
-import {classWeaponAvailable} from "./engine/classCertification.ts";
+import {classWeaponAvailable,certificationRequirements} from "./engine/classCertification.ts";
 import "./style.css";
 
 const get = (id: string): HTMLElement => {
@@ -202,28 +202,60 @@ get("minimap-grid").addEventListener("dblclick", () => board.resetCamera());
 const classOverlay=get("class-preparation-overlay");
 let preparationUnitId="a1";
 let preparationClassId:ClassId="sword";
+let classStatMode:"stats"|"growth"="stats";
+
+const CLASS_TIER_NAMES={basic:"初级",intermediate:"中级",advanced:"上级",
+  master:"最上级",legacy:"传承"} as const;
+const CLASS_DESCRIPTIONS:Partial<Record<ClassId,string>>={
+  sword:"灵活的近战剑士，利用速度优势进行连续攻击。",
+  lancer:"擅长枪术的前排战士，使用长枪克制骑乘目标。",
+  axeFighter:"以重斧作战的力量型战士，命中后具有最低伤害保障。",
+  archer:"擅长远程攻击的射手，对飞行目标具有武器威力特效。",
+  brawler:"使用轻巧拳套的近战战士，面对其他武器攻击时更容易闪避。",
+  mage:"运用黑魔法攻击敌人，以魔力对抗目标的魔防。",
+  acolyte:"掌握攻击型白魔法的施法者，治疗与辅助法术尚未开放。",
+  duelist:"熟练运用剑术的进阶职业，拥有更高的速度补正。",
+  sentinel:"重视防御的进阶枪术职业，拥有更高的防守补正。",
+};
+const WEAPON_TRAIT_LABELS={
+  sword:"剑系追击伤害 ×1.2",lance:"对骑乘目标武器威力 ×2",
+  axe:"斧命中伤害至少 5",bow:"对飞行目标武器威力 ×3",
+  gauntlet:"受非拳套攻击时回避 +15",dark:"黑魔法按魔防结算",
+  white:"攻击型白魔法按魔防结算",
+} as const;
+const CLASS_SYMBOLS={
+  sword:"⚔",lance:"♞",axe:"⚒",bow:"➶",gauntlet:"✊",dark:"✦",white:"✧",
+} as const;
 function closeClassPreparation():void {
   classOverlay.hidden=true;
   renderSelection();
 }
 function renderClassPreparation():void {
   const roster=get("class-roster"),options=get("class-options");
+  const oldScroll=options.scrollTop;
   roster.replaceChildren();options.replaceChildren();
   const allies=battle.units.filter(u=>u.team==="ally"&&u.hp>0);
   let actor=allies.find(u=>u.id===preparationUnitId);
-  if(!actor){
-    actor=allies[0];
-    if(actor)preparationUnitId=actor.id;
-  }
+  if(!actor){actor=allies[0];if(actor)preparationUnitId=actor.id;}
   if(!actor){closeClassPreparation();return;}
   for(const unit of allies){
+    const cls=CLASS_LIBRARY[unit.classId];
     const item=document.createElement("button");
     item.type="button";
-    item.className=unit.id===preparationUnitId?"active":"";
-    item.textContent=unit.name+" · "+CLASS_LIBRARY[unit.classId].name;
+    item.className="class-roster-card"+(unit.id===preparationUnitId?" active":"");
+    item.setAttribute("aria-pressed",String(unit.id===preparationUnitId));
+    const portrait=document.createElement("span");
+    portrait.className="class-roster-portrait";
+    portrait.textContent=cls.portrait;
+    portrait.setAttribute("aria-hidden","true");
+    const identity=document.createElement("span");identity.className="class-roster-identity";
+    const label=document.createElement("strong");label.textContent=unit.name;
     const sub=document.createElement("small");
-    sub.textContent=unit.classId===unit.role?"已认证职业 "+unit.classLicenses.length:"职业资格";
-    item.appendChild(sub);
+    sub.textContent="当前职业："+cls.name+" · Lv."+unit.level;
+    identity.append(label,sub);
+    const icon=document.createElement("span");icon.className="class-roster-crest";
+    icon.textContent=cls.emblem;icon.setAttribute("aria-hidden","true");
+    item.append(portrait,identity,icon);
     item.addEventListener("click",()=>{
       preparationUnitId=unit.id;preparationClassId=unit.classId;
       renderClassPreparation();
@@ -237,37 +269,149 @@ function renderClassPreparation():void {
   for(const id of battle.classChoices){
     const cls=CLASS_LIBRARY[id],eligibility=battle.classStatus(actor,id);
     const equippable=classWeaponAvailable(id,actor.inventory,actor.weaponExp);
-    const item=document.createElement("button");
-    item.type="button";
-    item.className=(id===preparationClassId?"active ":"")+
-      (eligibility.eligible&&equippable?"":"locked");
+    const isCurrent=id===actor.classId;
+    const item=document.createElement("button");item.type="button";
+    item.className="class-option-card"+(id===preparationClassId?" active":"")+
+      (!eligibility.eligible||!equippable?" locked":"");
+    item.setAttribute("aria-pressed",String(id===preparationClassId));
+    const symbol=document.createElement("span");symbol.className="class-option-icon";
+    symbol.textContent=CLASS_SYMBOLS[cls.weaponCategories[0]]??cls.emblem;
+    const info=document.createElement("span");info.className="class-option-identity";
     const headline=document.createElement("strong");
-    headline.textContent=cls.emblem+" "+cls.name+" · "+
-      (cls.tier==="basic"?"初级":"中级");
-    const detail=document.createElement("small");
-    detail.textContent=id===actor.classId?"当前职业":
-      !eligibility.eligible?eligibility.reason:
-      !equippable?"没有可用的训练武器":eligibility.reason;
-    item.append(headline,detail);
+    headline.textContent=cls.name+" · "+CLASS_TIER_NAMES[cls.tier];
+    const caption=document.createElement("small");
+    const label=isCurrent?"当前职业":eligibility.alreadyCertified?"已认证":
+      !eligibility.eligible||!equippable?"资格不足":"可转职";
+    caption.textContent=label;
+    info.append(headline,caption);
+    const flag=document.createElement("span");
+    flag.className="class-option-status "+(isCurrent?"is-current":
+      eligibility.alreadyCertified?"is-certified":
+      eligibility.eligible&&equippable?"is-ready":"is-locked");
+    flag.textContent=isCurrent?"◆":eligibility.alreadyCertified?"✓":
+      eligibility.eligible&&equippable?"✓":"🔒";
+    flag.setAttribute("aria-label",label);
+    item.append(symbol,info,flag);
+    item.title=isCurrent?"当前职业":eligibility.eligible&&equippable?eligibility.reason:
+      !eligibility.eligible?eligibility.reason:"缺少可用武器";
     item.addEventListener("click",()=>{preparationClassId=id;renderClassPreparation();});
     options.appendChild(item);
   }
+  options.scrollTop=oldScroll;
   const cls=CLASS_LIBRARY[preparationClassId];
-  const changes=Object.entries(cls.statModifiers).map(([k,v])=>
-    (BASIC_LABELS as Record<string,string>)[k]+" "+(Number(v)>=0?"+":"")+v).join(" · ");
-  const growth=Object.entries(cls.growthModifiers).map(([k,v])=>
-    (GROWTH_LABELS as Record<string,string>)[k]+"成长 "+
-    (Number(v)>=0?"+":"")+v+"%").join(" · ");
-  const req=Object.entries(cls.requiredWeaponRanks).map(([k,v])=>k+" "+v).join("、");
+  const symbol=CLASS_SYMBOLS[cls.weaponCategories[0]]??cls.emblem;
+  get("class-preview-emblem").textContent=symbol;
+  get("class-preview-silhouette").textContent=symbol;
+  get("class-preview-name").textContent=cls.name+" · "+CLASS_TIER_NAMES[cls.tier];
+  get("class-preview-description").textContent=CLASS_DESCRIPTIONS[preparationClassId]??"职业介绍尚未开放。";
+  const badges=get("class-preview-badges");
+  badges.replaceChildren();
+  for(const [label,kind] of [
+    [CLASS_TIER_NAMES[cls.tier]+"职业","tier"],
+    [preparationClassId===actor.classId?"当前职业":
+      status.alreadyCertified?"已认证":status.eligible&&hasWeapon?"可认证":"未解锁",
+      preparationClassId===actor.classId||status.alreadyCertified?"certified":
+      status.eligible&&hasWeapon?"ready":"locked"],
+  ]){
+    const tag=document.createElement("span");
+    tag.className="class-state-tag "+kind;tag.textContent=label;
+    badges.appendChild(tag);
+  }
+
+  const statsMode=classStatMode==="stats";
+  button("class-tab-stats").classList.toggle("active",statsMode);
+  button("class-tab-growth").classList.toggle("active",!statsMode);
+  button("class-tab-stats").setAttribute("aria-pressed",String(statsMode));
+  button("class-tab-growth").setAttribute("aria-pressed",String(!statsMode));
+  get("class-stats-title").textContent=statsMode?"基础能力对比":"成长值对比";
+  const currentStats=effectiveClassStats(actor.stats,actor.classId);
+  const afterStats=effectiveClassStats(actor.stats,preparationClassId);
+  const currentGrowth=effectiveClassGrowths(actor.growths,actor.classId);
+  const afterGrowth=effectiveClassGrowths(actor.growths,preparationClassId);
+  const statRows:readonly (readonly [string,number,number])[]=statsMode?[
+    ["HP",actor.maxHp,actor.maxHp],
+    ["力量",currentStats.strength,afterStats.strength],
+    ["魔力",currentStats.magic,afterStats.magic],
+    ["技巧",currentStats.dexterity,afterStats.dexterity],
+    ["速度",currentStats.speed,afterStats.speed],
+    ["防守",currentStats.defense,afterStats.defense],
+    ["魔防",currentStats.resistance,afterStats.resistance],
+    ["幸运",currentStats.luck,afterStats.luck],
+    ["魅力",currentStats.charm,afterStats.charm],
+    ["移动力",actor.move,actor.move],
+  ]:[
+    ["HP",currentGrowth.hp,afterGrowth.hp],
+    ["力量",currentGrowth.strength,afterGrowth.strength],
+    ["魔力",currentGrowth.magic,afterGrowth.magic],
+    ["技巧",currentGrowth.dexterity,afterGrowth.dexterity],
+    ["速度",currentGrowth.speed,afterGrowth.speed],
+    ["防守",currentGrowth.defense,afterGrowth.defense],
+    ["魔防",currentGrowth.resistance,afterGrowth.resistance],
+    ["幸运",currentGrowth.luck,afterGrowth.luck],
+    ["魅力",currentGrowth.charm,afterGrowth.charm],
+  ];
+  const statsRoot=get("class-stat-grid");statsRoot.replaceChildren();
+  for(const [label,before,after] of statRows){
+    const row=document.createElement("div");
+    row.className="class-stat-row";
+    const name=document.createElement("span");name.className="class-stat-label";name.textContent=label;
+    const from=document.createElement("span");from.className="class-stat-before";
+    from.textContent=String(before)+(statsMode?"":"%");
+    const arrow=document.createElement("span");arrow.className="class-stat-arrow";arrow.textContent="›";
+    const dest=document.createElement("strong");
+    dest.className="class-stat-after "+(after>before?"increased":after<before?"decreased":"unchanged");
+    dest.textContent=String(after)+(statsMode?"":"%")+
+      (after>before?" ▲":after<before?" ▼":"");
+    row.append(name,from,arrow,dest);statsRoot.appendChild(row);
+  }
+  get("class-preview-trait").textContent=
+    WEAPON_TRAIT_LABELS[cls.weaponCategories[0]]??"暂无可用的武器系规则";
+  get("class-preview-mastery").textContent=
+    cls.masteryRewardIds.length>0?cls.masteryRewardIds.join(" · "):
+    "尚未开放 · C3 职业精通";
+
+  const exam=get("class-exam-panel"),examContent=get("class-exam-content");
+  examContent.replaceChildren();
+  const needsExam=cls.tier==="intermediate"&&!status.alreadyCertified;
+  exam.hidden=!needsExam;
+  if(needsExam){
+    const requirements=certificationRequirements(preparationClassId);
+    const funds=battle.preparationFunds;
+    const conditions:([string,string,boolean])[]=[];
+    for(const [category,rank] of Object.entries(cls.requiredWeaponRanks)){
+      if(rank){
+        const count=actor.weaponExp[category as keyof typeof actor.weaponExp];
+        conditions.push(["技能："+category+" "+rank,
+          "当前 "+weaponRankForExp(count),count>=
+          ({E:0,D:40,C:120,B:260,A:450,S:700,"S+":1000} as Record<string,number>)[rank]]);
+      }
+    }
+    conditions.push(["名声 ≥"+requirements.reputation,"当前 "+funds.reputation,
+      funds.reputation>=requirements.reputation]);
+    conditions.push(["金币 ×"+requirements.gold,"持有 "+funds.gold,
+      funds.gold>=requirements.gold]);
+    if(requirements.voucher)
+      conditions.push(["中级考试凭证 ×1","持有 "+funds.vouchers[requirements.voucher],
+        funds.vouchers[requirements.voucher]>0]);
+    for(const [label,value,met] of conditions){
+      const row=document.createElement("div");
+      row.className="class-exam-row "+(met?"met":"unmet");
+      const name=document.createElement("span");name.textContent=label;
+      const qty=document.createElement("span");qty.textContent=value;
+      const marker=document.createElement("b");marker.textContent=met?"✓":"–";
+      row.append(name,qty,marker);examContent.appendChild(row);
+    }
+  }
+  const abilityNotes=Object.entries(cls.statModifiers).map(([key,value])=>
+    (BASIC_LABELS as Record<string,string>)[key]+" "+(Number(value)>=0?"+":"")+value);
   get("class-preparation-details").textContent=
-    actor.name+" → "+cls.name+"｜武器要求："+req+
-    "｜能力："+(changes||"无修正")+"｜成长："+(growth||"无修正")+
-    "｜"+(status.eligible?(hasWeapon?"资格满足":"无可用训练装备"):status.reason)+
-    "。个人属性、等级与熟练度不会因转职改变。"+
-    (cls.tier!=="basic"?"中级职业须有名声、考试凭证和金币；目前尚无获取入口。":"");
-  const canApply=battle.canPrepareClass(actor)&&status.eligible&&hasWeapon&&
-    preparationClassId!==actor.classId;
-  button("class-preparation-confirm").disabled=!canApply;
+    actor.name+" → "+cls.name+"。"+
+    (abilityNotes.length?abilityNotes.join("、"):"职业属性无修正")+"。"+
+    (status.eligible&&hasWeapon?"资格满足":status.reason)+"。"+
+    "个人属性、等级、熟练度不会因转职被重置。";
+  button("class-preparation-confirm").disabled=
+    !battle.canPrepareClass(actor)||!status.eligible||!hasWeapon||
+    preparationClassId===actor.classId;
 }
 function openClassPreparation():void {
   if(!battle.preparationOpen||battle.phase!=="player"||
@@ -277,6 +421,7 @@ function openClassPreparation():void {
   preparationUnitId=selected?.team==="ally"?selected.id:preparationUnitId;
   const actor=battle.units.find(u=>u.id===preparationUnitId);
   preparationClassId=actor?.classId??"sword";
+  classStatMode="stats";
   classOverlay.hidden=false;
   renderClassPreparation();
   button("class-preparation-close").focus();
@@ -285,6 +430,12 @@ button("class-preparation-button").addEventListener("click",openClassPreparation
 button("settings-preparation").addEventListener("click",openClassPreparation);
 button("class-preparation-close").addEventListener("click",closeClassPreparation);
 button("class-preparation-cancel").addEventListener("click",closeClassPreparation);
+button("class-tab-stats").addEventListener("click",()=>{
+  classStatMode="stats";renderClassPreparation();
+});
+button("class-tab-growth").addEventListener("click",()=>{
+  classStatMode="growth";renderClassPreparation();
+});
 classOverlay.addEventListener("click",e=>{
   if(e.target===classOverlay)closeClassPreparation();
 });

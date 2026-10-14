@@ -154,16 +154,67 @@
       <section class="class-preparation-panel" role="dialog" aria-modal="true"
         aria-labelledby="class-preparation-title">
         <header class="class-preparation-header">
-          <div><h2 id="class-preparation-title">职业整备</h2>
-            <p>仅限第一回合行动前 · 初级职业免费认证，已认证职业免费切换</p></div>
+          <div class="class-preparation-title-group">
+            <span class="class-preparation-crest" aria-hidden="true">✥</span>
+            <h2 id="class-preparation-title">职业整备</h2>
+          </div>
           <button id="class-preparation-close" type="button" aria-label="关闭职业整备">关闭 ✕</button>
         </header>
         <div class="class-preparation-columns">
-          <div><h3>选择人物</h3><div id="class-roster" class="class-roster"></div></div>
-          <div><h3>目标职业</h3><div id="class-options" class="class-options"></div></div>
+          <section class="class-preparation-roster-pane" aria-labelledby="class-roster-title">
+            <h3 id="class-roster-title" class="class-pane-heading">选择人物</h3>
+            <div id="class-roster" class="class-roster"></div>
+            <div class="class-roster-heraldry" aria-hidden="true"><span>✥</span></div>
+          </section>
+          <section class="class-preparation-choice-pane" aria-labelledby="class-options-title">
+            <h3 id="class-options-title" class="class-pane-heading">选择目标职业</h3>
+            <div id="class-options" class="class-options"></div>
+            <section id="class-exam-panel" class="class-exam-panel" aria-labelledby="class-exam-heading" hidden>
+              <h4 id="class-exam-heading" class="class-pane-heading">认证条件</h4>
+              <div id="class-exam-content" class="class-exam-content"></div>
+            </section>
+          </section>
+          <section class="class-preparation-info-pane" aria-labelledby="class-info-title">
+            <h3 id="class-info-title" class="class-pane-heading">职业信息</h3>
+            <div class="class-info-hero">
+              <div class="class-info-identity">
+                <div id="class-preview-emblem" class="class-preview-emblem" aria-hidden="true">剑</div>
+                <div class="class-info-heading">
+                  <strong id="class-preview-name">剑士</strong>
+                  <div id="class-preview-badges" class="class-preview-badges"></div>
+                </div>
+              </div>
+              <div class="class-info-description">
+                <p id="class-preview-description"></p>
+                <div id="class-preview-silhouette" class="class-preview-silhouette" aria-hidden="true">⚔</div>
+              </div>
+            </div>
+            <section class="class-stat-panel" aria-labelledby="class-stats-title">
+              <div class="class-stat-heading">
+                <h4 id="class-stats-title" class="class-pane-heading">基础能力对比</h4>
+                <div class="class-stat-switch" role="group" aria-label="能力比较方式">
+                  <button id="class-tab-stats" type="button" class="active" aria-pressed="true">基础能力</button>
+                  <button id="class-tab-growth" type="button" aria-pressed="false">成长值</button>
+                </div>
+              </div>
+              <div class="class-stat-head"><span>当前职业</span><span>转职后</span></div>
+              <div id="class-stat-grid" class="class-stat-grid"></div>
+            </section>
+            <div class="class-feature-panels">
+              <section class="class-feature-section">
+                <h4 class="class-pane-heading">武器系特性</h4>
+                <div id="class-preview-trait" class="class-feature-content"></div>
+              </section>
+              <section class="class-feature-section">
+                <h4 class="class-pane-heading">精通特技</h4>
+                <div id="class-preview-mastery" class="class-feature-content"></div>
+              </section>
+            </div>
+          </section>
         </div>
-        <div id="class-preparation-details" class="class-preparation-details" aria-live="polite"></div>
+        <div id="class-preparation-details" class="sr-only" role="status" aria-live="polite"></div>
         <footer class="class-preparation-footer">
+          <div class="class-footer-ornament" aria-hidden="true"><span>✥</span></div>
           <button id="class-preparation-cancel" type="button">返回战场</button>
           <button id="class-preparation-confirm" type="button">确认转职</button>
         </footer>

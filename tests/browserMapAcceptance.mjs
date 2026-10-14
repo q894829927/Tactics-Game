@@ -105,9 +105,42 @@ try {
     await page.locator("#class-preparation-overlay").waitFor({state:"visible"});
     assert.equal(await page.locator("#class-roster button").count(),4,name+" ally roster");
     assert.equal(await page.locator("#class-options button").count(),9,name+" available class list");
+    assert.equal(await page.locator("#class-exam-panel").isVisible(),false,
+      name+" free basic class must not show exam cost");
+    assert.equal(await page.locator("#class-preparation-confirm").isDisabled(),true,
+      name+" changing to current class is not a valid action");
+    const sameClass=await page.locator("#class-stat-grid .class-stat-row").allTextContents();
+    assert.ok(sameClass.length===10,name+" must show ten real base stats");
+    assert.ok(sameClass.every(row=>{
+      const numbers=row.match(/\d+/g)||[];
+      return numbers.length===2&&numbers[0]===numbers[1];
+    }),name+" current job to itself must have identical stats");
+    assert.equal(await page.locator("#class-options button").filter({hasText:"100%"}).count(),0,
+      name+" no invented examination rates on beginner classes");
     await page.locator("#class-options button").filter({hasText:"游剑士"}).click();
+    assert.equal(await page.locator("#class-exam-panel").isVisible(),true,
+      name+" uncertified intermediate class reveals actual requirements");
+    assert.match(await page.locator("#class-exam-content").innerText(),/中级考试凭证/);
+    assert.match(await page.locator("#class-exam-content").innerText(),/金币/);
     assert.equal(await page.locator("#class-preparation-confirm").isDisabled(),true,
       name+" intermediate class has no voucher");
+    await page.locator("#class-options button").filter({hasText:"拳斗士"}).click();
+    assert.equal(await page.locator("#class-exam-panel").isVisible(),false,
+      name+" exam panel is absent for free beginner jobs");
+    const speed=page.locator("#class-stat-grid .class-stat-row").filter({hasText:"速度"});
+    assert.match(await speed.innerText(),/9.*10/,
+      name+" actual blade 9 speed increases to 10 as brawler");
+    assert.match(await speed.locator(".class-stat-after").getAttribute("class"),/increased/);
+    await page.locator("#class-tab-growth").click();
+    assert.equal(await page.locator("#class-stats-title").innerText(),"成长值对比");
+    assert.match(await page.locator("#class-stat-grid .class-stat-row").filter({hasText:"速度"}).innerText(),/55%.*60%/,
+      name+" current class 55% speed growth increases to 60%");
+    await page.locator("#class-tab-stats").click();
+    assert.equal(await page.locator("#class-stat-grid .class-stat-row").count(),10);
+    const modalSize=await page.locator(".class-preparation-panel").evaluate(el=>
+      ({width:el.clientWidth,scrollWidth:el.scrollWidth}));
+    assert.ok(modalSize.scrollWidth<=modalSize.width+2,
+      name+" class preparation must not overflow horizontally");
     await page.locator("#class-options button").filter({hasText:"拳斗士"}).click();
     assert.equal(await page.locator("#class-preparation-confirm").isEnabled(),true,
       name+" brawler meets beginner requirements");
