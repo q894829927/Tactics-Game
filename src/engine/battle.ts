@@ -1,4 +1,5 @@
 import { TERRAIN_INFO, type Terrain } from "./terrain.ts";
+import { determineFollowUp } from "./followUp.ts";
 import {initialLoadout,weaponFor,canWield,MAX_INVENTORY,type WeaponId} from "./weapons.ts";
 import {createCharacter,deriveCombat,awardExperience,clampChance,
   type CharacterData,type CombatStats} from "./attributes.ts";
@@ -196,15 +197,17 @@ export class Battle {
     const damage=this.damage(attacker,defender);
     const counterDamage=this.damage(defender,attacker);
     const counterInRange=this.inAttackRange(defender,attacker);
-    const diff=this.combatStats(attacker).attackSpeed-this.combatStats(defender).attackSpeed;
-    const followUp=diff>=5?"attacker":diff<=-5?"defender":null;
     let hpA=attacker.hp,hpD=Math.max(0,defender.hp-damage);
     const canCounter=counterInRange&&hpD>0;
     if(canCounter)hpA=Math.max(0,hpA-counterDamage);
-    if(hpA>0&&hpD>0){
-      if(followUp==="attacker")hpD=Math.max(0,hpD-damage);
-      else if(followUp==="defender"&&counterInRange)hpA=Math.max(0,hpA-counterDamage);
-    }
+    // This preview assumes normal hits, no criticals. Report a follow-up
+    // only if both units would still be alive after the preceding strikes.
+    const followUp=hpA>0&&hpD>0
+      ? determineFollowUp(this.combatStats(attacker).attackSpeed,
+        this.combatStats(defender).attackSpeed,canCounter)
+      : null;
+    if(followUp==="attacker")hpD=Math.max(0,hpD-damage);
+    else if(followUp==="defender")hpA=Math.max(0,hpA-counterDamage);
     return {damage,counterDamage:canCounter?counterDamage:0,canCounter,attackerHpAfter:hpA,defenderHpAfter:hpD,
       attackerHit:this.hitChance(attacker,defender),defenderHit:this.hitChance(defender,attacker),
       attackerCrit:this.criticalChance(attacker,defender),
@@ -555,12 +558,17 @@ export class Battle {
       return amount;
     };
     damage+=hit(actor,defender);
-    if(defender.hp>0&&actor.hp>0&&this.inAttackRange(defender,actor)){
+    const canCounter=defender.hp>0&&actor.hp>0&&this.inAttackRange(defender,actor);
+    if(canCounter){
       countered=true;counterDamage+=hit(defender,actor);
     }
+    // Actual survival may differ from the normal-hit forecast (e.g. a miss).
+    // Compute the legal follow-up from the committed state, not preview text.
     if(actor.hp>0&&defender.hp>0){
-      if(forecast.followUp==="attacker")damage+=hit(actor,defender);
-      else if(forecast.followUp==="defender"&&this.inAttackRange(defender,actor)){
+      const followUp=determineFollowUp(this.combatStats(actor).attackSpeed,
+        this.combatStats(defender).attackSpeed,canCounter);
+      if(followUp==="attacker")damage+=hit(actor,defender);
+      else if(followUp==="defender"){
         countered=true;counterDamage+=hit(defender,actor);
       }
     }
