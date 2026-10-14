@@ -117,13 +117,15 @@ try {
     assert.match(await page.locator("#class-preparation-details").innerText(),/速度 \+1/,
       name+" brawler modifier is visible");
     await page.screenshot({path:`${out}/${name}-class-preparation.png`,animations:"disabled"});
-    await page.locator("#class-options button").filter({hasText:"剑士"}).click();
+    // Exact beginner sword class, not the intermediate "游剑士".
+    await page.locator("#class-options button").first().click();
     await page.locator("#class-preparation-confirm").click();
     assert.match(await page.locator("#class-roster button.active").innerText(),/剑士/,
       name+" original certified class can be reselected");
     await page.locator("#class-preparation-close").click();
     assert.equal(await page.locator("#class-preparation-overlay").isVisible(),false,
       name+" modal closed without consuming an action");
+    await page.locator('.battle-cell[data-x="1"][data-y="5"]').evaluate(el=>el.click());
     assert.equal(await page.locator("#selection-role").innerText(),"剑士 · 我方单位",
       name+" battle sidebar uses the restored class");
     assert.deepEqual(errors,[],name+" C1 reclass must not throw errors");
