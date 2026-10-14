@@ -2,14 +2,14 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {readFileSync} from "node:fs";
 import {execFileSync} from "node:child_process";
-import {fileURLToPath} from "node:url";
 
 const scriptURL=new URL("../scripts/deploy-ecs.sh",import.meta.url);
 const source=readFileSync(scriptURL,"utf8");
 const service=readFileSync(new URL("../ops/tactics-game-deploy.service",import.meta.url),"utf8");
 
 test("deployed root script is valid bash",()=>{
-  assert.doesNotThrow(()=>execFileSync("bash",["-n",fileURLToPath(scriptURL)]));
+  // Stdin works with native Bash, Git Bash and WSL without translating Windows paths.
+  assert.doesNotThrow(()=>execFileSync("bash",["-n"],{input:source.replace(/\r\n/g,"\n")}));
 });
 
 test("Git queries and fetch use SSH 443 first and fallback to verified HTTPS",()=>{

@@ -1,0 +1,51 @@
+{
+  "url": "http://127.0.0.1:5173/games/tactics/",
+  "desktop1920": {
+    "cells": 80,
+    "decoded": true,
+    "ground": {
+      "material": "loaded",
+      "waterMaterial": "loaded"
+    },
+    "hills": 3,
+    "mainCount": 100,
+    "miniCount": 100,
+    "shared": true,
+    "shrubs": 6,
+    "spriteResources": 6,
+    "stage": "translate3d(30px, 0px, 0px) scale(0.978261)",
+    "stones": 3,
+    "version": "v0.1.20.9"
+  },
+  "desktop1366": {
+    "cells": 80,
+    "decoded": true,
+    "ground": {
+      "material": "loaded",
+      "waterMaterial": "loaded"
+    },
+    "version": "v0.1.20.9"
+  },
+  "mobile390": {
+    "decoded": true,
+    "dock": "grid",
+    "ground": {
+      "material": "loaded",
+      "waterMaterial": "loaded"
+    },
+    "main": 100,
+    "mini": 100,
+    "units": 10,
+    "version": "v0.1.20.9"
+  },
+  "desktopHillMoveUndo": {
+    "destination": "D6 丘陵 我方可移动范围",
+    "menu": "none",
+    "origin": "B6 土地 岚锋 生命 30/30"
+  },
+  "mobileHillMoveUndo": {
+    "menu": "none",
+    "origin": "B6 土地 岚锋 生命 30/30"
+  },
+  "scope": "Local CUA render and UI checks; viewport resize does not emulate a coarse touch pointer."
+}

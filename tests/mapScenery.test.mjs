@@ -7,7 +7,7 @@ import { buildMapScenery, riverBankX } from "../src/scene/mapScenery.ts";
 import { TILE, TACTICAL_X, TACTICAL_Y, TACTICAL_WIDTH, TACTICAL_HEIGHT } from "../src/scene/worldGeometry.ts";
 import { MAP_ASSET_FILES } from "../src/scene/mapAssetFiles.ts";
 
-test("forest and rock sprites cover their actual terrain, without covering walkable cells", () => {
+test("forest, hill and rock sprites stay inside their corresponding terrain cells", () => {
   const terrain=new Battle().terrain;
   const scenery=buildMapScenery(terrain);
   const inside=scenery.filter(s=>s.terrainCells.length);
@@ -15,10 +15,11 @@ test("forest and rock sprites cover their actual terrain, without covering walka
   for(let y=0;y<terrain.length;y++) for(let x=0;x<terrain[y].length;x++) {
     const type=terrain[y][x];
     const props=inside.filter(s=>s.terrainCells.some(cell=>cell.x===x&&cell.y===y));
-    assert.equal(props.length,type==="F"||type==="#"?1:0,`${x},${y} ${type}`);
+    assert.equal(props.length,["F","H","#"].includes(type)?1:0,`${x},${y} ${type}`);
     for(const prop of props) {
       count++;
-      assert.equal(prop.file,type==="F"?MAP_ASSET_FILES.tree:MAP_ASSET_FILES.cliff);
+      if(type==="F") assert.ok([MAP_ASSET_FILES.tree,MAP_ASSET_FILES.treeBroadleaf].includes(prop.file));
+      else assert.equal(prop.file,type==="H"?MAP_ASSET_FILES.hill:MAP_ASSET_FILES.cliff);
     }
   }
   assert.equal(inside.reduce((total,prop)=>total+prop.terrainCells.length,0),count);
@@ -29,8 +30,22 @@ test("forest and rock sprites cover their actual terrain, without covering walka
     assert.ok(prop.y>=TACTICAL_Y+Math.min(...ys)*TILE);
     assert.ok(prop.y+prop.height<=TACTICAL_Y+(Math.max(...ys)+1)*TILE);
   }
-  const cleared=terrain.map(row=>row.replace(/[F#]/g,"."));
+  const cleared=terrain.map(row=>row.replace(/[FH#]/g,"."));
   assert.equal(buildMapScenery(cleared).filter(s=>s.terrainCells.length).length,0);
+});
+
+test("new forest variants and small woodland props are actually used without changing terrain", () => {
+  const terrain=new Battle().terrain, before=[...terrain];
+  const scenery=buildMapScenery(terrain);
+  assert.deepEqual(terrain,before);
+  for(const file of [MAP_ASSET_FILES.tree,MAP_ASSET_FILES.treeBroadleaf])
+    assert.ok(scenery.some(prop=>prop.file===file&&prop.terrainCells.length),file);
+  for(const file of [MAP_ASSET_FILES.shrub,MAP_ASSET_FILES.stones]) {
+    const props=scenery.filter(prop=>prop.file===file);
+    assert.ok(props.length>0,file);
+    assert.ok(props.every(prop=>prop.terrainCells.length===0));
+  }
+  assert.equal(new Set(scenery.map(prop=>prop.id)).size,scenery.length);
 });
 
 test("a joined rock obstacle preserves blocked coverage and cannot bridge a walkable gap", () => {
@@ -62,7 +77,7 @@ test("decorations and water stay outside playable cells and scenery is stable", 
 test("content-hashed runtime WebP art stays within 1 MiB and retains alpha/source provenance", () => {
   const root=new URL("../public/assets/maps/red-banner/modular/",import.meta.url);
   const manifest=JSON.parse(readFileSync(new URL("manifest.json",root),"utf8"));
-  assert.equal(manifest.assets.length,7);
+  assert.equal(manifest.assets.length,11);
   let total=0;
   for(const asset of manifest.assets) {
     const bytes=readFileSync(new URL(asset.filename,root));

@@ -16,6 +16,10 @@ CONFIG = (
     ("tree", "tree-spruce", "art/map-style-samples/v1/tree-style-v1.png", 768, True),
     ("cliff", "rock-outcrop", "art/terrain-readability/v0.1.5.2/rock-outcrop.png", 768, True),
     ("water", "river-water", "art/terrain-readability/v0.1.5.2/river-water.png", 512, False),
+    ("treeBroadleaf", "tree-broadleaf", "art/map-expansion/v1/tree-broadleaf.png", 384, True),
+    ("shrub", "shrub", "art/map-expansion/v1/shrub.png", 256, True),
+    ("stones", "stones", "art/map-expansion/v1/stones.png", 256, True),
+    ("hill", "grassy-knoll", "art/map-expansion/v1/hill.png", 384, True),
 )
 
 

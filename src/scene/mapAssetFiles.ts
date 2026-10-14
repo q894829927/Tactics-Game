@@ -6,5 +6,9 @@ export const MAP_ASSET_FILES = {
   "grassVariant": "modular/ground-grass-b.b7f77a360b93.webp",
   "tree": "modular/tree-spruce.85c73f984762.webp",
   "cliff": "modular/rock-outcrop.10c67ef0c364.webp",
-  "water": "modular/river-water.9070857988e6.webp"
+  "water": "modular/river-water.9070857988e6.webp",
+  "treeBroadleaf": "modular/tree-broadleaf.041dbfb52911.webp",
+  "shrub": "modular/shrub.9b469ceccc61.webp",
+  "stones": "modular/stones.5f300e589847.webp",
+  "hill": "modular/grassy-knoll.1f306aa89e65.webp"
 } as const;

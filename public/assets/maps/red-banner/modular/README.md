@@ -1,5 +1,7 @@
 # 分层地图运行时素材
 
+v0.1.20.9 补充素材原图及最终提示词见 [地图补充素材](../../../../../art/map-expansion/v1/README.md)：`tree-broadleaf.*.webp`（384 px）、`shrub.*.webp`（256 px）、`stones.*.webp`（256 px）、`grassy-knoll.*.webp`（384 px），均保留真实 RGBA。阔叶树用于森林变体，灌木和小石用于林缘装饰，丘陵对应实际可走格。十一张素材总量仍不超过 1 MiB，准确字节数以清单为准；下面七张素材的说明保留为原有资源记录。
+
 v0.1.9.0 土地/草地原图与最终提示词见 [地面素材组](../../../../../art/ground-materials/v0.1.9.0/README.md)；树木原图保留在 `art/map-style-samples/v1/`，提示词见 [prompts.json](../../../../../art/map-style-samples/v1/prompts.json)；岩团/水面原图及提示词见 [制作记录](../../../../../art/terrain-readability/v0.1.5.2/README.md)。均由内置 image_gen 原创生成。运行时采用按显示尺寸压缩的 WebP，具体内容哈希文件名、来源、尺寸、字节数及编码参数见 [manifest.json](manifest.json)。
 
 | 文件 | 来源 | 分辨率 | Alpha | 接入 |

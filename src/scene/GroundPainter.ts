@@ -66,14 +66,10 @@ export class GroundPainter {
         shadow.addColorStop(1,"#162e2500");
         ctx.fillStyle=shadow; ctx.fillRect(p.x-58,p.y-58,116,116);
       } else if (type === "H") {
-        // A shallow, walkable grassy slope, distinct from the blocked rock faces.
+        // A subtle underlay remains readable if the separate grassy knoll sprite fails.
         const hill=ctx.createRadialGradient(p.x-17,p.y-17,2,p.x,p.y,51);
         hill.addColorStop(0,"#a5a16a55");hill.addColorStop(.55,"#837a5155");hill.addColorStop(1,"#46523900");
         ctx.fillStyle=hill;ctx.fillRect(p.x-51,p.y-51,102,102);
-        ctx.strokeStyle="#c7ba8548";ctx.lineWidth=1.5;
-        for(let i=0;i<3;i++) {
-          ctx.beginPath();ctx.ellipse(p.x,p.y+8+i*8,30-i*4,12,0,Math.PI*.1,Math.PI*.9);ctx.stroke();
-        }
       }
     }
     this.river(ctx);

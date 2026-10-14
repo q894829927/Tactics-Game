@@ -32,7 +32,7 @@ const imgAsset = (name: MapAssetFile, x: number, y: number, w: number, h: number
   return sprite;
 };
 
-const terrainGlyphs: Record<string, string> = { ".": "", G: "", F: "♠♠", H: "▲", "#": "" };
+const terrainGlyphs: Record<string, string> = { ".": "", G: "", F: "♠♠", H: "", "#": "" };
 const roleNames: Record<string, string> = {
   sword: "剑", lancer: "枪", archer: "弓", mage: "术", raider: "兵", commander: "将",
 };
