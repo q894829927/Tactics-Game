@@ -45,11 +45,14 @@ test("attacking red is only in upper layer and cancels lower blue when overlappi
   assert.doesNotMatch(board,/this\.highlights/);
 });
 
-test("touch union keeps legal movement blue; desktop hover retains red precedence",()=>{
-  assert.match(board,/const attack=attacks\.has\(coord\) && \(!touchAttackUnion \|\| !moveFill\)/);
+test("enemy and touch unions keep movement blue; desktop ally hover retains red priority",()=>{
+  assert.match(board,/const enemyAttackUnion=actionable && focus\?\.team==="enemy"/);
+  assert.match(board,/const showAttackUnion=touchAttackUnion \|\| enemyAttackUnion/);
+  assert.match(board,/const attack=attacks\.has\(coord\) && \(!showAttackUnion \|\| !moveFill\)/);
   assert.match(board,/attack\?"route-attack"/);
   assert.match(board,/moveFill \? \(focus\?\.team==="enemy" \? "route-move-enemy" : "route-move-ally"\)/);
-  assert.match(css,/\.world-stage \.tactical-highlight \.range-cell\.route-move-ally/);
+  assert.match(css,/\.world-stage \.tactical-highlight \.range-cell\.route-move-ally,/);
+  assert.match(css,/\.world-stage \.tactical-highlight \.range-cell\.route-move-enemy \{\s*background:rgba\(45,150,237,\.48\)/);
   assert.match(css,/\.world-stage \.tactical-highlight-attack \.range-cell\.route-attack,/);
 });
 

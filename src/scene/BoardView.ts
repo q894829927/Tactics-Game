@@ -524,11 +524,9 @@ export class BoardView {
     this.applyCamera();
   }
 
-  /** Tile hover is transient. Painting just range cells (not units/labels)
-   * avoids rebuilding DOM nodes on every pointer crossing.
-   *
-   * Hovering ANY unit: movement only. Clicking a unit fixes inspection;
-   * hovering a legal endpoint then shows route + ONLY that tile's attacks.
+  /** Enemy hover and inspection show blue movement + red attack coverage.
+   * Allies retain touch union or desktop single-endpoint hover previews.
+   * Repaint range cells without recreating units or labels.
    */
   private renderRangeHighlights(): void {
     const active=this.battle.result==="playing" && !this.isAnimating;
@@ -552,22 +550,22 @@ export class BoardView {
     const move=range?.move ?? new Set<string>();
     const targeting = new Set(selected && !selected.acted && !selected.spent
       ? this.battle.targets(selected).map(key) : []);
-    // Touch-first screens have no hover destination. Project attack cells
-    // across all legal movement endpoints; after moving allyThreat only uses
-    // the current cell. Mouse desktops retain single-endpoint hover previews.
+    // Enemy inspections always show all legal attacks; touch-first allies
+    // need the same projection because touch has no hover destination.
+    // Mouse allies retain their single-endpoint attack preview.
     const touchAttackUnion=!!selected && actionable && !hoverMode &&
       focus?.team==="ally" && focus.id===selected.id &&
       window.matchMedia("(hover: none) and (pointer: coarse)").matches;
+    const enemyAttackUnion=actionable && focus?.team==="enemy";
+    const showAttackUnion=touchAttackUnion || enemyAttackUnion;
     let route:Point[]|null=null;
-    let attacks=new Set<string>();
-    if(touchAttackUnion) {
-      attacks=range?.attack ?? new Set<string>();
-    } else if(actionable && !hoverMode && focus && this.hoveredTile &&
+    let attacks=showAttackUnion ? range?.attack ?? new Set<string>() : new Set<string>();
+    if(actionable && !hoverMode && focus && this.hoveredTile &&
        move.has(key(this.hoveredTile)) &&
        (!mouseUnit || mouseUnit.id===focus.id)) {
       const forecast=this.battle.previewMovementAttack(focus,this.hoveredTile);
       route=forecast?.path??null;
-      attacks=forecast?.attack??new Set();
+      if(!showAttackUnion) attacks=forecast?.attack??new Set();
     }
     this.drawRoute(route);
     for (let y=0;y<MAP_HEIGHT;y++) {
@@ -581,10 +579,9 @@ export class BoardView {
         const coord=key({x,y});
         const canMove=move.has(coord);
         const moveFill=canMove && (!occupant || occupant.id===focus?.id);
-        // Touch projects attacks across all movement endpoints: keep legal
-        // movement cells blue rather than letting their red union cover them.
-        // Desktop single-destination hover retains red-on-blue precedence.
-        const attack=attacks.has(coord) && (!touchAttackUnion || !moveFill);
+        // In enemy/touch attack unions blue movement wins. Desktop ally hover
+        // with a single destination still shows the red attacking area.
+        const attack=attacks.has(coord) && (!showAttackUnion || !moveFill);
         const targeted=this.attackMode && targeting.has(coord);
         const inspectedHere=this.inspectionCell?.x===x && this.inspectionCell.y===y;
         cell.className="battle-cell"
@@ -614,9 +611,12 @@ export class BoardView {
           (occupant?occupant.name+" 生命 "+occupant.hp+"/"+occupant.maxHp:
            targeted?"可攻击目标":
            attack&&moveFill?"移动终点与该处攻击范围":
-           attack?(touchAttackUnion?"我方移动后可攻击范围":"所选移动终点的攻击范围"):
-           moveFill?(focus?.team==="enemy"?"敌方可移动范围":
-             touchAttackUnion && attacks.has(coord)
+           attack?(showAttackUnion
+             ?(enemyAttackUnion?"敌方移动后可攻击范围":"我方移动后可攻击范围")
+             :"所选移动终点的攻击范围"):
+           moveFill?(focus?.team==="enemy"
+             ?(attacks.has(coord)?"敌方可移动范围（同时属于可攻击覆盖区）":"敌方可移动范围")
+             :touchAttackUnion && attacks.has(coord)
                ?"我方可移动范围（同时属于可攻击覆盖区）":"我方可移动范围"):""));
       }
     }

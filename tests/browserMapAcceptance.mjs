@@ -142,6 +142,49 @@ try {
           "confirming stay must keep mobile projected attack cells");
       }
     }
+    // Enemy hover and click share the blue movement / red attack legend.
+    const enemyCell='.battle-cell[data-x="7"][data-y="1"]';
+    if(!isMobile) {
+      await page.locator(enemyCell).evaluate(el => {
+        const bounds=el.getBoundingClientRect();
+        el.dispatchEvent(new PointerEvent("pointermove", {
+          bubbles:true,pointerType:"mouse",
+          clientX:(bounds.left+bounds.right)/2,
+          clientY:(bounds.top+bounds.bottom)/2
+        }));
+      });
+      assert.ok(await page.locator(".tactical-highlight-move .route-move-enemy").count()>0,
+        "desktop enemy hover should show blue movement");
+      assert.ok(await page.locator(attackSelector).count()>0,
+        "desktop enemy hover should show red attack coverage");
+    }
+    // Clear stale hover to ensure clicked enemy inspection gets the focus.
+    await page.locator("#game").evaluate(el =>
+      el.dispatchEvent(new PointerEvent("pointerleave",{pointerType:"mouse"})));
+    await page.locator(enemyCell).evaluate(el=>el.click());
+    await page.waitForFunction(() => document.querySelector("#selection-name")?.textContent==="掠夺者 A");
+    const enemyState=await page.evaluate(() => {
+      const blue=[...document.querySelectorAll(".tactical-highlight-move .range-cell")];
+      const red=[...document.querySelectorAll(".tactical-highlight-attack .range-cell")];
+      const movement=blue.filter(el=>el.classList.contains("route-move-enemy"));
+      const attacks=red.filter(el=>el.classList.contains("route-attack"));
+      return {
+        moveCount:movement.length,attackCount:attacks.length,
+        overlap:blue.filter((el,index)=>el.classList.contains("route-move-enemy") &&
+          red[index]?.classList.contains("route-attack")).length,
+        moveColor:movement[0]?getComputedStyle(movement[0]).backgroundColor:null,
+        attackColor:attacks[0]?getComputedStyle(attacks[0]).backgroundColor:null
+      };
+    });
+    assert.ok(enemyState.moveCount>1,name+" enemy has blue movement tiles");
+    assert.ok(enemyState.attackCount>0,name+" enemy has red attack-only tiles");
+    assert.equal(enemyState.overlap,0,name+" enemy attack union does not cover blue");
+    const channels=s=>s?.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/)?.slice(1,4).map(Number);
+    const enemyBlue=channels(enemyState.moveColor);
+    const enemyRed=channels(enemyState.attackColor);
+    assert.ok(enemyBlue && enemyBlue[2]>enemyBlue[0],name+" enemy movement is blue");
+    assert.ok(enemyRed && enemyRed[0]>enemyRed[2],name+" enemy attack is red");
+    await page.screenshot({path:out+"/"+name+"-enemy-range.png",animations:"disabled"});
     if(name==="desktop-1920x1080") {
       // Capture the M1 6x5 world-grid slice including independent transparent
       // scenery, never crop and reuse a flattened AI background.

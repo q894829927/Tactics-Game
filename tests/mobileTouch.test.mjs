@@ -40,14 +40,15 @@ test("touch-first range preview uses allyThreat attacks without a hover cursor",
   assert.match(view,/const touchAttackUnion=!!selected && actionable && !hoverMode/);
   assert.match(view,/focus\?\.team==="ally" && focus\.id===selected\.id/);
   assert.match(view,/window\.matchMedia\("\(hover: none\) and \(pointer: coarse\)"\)\.matches/);
-  assert.match(view,/if\(touchAttackUnion\) \{\s*attacks=range\?\.attack/);
-  assert.match(view,/else if\(actionable && !hoverMode && focus && this\.hoveredTile/);
-  assert.match(view,/attack\?\(touchAttackUnion\?"我方移动后可攻击范围"/);
+  assert.match(view,/const showAttackUnion=touchAttackUnion \|\| enemyAttackUnion/);
+  assert.match(view,/let attacks=showAttackUnion \? range\?\.attack/);
+  assert.match(view,/if\(actionable && !hoverMode && focus && this\.hoveredTile/);
+  assert.match(view,/\(enemyAttackUnion\?"敌方移动后可攻击范围":"我方移动后可攻击范围"\)/);
   assert.match(view,/if\(event\.pointerType==="touch" \|\| this\.drag\?\.moved/);
 });
 
 test("touch attack projection cannot paint over blue movement cells",()=>{
-  assert.match(view,/const attack=attacks\.has\(coord\) && \(!touchAttackUnion \|\| !moveFill\)/);
+  assert.match(view,/const attack=attacks\.has\(coord\) && \(!showAttackUnion \|\| !moveFill\)/);
   assert.match(view,/moveFill && attack \? "route-under-attack":""/);
 });
 

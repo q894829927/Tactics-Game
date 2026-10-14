@@ -67,12 +67,26 @@ test("threat cannot cause movement, HP, selected state or combat log changes", (
   assert.deepEqual(game.enemyThreat(enemy),{move:new Set(),attack:new Set()});
 });
 
+test("enemy projections include blue movement and red attacks outside its movement",()=>{
+  const game=new Battle();
+  const enemy=game.units.find(u=>u.id==="e1");
+  const {move,attack}=game.enemyThreat(enemy);
+  assert.ok(move.size>1);
+  assert.ok(attack.size>0);
+  assert.ok([...move].some(point=>attack.has(point)),
+    "projected attack overlaps movement and needs blue priority");
+  assert.ok([...attack].some(point=>!move.has(point)),
+    "projected attack extends outside enemy movement");
+});
+
 test("board renders only inspected enemy threat, keeping attack targeting priority", () => {
   const board=readFileSync(new URL("../src/scene/BoardView.ts",import.meta.url),"utf8");
   const css=readFileSync(new URL("../src/style.css",import.meta.url),"utf8");
   assert.match(board,/const focus=hoverMode \? mouseUnit/);
   assert.match(board,/this\.battle\.enemyThreat\(focus\)/);
   assert.match(board,/focus\?\.team==="enemy" \? "route-move-enemy"/);
-  assert.match(css,/\.range-cell\.route-move-enemy/);
+  assert.match(css,/\.range-cell\.route-move-enemy \{\s*background:rgba\(45,150,237,\.48\)/);
+  assert.match(board,/const enemyAttackUnion=actionable && focus\?\.team==="enemy"/);
+  assert.match(board,/const showAttackUnion=touchAttackUnion \|\| enemyAttackUnion/);
   assert.match(css,/\.range-cell\.route-attack/);
 });
