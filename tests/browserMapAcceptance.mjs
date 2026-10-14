@@ -128,13 +128,18 @@ try {
     assert.equal(await page.locator("#class-exam-panel").isVisible(),false,
       name+" exam panel is absent for free beginner jobs");
     const speed=page.locator("#class-stat-grid .class-stat-row").filter({hasText:"速度"});
-    assert.match(await speed.innerText(),/9.*10/,
-      name+" actual blade 9 speed increases to 10 as brawler");
+    assert.equal((await speed.locator(".class-stat-before").innerText()).trim(),"9",
+      name+" original blade speed");
+    assert.match(await speed.locator(".class-stat-after").innerText(),/^10\s*▲$/,
+      name+" speed increases to 10 as brawler");
     assert.match(await speed.locator(".class-stat-after").getAttribute("class"),/increased/);
     await page.locator("#class-tab-growth").click();
     assert.equal(await page.locator("#class-stats-title").innerText(),"成长值对比");
-    assert.match(await page.locator("#class-stat-grid .class-stat-row").filter({hasText:"速度"}).innerText(),/55%.*60%/,
-      name+" current class 55% speed growth increases to 60%");
+    const growthSpeed=page.locator("#class-stat-grid .class-stat-row").filter({hasText:"速度"});
+    assert.equal((await growthSpeed.locator(".class-stat-before").innerText()).trim(),"55%",
+      name+" original speed growth");
+    assert.match(await growthSpeed.locator(".class-stat-after").innerText(),/^60%\s*▲$/,
+      name+" class growth bonus raises speed rate to 60%");
     await page.locator("#class-tab-stats").click();
     assert.equal(await page.locator("#class-stat-grid .class-stat-row").count(),10);
     const modalSize=await page.locator(".class-preparation-panel").evaluate(el=>
