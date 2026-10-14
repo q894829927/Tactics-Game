@@ -11,6 +11,7 @@
 - [更新日志 CHANGELOG.md](CHANGELOG.md)：查看每次更新具体做了什么。
 - [版本号规则 docs/VERSIONING.md](docs/VERSIONING.md)：决定升级哪一位，规范提交与 CI。
 - [开发代理约束 AGENTS.md](AGENTS.md)：要求每个开发任务同步改版本与日志。
+- [七系武器与自由职业系统策划 V1.1](docs/WEAPON-AND-CLASS-SYSTEM.md)：**未来玩法规格，尚未实装**。取消武器三角；剑枪斧弓拳套与黑白魔法均按合法攻速差≥4判定追击，剑的追击伤害额外×1.2；普通物理攻击零耐久、战技消耗耐久；自由转职及独立精通。
 
 
 ## 目标图四阶段落地计划
