@@ -73,7 +73,8 @@ test("W1: bow triples only weapon might versus flying; range and no counter rema
  const normal=game.damage(a,d);
  d.classId="flier";
  const special=game.damage(a,d);
- assert.equal(special,5+4*3-3);
+ assert.equal(special,5+4*3-game.combatStats(d).physicalProtection,
+   "effective bow might must still pay the forest terrain defense");
  assert.equal(special-normal,8);
  assert.equal(game.forecastAttack(a,d).canCounter,false);
  assert.equal(commit(game,a,d)[0].damage,special);
