@@ -145,7 +145,8 @@ function validAlly(v:unknown):v is AllyProgress {
 function validSettlement(v:unknown):v is SortieSettlement {
   if(!obj(v)||!(v.result==="victory"||v.result==="defeat")||
     !integer(v.sortie,1,1000000)||!Array.isArray(v.units)||v.units.length!==4)return false;
-  return ALLY_IDS.every(id=>v.units.some(row=>obj(row)&&row.id===id&&
+  const rows=v.units as unknown[];
+  return ALLY_IDS.every(id=>rows.some((row:unknown)=>obj(row)&&row.id===id&&
     typeof row.name==="string"&&row.name.length<=80&&
     integer(row.levelBefore,1,99)&&integer(row.levelAfter,1,99)&&
     integer(row.experienceBefore,0,99)&&integer(row.experienceAfter,0,99)&&
@@ -161,7 +162,7 @@ export function parseCampaign(raw:unknown):CampaignSave|null{
     !integer(raw.funds.vouchers.intermediate,0,100000)||
     !Array.isArray(raw.allies)||raw.allies.length!==4||
     !raw.allies.every(validAlly)||
-    !ALLY_IDS.every(id=>raw.allies.some((x:AllyProgress)=>x.id===id))||
+    !ALLY_IDS.every(id=>(raw.allies as unknown[]).some(x=>obj(x)&&x.id===id))||
     !(raw.pendingSettlement===null||validSettlement(raw.pendingSettlement)))
     return null;
   if(raw.pendingSettlement&&raw.pendingSettlement.sortie!==raw.sortiesCompleted)
