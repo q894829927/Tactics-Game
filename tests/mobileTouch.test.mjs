@@ -36,6 +36,16 @@ test("finger route supports tap and single-drag, suppresses click after a pinch"
   assert.match(view,/this\.showConfirmedCommands\(unit\.id\)/);
 });
 
+test("touch-first range preview uses allyThreat attacks without a hover cursor",()=>{
+  assert.match(view,/const touchAttackUnion=!!selected && actionable && !hoverMode/);
+  assert.match(view,/focus\?\.team==="ally" && focus\.id===selected\.id/);
+  assert.match(view,/window\.matchMedia\("\(hover: none\) and \(pointer: coarse\)"\)\.matches/);
+  assert.match(view,/if\(touchAttackUnion\) \{\s*attacks=range\?\.attack/);
+  assert.match(view,/else if\(actionable && !hoverMode && focus && this\.hoveredTile/);
+  assert.match(view,/attack\?\(touchAttackUnion\?"我方移动后可攻击范围"/);
+  assert.match(view,/if\(event\.pointerType==="touch" \|\| this\.drag\?\.moved/);
+});
+
 test("mobile UI has command, back, info drawer and real end-turn action",()=>{
   for(const id of ["mobile-commands","mobile-back","mobile-info","mobile-end-turn",
      "mobile-sidebar-close","unit-sidebar"]) assert.ok(html.includes('id="'+id+'"'),id);

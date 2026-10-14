@@ -40,6 +40,20 @@ try {
     });
     assert.ok(checked,name+" playable ally selection");
     await page.waitForFunction(() => document.querySelector("#selection-name")?.textContent==="岚锋");
+    // On touch screens red is the union over legal destinations, without hover.
+    // On desktop red appears only when a legal destination is hovered.
+    const attackSelector=".tactical-highlight-attack .route-attack";
+    const initialAttackCount=await page.locator(attackSelector).count();
+    if(isMobile) {
+      assert.equal(await page.evaluate(() =>
+        matchMedia("(hover: none) and (pointer: coarse)").matches),true,
+        "mobile context should use touch-first range preview");
+      assert.ok(initialAttackCount>0,"mobile selection must show projected attack cells");
+      assert.ok(await page.locator(".tactical-highlight-move .route-move-ally").count()>0,
+        "mobile selection must retain movement cells");
+    } else {
+      assert.equal(initialAttackCount,0,"desktop selection must not show attack union");
+    }
     const cameraBefore=await page.locator(".map-world").getAttribute("style");
     const rect=await page.locator("#game").boundingBox();
     assert.ok(rect);
@@ -72,6 +86,11 @@ try {
       await page.locator(".unit-command-menu").waitFor({state:"visible",timeout:6500});
       assert.ok(await page.locator(".unit-command-menu").getByText("取消移动",{exact:false}).count());
       if(isMobile) {
+        const movedAttacks=await page.locator(attackSelector).count();
+        assert.ok(movedAttacks>0 && movedAttacks<initialAttackCount,
+          "after movement red must cover only attacks from the new cell");
+      }
+      if(isMobile) {
         await page.locator("#mobile-back").click();
       } else {
         const target=await page.locator('.battle-cell[data-x="2"][data-y="5"]').boundingBox();
@@ -82,10 +101,18 @@ try {
         !!document.querySelector('.battle-cell[data-x="1"][data-y="5"].is-selected'));
       assert.equal(await page.locator(".unit-command-menu").isVisible(),false,
         "undo must close commands and restore the selected original cell");
+      if(isMobile) {
+        assert.equal(await page.locator(attackSelector).count(),initialAttackCount,
+          "undo should restore mobile projected attack cells");
+      }
       await page.locator('.battle-cell[data-x="1"][data-y="5"]').evaluate(el => el.click());
       await page.locator(".unit-command-menu").waitFor({state:"visible",timeout:3000});
       assert.equal(await page.locator(".unit-command-menu").getByText("取消移动",{exact:false}).count(),0,
         "confirming stay must not offer movement rollback");
+      if(isMobile) {
+        assert.equal(await page.locator(attackSelector).count(),initialAttackCount,
+          "confirming stay must keep mobile projected attack cells");
+      }
     }
     if(name==="desktop-1920x1080") {
       // Capture the M1 6x5 world-grid slice including independent transparent

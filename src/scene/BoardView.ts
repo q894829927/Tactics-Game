@@ -552,9 +552,17 @@ export class BoardView {
     const move=range?.move ?? new Set<string>();
     const targeting = new Set(selected && !selected.acted && !selected.spent
       ? this.battle.targets(selected).map(key) : []);
+    // Touch-first screens have no hover destination. Project attack cells
+    // across all legal movement endpoints; after moving allyThreat only uses
+    // the current cell. Mouse desktops retain single-endpoint hover previews.
+    const touchAttackUnion=!!selected && actionable && !hoverMode &&
+      focus?.team==="ally" && focus.id===selected.id &&
+      window.matchMedia("(hover: none) and (pointer: coarse)").matches;
     let route:Point[]|null=null;
     let attacks=new Set<string>();
-    if(actionable && !hoverMode && focus && this.hoveredTile &&
+    if(touchAttackUnion) {
+      attacks=range?.attack ?? new Set<string>();
+    } else if(actionable && !hoverMode && focus && this.hoveredTile &&
        move.has(key(this.hoveredTile)) &&
        (!mouseUnit || mouseUnit.id===focus.id)) {
       const forecast=this.battle.previewMovementAttack(focus,this.hoveredTile);
@@ -603,7 +611,7 @@ export class BoardView {
           (occupant?occupant.name+" 生命 "+occupant.hp+"/"+occupant.maxHp:
            targeted?"可攻击目标":
            attack&&moveFill?"移动终点与该处攻击范围":
-           attack?"所选移动终点的攻击范围":
+           attack?(touchAttackUnion?"我方移动后可攻击范围":"所选移动终点的攻击范围"):
            moveFill?(focus?.team==="enemy"?"敌方可移动范围":"我方可移动范围"):""));
       }
     }
