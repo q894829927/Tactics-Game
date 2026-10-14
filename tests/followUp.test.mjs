@@ -48,7 +48,8 @@ test("single shared follow-up threshold accepts ±4 but excludes ±3",()=>{
 test("all currently available offensive categories follow up at exactly four AS",()=>{
   for(const [id,distance] of [
     ["iron-sword",1],["iron-lance",1],["iron-axe",1],
-    ["iron-bow",2],["fire-tome",1],["thunder-tome",2]
+    ["iron-bow",2],["training-gauntlet",1],["fire-tome",1],
+    ["thunder-tome",2],["light-bolt",1]
   ]){
     const {game,attacker,defender}=duel(id,distance);
     const before=JSON.stringify(game.units);
@@ -66,12 +67,9 @@ test("all currently available offensive categories follow up at exactly four AS"
   }
 });
 
-test("future gauntlet and offensive white magic use the same weapon-agnostic rule",()=>{
-  for(const [kind,label] of [["physical","test gauntlet"],["magical","test offensive white spell"]]){
-    const {game,attacker,defender}=duel();
-    // W0 uses synthetic weapons only to prove that it does not filter categories.
-    // W1 adds actual gauntlets and offensive white magic definitions.
-    attacker.weapon={...attacker.weapon,kind,name:label};
+test("actual gauntlet and offensive white magic follow the same weapon-agnostic rule",()=>{
+  for(const weaponId of ["training-gauntlet","light-bolt"]){
+    const {game,attacker,defender}=duel(weaponId);
     assert.equal(game.forecastAttack(attacker,defender).followUp,"attacker");
     assert.equal(attack(game,attacker,defender).filter(e=>e.kind==="follow-up").length,1);
   }

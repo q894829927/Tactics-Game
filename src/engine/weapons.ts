@@ -19,6 +19,10 @@ export const WEAPON_LIBRARY = {
   "steel-axe": {category:"axe",requiredRank:"C",name:"钢斧",kind:"physical",might:8,weight:14,hit:90,crit:0,dodge:0,minRange:1,maxRange:1},
   "hand-axe": {category:"axe",requiredRank:"D",name:"手斧",kind:"physical",might:2,weight:9,hit:90,crit:0,dodge:0,minRange:1,maxRange:2},
   "command-sword": {category:"sword",requiredRank:"E",name:"指挥剑",kind:"physical",might:4,weight:8,hit:110,crit:0,dodge:0,minRange:1,maxRange:1},
+  // W1 mechanics can be exercised in real battles via the dormant F0 class
+  // templates. They do not enter the existing 4v6 roster or starting bags.
+  "training-gauntlet": {category:"gauntlet",requiredRank:"E",name:"练习拳套",kind:"physical",might:3,weight:2,hit:92,crit:0,dodge:0,minRange:1,maxRange:1},
+  "light-bolt": {category:"white",requiredRank:"E",name:"光矢术",kind:"magical",might:3,weight:4,hit:82,crit:0,dodge:0,minRange:1,maxRange:2},
 } as const satisfies Record<string, Weapon>;
 
 export type WeaponId = keyof typeof WEAPON_LIBRARY;

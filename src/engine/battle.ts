@@ -1,5 +1,6 @@
 import { TERRAIN_INFO, type Terrain } from "./terrain.ts";
 import { determineFollowUp } from "./followUp.ts";
+import {effectiveMight,defensiveAvoidBonus,strikeDamage,traitLabel} from "./weaponTraits.ts";
 import {initialLoadout,weaponFor,canWield,MAX_INVENTORY,type WeaponId} from "./weapons.ts";
 import {deriveCombat,awardExperience,clampChance,
   type CharacterData,type CombatStats} from "./attributes.ts";
@@ -42,6 +43,9 @@ export type AttackForecast = {
   attackerHpAfter:number; defenderHpAfter:number;
   attackerHit:number; defenderHit:number; attackerCrit:number; defenderCrit:number;
   followUp:"attacker"|"defender"|null;
+  /** Damage of only the additional attack, computed independently for sword. */
+  followUpDamage:number;
+  attackerTrait:string;defenderTrait:string;
 };
 
 export type Unit = CharacterData & {
@@ -196,7 +200,8 @@ export class Battle {
     return deriveCombat(unit,TERRAIN_INFO[this.tile(unit.x,unit.y)].defense);
   }
   hitChance(from:Unit,to:Unit):number {
-    return clampChance(this.combatStats(from).hit-this.combatStats(to).avoid);
+    return clampChance(this.combatStats(from).hit-this.combatStats(to).avoid
+      -defensiveAvoidBonus(from.weapon.category,to.weapon.category));
   }
   criticalChance(from:Unit,to:Unit):number {
     return clampChance(this.combatStats(from).crit-this.combatStats(to).critAvoid);
@@ -218,12 +223,18 @@ export class Battle {
       ? determineFollowUp(this.combatStats(attacker).attackSpeed,
         this.combatStats(defender).attackSpeed,canCounter)
       : null;
-    if(followUp==="attacker")hpD=Math.max(0,hpD-damage);
-    else if(followUp==="defender")hpA=Math.max(0,hpA-counterDamage);
+    const followUpDamage=followUp==="attacker"
+      ? strikeDamage(damage,attacker.weapon.category,false,true)
+      : followUp==="defender"
+        ? strikeDamage(counterDamage,defender.weapon.category,false,true) : 0;
+    if(followUp==="attacker")hpD=Math.max(0,hpD-followUpDamage);
+    else if(followUp==="defender")hpA=Math.max(0,hpA-followUpDamage);
     return {damage,counterDamage:canCounter?counterDamage:0,canCounter,attackerHpAfter:hpA,defenderHpAfter:hpD,
       attackerHit:this.hitChance(attacker,defender),defenderHit:this.hitChance(defender,attacker),
       attackerCrit:this.criticalChance(attacker,defender),
-      defenderCrit:this.criticalChance(defender,attacker),followUp};
+      defenderCrit:this.criticalChance(defender,attacker),followUp,followUpDamage,
+      attackerTrait:traitLabel(attacker.weapon,defender.classId,followUp==="attacker"),
+      defenderTrait:canCounter?traitLabel(defender.weapon,attacker.classId,followUp==="defender"):""};
   }
 
   private completedMovement(actor: Unit): string {
@@ -369,10 +380,12 @@ export class Battle {
       .filter(u => this.inAttackRange(actor, u));
   }
   damage(attacker:Unit,defender:Unit):number {
-    const from=this.combatStats(attacker),to=this.combatStats(defender);
-    return Math.max(0,attacker.weapon.kind==="magical"
-      ? from.magicalAttack-to.magicalProtection
-      : from.physicalAttack-to.physicalProtection);
+    const to=this.combatStats(defender);
+    const might=effectiveMight(attacker.weapon,defender.classId);
+    const base=attacker.weapon.kind==="magical"
+      ? attacker.stats.magic+might-to.magicalProtection
+      : attacker.stats.strength+might-to.physicalProtection;
+    return strikeDamage(base,attacker.weapon.category);
   }
 
   click(x: number, y: number): void {
@@ -555,13 +568,13 @@ export class Battle {
     const events: CombatEvent[] = [];
     this.lastCombatEvents = [];
     let strikeIndex=0;
-    const hit=(from:Unit,to:Unit):number=>{
+    const hit=(from:Unit,to:Unit,followUp=false):number=>{
       if(from.hp<=0||to.hp<=0)return 0;
       const missed=!this.roll(this.hitChance(from,to));
       if(missed) misses++;
       const critical=!missed && this.roll(this.criticalChance(from,to));
       if(critical) crits++;
-      const amount=missed?0:this.damage(from,to)*(critical?3:1);
+      const amount=missed?0:strikeDamage(this.damage(from,to),from.weapon.category,critical,followUp);
       to.hp=Math.max(0,to.hp-amount);
       events.push({kind: strikeIndex++===0?"attack":from.id===actor.id?"follow-up":
         events.some(e=>e.fromId===from.id)?"follow-up":"counter",
@@ -579,9 +592,9 @@ export class Battle {
     if(actor.hp>0&&defender.hp>0){
       const followUp=determineFollowUp(this.combatStats(actor).attackSpeed,
         this.combatStats(defender).attackSpeed,canCounter);
-      if(followUp==="attacker")damage+=hit(actor,defender);
+      if(followUp==="attacker")damage+=hit(actor,defender,true);
       else if(followUp==="defender"){
-        countered=true;counterDamage+=hit(defender,actor);
+        countered=true;counterDamage+=hit(defender,actor,true);
       }
     }
     this.lastCombatEvents = events.map(event=>({...event}));

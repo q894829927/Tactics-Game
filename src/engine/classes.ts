@@ -52,6 +52,16 @@ export const CLASS_LIBRARY={
     weaponCategories:["white"],requiredWeaponRanks:{white:"E"},
     statModifiers:{},growthModifiers:{},movementMode:"ground",unitTags:[],
     innateAbilityIds:[],masteryRewardIds:[],masteryThreshold:80},
+  // W1 target-tag fixtures, not selectable characters. C1 adds certification
+  // and future movement/pathfinding rules; W1 uses their combat tags only.
+  rider:{name:"试验骑兵",emblem:"骑",portrait:"♞",tier:"basic",
+    weaponCategories:["lance"],requiredWeaponRanks:{lance:"E"},
+    statModifiers:{},growthModifiers:{},movementMode:"cavalry",unitTags:["Cavalry"],
+    innateAbilityIds:[],masteryRewardIds:[],masteryThreshold:80},
+  flier:{name:"试验飞兵",emblem:"翼",portrait:"✦",tier:"basic",
+    weaponCategories:["bow"],requiredWeaponRanks:{bow:"E"},
+    statModifiers:{},growthModifiers:{},movementMode:"flying",unitTags:["Flying"],
+    innateAbilityIds:[],masteryRewardIds:[],masteryThreshold:80},
 } as const satisfies Record<string,ClassDefinition>;
 export type ClassId=keyof typeof CLASS_LIBRARY;
 

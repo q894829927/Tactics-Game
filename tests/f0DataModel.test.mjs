@@ -18,17 +18,17 @@ const expectedCombat={
   e1:[8,2,7],e2:[9,4,7],e3:[8,2,9],e4:[8,2,7],e5:[8,2,7],e6:[11,5,8],
 };
 
-test("F0: catalog retains all 16 weapons and defines the seven-category vocabulary",()=>{
+test("F0/W1: original 16 weapons preserved, plus gauntlet and offensive white magic",()=>{
  assert.deepEqual(WEAPON_CATEGORIES,["sword","lance","axe","bow","gauntlet","dark","white"]);
  assert.deepEqual(WEAPON_RANKS,["E","D","C","B","A","S","S+"]);
- assert.equal(Object.keys(WEAPON_LIBRARY).length,16);
+ assert.equal(Object.keys(WEAPON_LIBRARY).length,18);
  const actual=new Set(Object.values(WEAPON_LIBRARY).map(w=>w.category));
- assert.deepEqual([...actual].sort(),["sword","lance","axe","bow","dark"].sort(),
-   "do not pretend gauntlets and white magic exist yet");
+ assert.deepEqual([...actual].sort(),[...WEAPON_CATEGORIES].sort(),
+   "W1 has actual offensive definitions for all seven categories");
  for(const [id,definition] of Object.entries(WEAPON_LIBRARY)){
    assert.ok(WEAPON_CATEGORIES.includes(definition.category),id);
    assert.ok(WEAPON_RANKS.includes(definition.requiredRank),id);
-   assert.equal(definition.kind,definition.category==="dark"?"magical":"physical",id);
+   assert.equal(definition.kind,["dark","white"].includes(definition.category)?"magical":"physical",id);
    assert.ok(definition.minRange>0&&definition.maxRange>=definition.minRange,id);
    assert.deepEqual(weaponFor(id),definition);
  }
