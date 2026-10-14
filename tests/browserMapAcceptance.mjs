@@ -98,6 +98,35 @@ try {
         "mobile camera should frame the initial allied deployment");
     }
     await page.screenshot({path:`${out}/${name}.png`,animations:"disabled"});
+    // C1 end-to-end: settings -> preparation -> reclass -> return.
+    // Run on both desktop sizes and the real mobile/touch viewport.
+    await page.locator("#settings-button").click();
+    await page.locator("#settings-preparation").click();
+    await page.locator("#class-preparation-overlay").waitFor({state:"visible"});
+    assert.equal(await page.locator("#class-roster button").count(),4,name+" ally roster");
+    assert.equal(await page.locator("#class-options button").count(),9,name+" available class list");
+    await page.locator("#class-options button").filter({hasText:"游剑士"}).click();
+    assert.equal(await page.locator("#class-preparation-confirm").isDisabled(),true,
+      name+" intermediate class has no voucher");
+    await page.locator("#class-options button").filter({hasText:"拳斗士"}).click();
+    assert.equal(await page.locator("#class-preparation-confirm").isEnabled(),true,
+      name+" brawler meets beginner requirements");
+    await page.locator("#class-preparation-confirm").click();
+    assert.match(await page.locator("#class-roster button.active").innerText(),/拳斗士/,
+      name+" new class is reflected in the roster");
+    assert.match(await page.locator("#class-preparation-details").innerText(),/速度 \+1/,
+      name+" brawler modifier is visible");
+    await page.screenshot({path:`${out}/${name}-class-preparation.png`,animations:"disabled"});
+    await page.locator("#class-options button").filter({hasText:"剑士"}).click();
+    await page.locator("#class-preparation-confirm").click();
+    assert.match(await page.locator("#class-roster button.active").innerText(),/剑士/,
+      name+" original certified class can be reselected");
+    await page.locator("#class-preparation-close").click();
+    assert.equal(await page.locator("#class-preparation-overlay").isVisible(),false,
+      name+" modal closed without consuming an action");
+    assert.equal(await page.locator("#selection-role").innerText(),"剑士 · 我方单位",
+      name+" battle sidebar uses the restored class");
+    assert.deepEqual(errors,[],name+" C1 reclass must not throw errors");
     // End-to-end: first click selects, destination click opens commands AFTER
     // animation, right-click/mobile back safely restores the original tile.
     if (name === "desktop-1920x1080" || isMobile) {
