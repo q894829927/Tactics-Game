@@ -150,6 +150,38 @@
       </div>
     </div>
   </div>
+    <div id="campaign-preparation-overlay" class="campaign-overlay" role="presentation" hidden>
+      <section class="campaign-panel" role="dialog" aria-modal="true"
+        aria-labelledby="campaign-preparation-title">
+        <header class="campaign-header"><span aria-hidden="true">✥</span>
+          <h2 id="campaign-preparation-title">战前整备</h2>
+          <small id="campaign-sortie-number">第 1 次出击</small>
+        </header>
+        <p class="campaign-subtitle">出击前调整职业与装备；确认出击后进入战场。</p>
+        <div id="campaign-roster" class="campaign-roster"></div>
+        <div id="campaign-equipment" class="campaign-equipment" aria-live="polite"></div>
+        <div id="campaign-save-status" class="campaign-save-status" role="status"></div>
+        <footer class="campaign-footer">
+          <button id="campaign-reset-save" type="button" class="campaign-text-action">清除队伍进度</button>
+          <button id="campaign-change-class" type="button">职业整备</button>
+          <button id="campaign-start-sortie" type="button" class="campaign-primary">确认出击</button>
+        </footer>
+      </section>
+    </div>
+    <div id="campaign-settlement-overlay" class="campaign-overlay" role="presentation" hidden>
+      <section class="campaign-panel campaign-settlement-panel" role="dialog" aria-modal="true"
+        aria-labelledby="campaign-settlement-title">
+        <header class="campaign-header"><span aria-hidden="true">✥</span>
+          <h2 id="campaign-settlement-title">战后结算</h2>
+        </header>
+        <p id="campaign-settlement-result" class="campaign-subtitle"></p>
+        <div id="campaign-settlement-roster" class="campaign-settlement-roster"></div>
+        <p class="campaign-save-status">人物与武器熟练度保留。下次出击恢复生命与本关魔法次数；武器耐久不会自动修复。</p>
+        <footer class="campaign-footer">
+          <button id="campaign-return-preparation" type="button" class="campaign-primary">返回战前整备</button>
+        </footer>
+      </section>
+    </div>
     <div id="class-preparation-overlay" class="class-preparation-overlay" role="presentation" hidden>
       <section class="class-preparation-panel" role="dialog" aria-modal="true"
         aria-labelledby="class-preparation-title">

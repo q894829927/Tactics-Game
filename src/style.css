@@ -1269,3 +1269,54 @@ button:disabled { cursor: not-allowed; }
  .class-footer-ornament{display:none}
  .class-preparation-footer button{flex:1;min-height:42px;padding:7px 6px;font-size:14px}
 }
+
+/* C2-0 dedicated preparation/settlement; uses existing navy-and-gold tokens. */
+.campaign-overlay[hidden]{display:none!important}
+.campaign-overlay{position:fixed;inset:0;z-index:115;display:grid;place-items:center;
+ padding:12px;background:#030e18dc;overflow:auto}
+.campaign-panel{box-sizing:border-box;width:min(850px,100%);max-height:94dvh;overflow-y:auto;
+ background:linear-gradient(140deg,#12364b,#061a29);border:2px solid #b9965f;
+ box-shadow:0 12px 60px #000c;color:#e7e5db;padding:18px;border-radius:7px}
+.campaign-header{display:flex;align-items:center;gap:13px;border-bottom:1px solid #a08456;
+ padding:0 0 12px;color:#f0cd89}
+.campaign-header>span{font-size:34px}
+.campaign-header h2{margin:0;font-size:25px;letter-spacing:.1em}
+.campaign-header small{margin-left:auto;color:#d4bd91}
+.campaign-subtitle{font-size:13px;color:#becbd2;line-height:1.5}
+.campaign-roster{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:14px 0}
+.campaign-unit,.campaign-weapon{color:#f2e7d8;text-align:left;cursor:pointer;padding:12px;
+ background:#102d42;border:1px solid #587287;border-radius:4px;min-height:43px}
+.campaign-unit.selected,.campaign-weapon.selected{border-color:#edca84;
+ box-shadow:inset 0 0 0 1px #b8924b;background:#244558}
+.campaign-unit:focus-visible,.campaign-weapon:focus-visible,.campaign-footer button:focus-visible{
+ outline:2px solid #f0c779;outline-offset:2px}
+.campaign-equipment{display:flex;flex-wrap:wrap;align-items:center;gap:7px;
+ background:#081f2e;padding:12px;border:1px solid #63573c}
+.campaign-equipment h3{flex-basis:100%;font-size:14px;margin:0 0 6px;color:#ddbd88}
+.campaign-weapon{font-size:12px;padding:9px;min-height:37px}
+.campaign-weapon:disabled{opacity:.42;cursor:not-allowed}
+.campaign-save-status{font-size:12px;color:#bbc7ce;min-height:19px;line-height:1.5;margin:14px 0}
+.campaign-footer{display:flex;flex-wrap:wrap;gap:10px;justify-content:flex-end;
+ border-top:1px solid #8a764e;padding-top:13px}
+.campaign-footer button{min-height:44px;border:1px solid #b39360;color:#edd9b6;
+ background:#1c4159;padding:9px 19px;border-radius:4px;cursor:pointer;font-weight:700}
+.campaign-footer button.campaign-primary{background:linear-gradient(#e8c98f,#af7e40);color:#2b1907}
+.campaign-footer button.campaign-text-action{margin-right:auto;color:#b6c2c8;
+ border-color:#50687a;background:transparent;font-weight:400}
+.campaign-settlement-roster{display:grid;gap:7px}
+.campaign-settlement-row{display:flex;justify-content:space-between;gap:14px;
+ padding:10px 12px;background:#0d293b;border:1px solid #526574;font-size:13px}
+.campaign-settlement-row strong{color:#f0c788}
+.campaign-settlement-row span{text-align:right}
+@media(max-width:600px){
+ .campaign-overlay{padding:5px}
+ .campaign-panel{padding:11px;max-height:97dvh}
+ .campaign-header h2{font-size:20px}
+ .campaign-roster{grid-template-columns:1fr;gap:5px}
+ .campaign-unit{font-size:13px;padding:8px;min-height:38px}
+ .campaign-footer{gap:6px}
+ .campaign-footer button{padding:7px;font-size:12px;flex:1}
+ .campaign-footer button.campaign-text-action{flex-basis:100%}
+ .campaign-settlement-row{flex-direction:column;gap:4px}
+ .campaign-settlement-row span{text-align:left}
+}

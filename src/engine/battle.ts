@@ -10,6 +10,9 @@ import {PLAYER_CLASS_CHOICES,INITIAL_PREPARATION_FUNDS,certificationRequirements
   classCertificationStatus,classWeaponAvailable,loanerForClass,
   type PreparationFunds,type CertificationStatus} from "./classCertification.ts";
 import type {Weapon} from "./equipmentTypes.ts";
+import {ALLY_IDS,captureAlly,applyAlly,parseCampaign,settlementFrom,
+  type AllyProgress,type CampaignSave,type SortieSettlement} from "./campaign.ts";
+import {refillSpells} from "./combatResources.ts";
 import {awardWeaponExperience} from "./proficiency.ts";
 import {activeWeaponId} from "./combatResources.ts";
 import {initialWeaponInstances,initialSpellCharges,makeWeaponInstance,
@@ -126,6 +129,11 @@ export class Battle {
   lastCombatEvents: CombatEvent[] = [];
   onChange: (() => void) | null = null;
   preparationOpen=true;
+  readonly campaignEnabled:boolean;
+  campaignStage:"preparation"|"battle"|"settlement"="battle";
+  sortiesCompleted=0;
+  pendingSettlement:SortieSettlement|null=null;
+  private sortieStart:CampaignSave|null=null;
   /** C1 supports credential checks. The E1 reward/economy loop is future work. */
   preparationFunds:PreparationFunds={
     reputation:0,gold:0,vouchers:{intermediate:0},
@@ -144,9 +152,18 @@ export class Battle {
     return chance>=100?true:chance<=0?false:this.nextRandom()*100<chance;
   }
 
-  constructor() { this.restart(); }
+  constructor(options?:{campaign?:boolean;save?:CampaignSave|null}){
+    this.campaignEnabled=!!options?.campaign;
+    this.restart();
+    if(this.campaignEnabled&&options?.save)this.loadCampaign(options.save);
+  }
 
   restart(): void {
+    // In campaign mode restarting a sortie abandons the current in-battle
+    // gains; already completed sorties remain safely committed.
+    const saved=this.campaignEnabled
+      ? this.sortieStart??(this.campaignStage==="preparation"?this.campaignSnapshot():null)
+      : null;
     this.units = [
       unit("a1","ally",1,5),
       unit("a2","ally",1,6),
@@ -174,7 +191,128 @@ export class Battle {
     this.moveOrigin = null;
     this.log = [];
     this.lastCombatEvents = [];
+    this.campaignStage=this.campaignEnabled?"preparation":"battle";
+    if(this.campaignEnabled){
+      this.sortieStart=null;
+      this.pendingSettlement=null;
+      if(saved)this.restoreCampaign(saved,false);
+    }
     this.emit();
+  }
+
+  /** C2-0: immutable progression-only snapshot, never a live battle save. */
+  campaignSnapshot():CampaignSave {
+    if(!this.campaignEnabled)throw Error("Campaign is not enabled");
+    const units=this.campaignStage==="battle"&&this.sortieStart
+      ? this.sortieStart.allies
+      : this.aliveAndDefeatedAllies().map(captureAlly);
+    return {schema:1,sortiesCompleted:this.sortiesCompleted,
+      funds:{gold:this.preparationFunds.gold,reputation:this.preparationFunds.reputation,
+        vouchers:{...this.preparationFunds.vouchers}},
+      allies:units.map(x=>({...x,stats:{...x.stats},growths:{...x.growths},
+        weaponExp:{...x.weaponExp},inventory:[...x.inventory],
+        classLicenses:[...x.classLicenses],
+        spellCharges:{...x.spellCharges},
+        weaponInstances:x.weaponInstances.map(w=>w?{...w}:null)})),
+      pendingSettlement:this.pendingSettlement
+        ? {result:this.pendingSettlement.result,sortie:this.pendingSettlement.sortie,
+          units:this.pendingSettlement.units.map(u=>({...u}))}:null};
+  }
+  private aliveAndDefeatedAllies():Unit[]{
+    return ALLY_IDS.map(id=>{
+      const ally=this.units.find(u=>u.id===id&&u.team==="ally");
+      if(!ally)throw Error("Missing ally: "+id);
+      return ally;
+    });
+  }
+  private restoreCampaign(save:CampaignSave,resumeSettlement:boolean):void {
+    const checked=parseCampaign(save);
+    if(!checked)throw Error("Invalid campaign progress");
+    for(const p of checked.allies){
+      const ally=this.units.find(u=>u.id===p.id&&u.team==="ally");
+      if(!ally)throw Error("Unknown ally: "+p.id);
+      applyAlly(ally,p);
+    }
+    this.preparationFunds={gold:checked.funds.gold,
+      reputation:checked.funds.reputation,vouchers:{...checked.funds.vouchers}};
+    this.sortiesCompleted=checked.sortiesCompleted;
+    this.pendingSettlement=resumeSettlement?checked.pendingSettlement:null;
+    this.campaignStage=resumeSettlement&&checked.pendingSettlement?"settlement":"preparation";
+    this.preparationOpen=this.campaignStage==="preparation";
+    this.result=this.pendingSettlement?.result??"playing";
+    this.selectedId=null;
+  }
+  /** Load only validated, versioned character progression from local storage. */
+  loadCampaign(save:CampaignSave):void {
+    if(!this.campaignEnabled)throw Error("Campaign is not enabled");
+    this.restoreCampaign(save,true);
+    this.sortieStart=null;
+    this.emit();
+  }
+  /** Preparation confirms the loadout; restores only per-sortie spell casts.
+   * Physical durability, levels, professions and weapon XP are untouched.
+   */
+  beginSortie():boolean {
+    if(!this.campaignEnabled||this.campaignStage!=="preparation"||
+      this.result!=="playing"||this.phase!=="player")return false;
+    if(!this.aliveAndDefeatedAllies().every(u=>
+      canWield(u.classId,u.inventory[u.equippedIndex]!,u.weaponExp)))return false;
+    this.sortieStart=this.campaignSnapshot();
+    this.pendingSettlement=null;
+    for(const unit of this.aliveAndDefeatedAllies()){
+      unit.hp=unit.maxHp;
+      refillSpells(unit.spellCharges,unit.inventory);
+      unit.moved=false;unit.acted=false;unit.spent=false;
+    }
+    this.preparationOpen=false;
+    this.campaignStage="battle";
+    this.emit();
+    return true;
+  }
+  /** Battle result is acknowledged exactly once; new sortie starts from
+   * fresh enemies and positions with the preserved personal progression.
+   */
+  returnToPreparation():boolean {
+    if(!this.campaignEnabled||this.campaignStage!=="settlement"||
+      !this.pendingSettlement)return false;
+    const finished=this.campaignSnapshot();
+    this.sortieStart=null;
+    this.units=[
+      unit("a1","ally",1,5),unit("a2","ally",1,6),
+      unit("a3","ally",2,6),unit("a4","ally",0,7),
+      unit("e1","enemy",7,1),unit("e2","enemy",8,2),
+      unit("e3","enemy",7,3),unit("e4","enemy",8,4),
+      unit("e5","enemy",9,5),unit("e6","enemy",9,7),
+    ];
+    this.round=1;this.phase="player";this.result="playing";
+    this.enemyQueue=[];this.moveOrigin=null;this.selectedId=null;
+    this.log=[];this.lastCombatEvents=[];
+    this.setRandomSeed(0x2946e73b);
+    this.restoreCampaign({...finished,pendingSettlement:null},false);
+    this.emit();
+    return true;
+  }
+  /** The only destructive reset: explicit user confirmation in the UI.
+   * An ordinary restart must preserve already earned campaign progression.
+   */
+  resetCampaign():void {
+    if(!this.campaignEnabled)throw Error("Campaign is not enabled");
+    this.sortieStart=null;
+    this.sortiesCompleted=0;
+    this.pendingSettlement=null;
+    this.campaignStage="battle";
+    this.restart();
+  }
+
+  /** Change equipment during dedicated preparation, outside action economy. */
+  prepareEquipWeapon(unitId:string,index:number):boolean{
+    if(!this.campaignEnabled||this.campaignStage!=="preparation")return false;
+    const unit=this.units.find(u=>u.id===unitId&&u.team==="ally");
+    if(!unit||!Number.isInteger(index)||index<0||index>=unit.inventory.length||
+      !canWield(unit.classId,unit.inventory[index]!,unit.weaponExp))return false;
+    unit.equippedIndex=index;unit.weapon=weaponFor(unit.inventory[index]!);
+    unit.minRange=unit.weapon.minRange;unit.maxRange=unit.weapon.maxRange;
+    this.emit();return true;
   }
 
   get classChoices():readonly ClassId[]{return PLAYER_CLASS_CHOICES;}
@@ -185,7 +323,9 @@ export class Battle {
       unit.classLicenses,this.preparationFunds);
   }
   canPrepareClass(unit:Unit):boolean {
-    return this.preparationOpen&&this.round===1&&this.phase==="player"&&
+    return this.preparationOpen&&
+      (!this.campaignEnabled||this.campaignStage==="preparation")&&
+      this.round===1&&this.phase==="player"&&
       this.result==="playing"&&this.units.includes(unit)&&
       unit.team==="ally"&&unit.hp>0&&!unit.moved&&!unit.acted&&!unit.spent;
   }
@@ -496,6 +636,7 @@ export class Battle {
   }
 
   click(x: number, y: number): void {
+    if(this.campaignEnabled&&this.campaignStage!=="battle")return;
     if (this.phase !== "player" || this.result !== "playing" || !inBounds(x, y)) return;
     const found = this.occupant(x, y);
     if (found?.team === "ally") {
@@ -580,6 +721,7 @@ export class Battle {
   }
 
   beginEnemyTurn(): boolean {
+    if(this.campaignEnabled&&this.campaignStage!=="battle")return false;
     if (this.phase !== "player" || this.result !== "playing") return false;
     // Resolve pre-existing terminal states (e.g. the final ally already at 0 HP).
     this.resolve();
@@ -768,6 +910,13 @@ export class Battle {
       this.result = "victory";
     }
     if (this.result !== "playing") {
+      if(this.campaignEnabled&&this.campaignStage==="battle"){
+        this.sortiesCompleted++;
+        this.pendingSettlement=settlementFrom(this.result,this.sortiesCompleted,
+          this.sortieStart?.allies??this.aliveAndDefeatedAllies().map(captureAlly),
+          this.units);
+        this.campaignStage="settlement";
+      }
       this.selectedId = null;
       this.moveOrigin = null;
       // No additional enemy actions occur once the battle is over.

@@ -1,4 +1,5 @@
 import { Battle } from "./engine/battle.ts";
+import {CAMPAIGN_STORAGE_KEY,readCampaignJson,ALLY_IDS,type AllyId} from "./engine/campaign.ts";
 import { TERRAIN_INFO, movementCostLabel } from "./engine/terrain.ts";
 import { BoardView } from "./scene/BoardView.ts";
 import { GAME_VERSION } from "./version.ts";
@@ -17,11 +18,17 @@ const get = (id: string): HTMLElement => {
 };
 const button = (id: string): HTMLButtonElement => get(id) as HTMLButtonElement;
 get("game-version").textContent = GAME_VERSION;
-const battle = new Battle();
+const storedText=(()=>{try{return localStorage.getItem(CAMPAIGN_STORAGE_KEY);}catch{return null;}})();
+const loadedCampaign=readCampaignJson(storedText);
+const battle=new Battle({campaign:true,save:loadedCampaign});
+let campaignSelectedId:AllyId="a1";
+let saveStatus=storedText&&!loadedCampaign
+  ?"旧存档不可识别，已开启新队伍。":"队伍进度保存在当前浏览器。";
 const board = new BoardView(battle, get("game"));
 board.onCombatCommitted=()=>renderSelection();
 board.onCombatPresentationEnded=()=>{
   renderSelection();
+  renderCampaign();
   // Battle.commitAttack updates unit flags before the duel is animated;
   // do not change turns until the last visible strike has finished.
   maybeAutoEndTurn();
@@ -132,7 +139,8 @@ function renderSelection(): void {
       : inspected ? "当前地形：" + terrain?.name + "。左键查看其他格子，右键拖动地图。"
       : "选中友军，再点目的地移动；右键撤回移动。";
   button("settings-end-turn").disabled =
-    battle.result !== "playing" || battle.phase !== "player" || endingTurn || board.isAnimating;
+    battle.result !== "playing" || battle.phase !== "player" ||
+    battle.campaignStage!=="battle" || endingTurn || board.isAnimating;
   mobileEndTurn.disabled=button("settings-end-turn").disabled;
   const canPrepare=battle.preparationOpen&&battle.phase==="player"&&
     battle.result==="playing"&&!endingTurn&&!board.isAnimating;
@@ -141,7 +149,8 @@ function renderSelection(): void {
   mobileCommands.textContent = battle.selected?.team==="ally" && !battle.selected.moved &&
     !battle.selected.spent ? "◎ 原地行动" : "⚔ 指令";
   mobileCommands.disabled=!(battle.selected?.team==="ally" && !battle.selected.spent &&
-    battle.phase==="player" && battle.result==="playing" && !endingTurn && !board.isAnimating);
+    battle.phase==="player" && battle.result==="playing" &&
+    battle.campaignStage==="battle" && !endingTurn && !board.isAnimating);
   mobileBack.disabled=battle.phase!=="player" || endingTurn || board.isAnimating;
 }
 
@@ -167,6 +176,8 @@ function refresh(): void {
 }
 battle.onChange = ()=>{
   refresh();
+  if(battle.campaignStage!=="battle")saveCampaignProgress();
+  renderCampaign();
   // Defer until Battle.click / waitSelected and BoardView event handlers have
   // finished. A combat may start its visual playback synchronously afterward.
   queueMicrotask(maybeAutoEndTurn);
@@ -198,6 +209,85 @@ setMobileInfo(false);
 
 get("minimap-grid").addEventListener("dblclick", () => board.resetCamera());
 
+
+function saveCampaignProgress():void{
+  try{
+    localStorage.setItem(CAMPAIGN_STORAGE_KEY,JSON.stringify(battle.campaignSnapshot()));
+    saveStatus="队伍进度已保存在本机。";
+  }catch{saveStatus="浏览器存储不可用：刷新可能丢失成长。";}
+}
+function renderCampaign():void{
+  const preparing=battle.campaignStage==="preparation";
+  const settling=battle.campaignStage==="settlement"&&!board.isAnimating&&!endingTurn;
+  get("campaign-preparation-overlay").hidden=!preparing;
+  get("campaign-settlement-overlay").hidden=!settling;
+  if(preparing){
+    const roster=get("campaign-roster"),equipment=get("campaign-equipment");
+    roster.replaceChildren();equipment.replaceChildren();
+    get("campaign-sortie-number").textContent="第 "+(battle.sortiesCompleted+1)+" 次出击";
+    for(const id of ALLY_IDS){
+      const ally=battle.units.find(u=>u.id===id)!;
+      const item=document.createElement("button");
+      item.type="button";
+      item.className="campaign-unit"+(id===campaignSelectedId?" selected":"");
+      item.setAttribute("aria-pressed",String(id===campaignSelectedId));
+      item.textContent=ally.name+" · "+CLASS_LIBRARY[ally.classId].name+" · Lv."+ally.level;
+      item.addEventListener("click",()=>{campaignSelectedId=id;renderCampaign();});
+      roster.appendChild(item);
+    }
+    const selected=battle.units.find(u=>u.id===campaignSelectedId)!;
+    const heading=document.createElement("h3");
+    heading.textContent=selected.name+" · 出击装备";
+    equipment.appendChild(heading);
+    selected.inventory.forEach((id,index)=>{
+      const item=document.createElement("button");
+      item.type="button";item.className="campaign-weapon"+
+        (selected.equippedIndex===index?" selected":"");
+      item.disabled=!canWield(selected.classId,id,selected.weaponExp);
+      item.textContent=(selected.equippedIndex===index?"◆ ":"")+
+        WEAPON_LIBRARY[id].name+" · "+weaponResourceText(selected,index);
+      item.addEventListener("click",()=>{battle.prepareEquipWeapon(selected.id,index);});
+      equipment.appendChild(item);
+    });
+    get("campaign-save-status").textContent=saveStatus;
+  }
+  if(settling){
+    const outcome=battle.pendingSettlement;
+    if(outcome){
+      get("campaign-settlement-result").textContent=
+        (outcome.result==="victory"?"战斗胜利":"战斗失败")+
+        " · 第 "+outcome.sortie+" 次出击";
+      const rows=get("campaign-settlement-roster");rows.replaceChildren();
+      for(const unit of outcome.units){
+        const row=document.createElement("div");row.className="campaign-settlement-row";
+        const label=document.createElement("strong");label.textContent=unit.name;
+        const stats=document.createElement("span");
+        stats.textContent="Lv."+unit.levelBefore+" → "+unit.levelAfter+
+          " · EXP "+unit.experienceBefore+" → "+unit.experienceAfter+
+          " · 武器经验 +"+unit.weaponExpGained;
+        row.append(label,stats);rows.appendChild(row);
+      }
+    }
+  }
+}
+button("campaign-change-class").addEventListener("click",()=>{
+  preparationUnitId=campaignSelectedId;openClassPreparation();
+});
+button("campaign-start-sortie").addEventListener("click",()=>{
+  if(battle.beginSortie())showPhase("第 1 回合 · 我方行动","PLAYER PHASE");
+});
+button("campaign-return-preparation").addEventListener("click",()=>{
+  if(battle.returnToPreparation()){
+    board.clearInspection();board.resetCamera();
+    refresh();renderCampaign();
+  }
+});
+button("campaign-reset-save").addEventListener("click",()=>{
+  if(!window.confirm("永久清除全部队伍成长与职业认证？"))return;
+  try{localStorage.removeItem(CAMPAIGN_STORAGE_KEY);}catch{/* unsupported */}
+  battle.resetCampaign();campaignSelectedId="a1";
+  saveStatus="队伍进度已重置。";refresh();renderCampaign();
+});
 
 const classOverlay=get("class-preparation-overlay");
 let preparationUnitId="a1";
@@ -508,8 +598,8 @@ const pause = (ms: number) => new Promise<void>(resolve => {
  * The manual button still allows ending before all allies have acted.
  */
 function startEnemyTurn(): void {
-  if (endingTurn || board.isAnimating || battle.phase !== "player" ||
-      battle.result !== "playing") return;
+  if (endingTurn || board.isAnimating || battle.campaignStage!=="battle"||
+      battle.phase !== "player" || battle.result !== "playing") return;
   endingTurn = true;
   setMobileInfo(false);
   const run = ++turnRunId;
@@ -540,20 +630,21 @@ function startEnemyTurn(): void {
     if (run !== turnRunId) return;
     battle.finishEnemyTurn();
     endingTurn = false;
-    refresh();
+    refresh();renderCampaign();
     if (battle.result === "playing")
       showPhase("第 " + battle.round + " 回合 · 我方行动", "PLAYER PHASE");
   })();
 }
 
 function maybeAutoEndTurn(): void {
-  if (endingTurn || board.isAnimating || !battle.allLivingAlliesSpent) return;
+  if (endingTurn || board.isAnimating || battle.campaignStage!=="battle"||
+      !battle.allLivingAlliesSpent) return;
   startEnemyTurn();
 }
 
 button("settings-end-turn").addEventListener("click", startEnemyTurn);
 button("restart-button").addEventListener("click", () => {
-  if (!window.confirm("重新开始关卡？当前进度将丢失。")) return;
+  if (!window.confirm("放弃当前战斗返回整备？未结算的战斗成长不会保留。")) return;
   // Invalidate an in-flight enemy turn and any active interpolation first.
   turnRunId++;
   board.cancelAnimation();
@@ -563,7 +654,7 @@ button("restart-button").addEventListener("click", () => {
   board.resetCamera();
   setMobileInfo(false);
   setSettings(false);
-  showPhase("第 1 回合 · 我方行动", "PLAYER PHASE");
+  renderCampaign();
 });
 
 window.addEventListener("keydown", event => {
@@ -577,4 +668,4 @@ window.addEventListener("keydown", event => {
   if (event.key.toLowerCase() === "m") board.resetCamera();
 });
 refresh();
-showPhase("第 1 回合 · 我方行动", "PLAYER PHASE");
+renderCampaign();

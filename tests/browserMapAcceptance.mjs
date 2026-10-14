@@ -32,76 +32,13 @@ try {
         sel(".tactical-hit-grid")];
     });
     assert.deepEqual(layers,["none","none","none","auto"],name+" layered hit testing");
-    const checked=await page.evaluate(() => {
-      const el=document.querySelector('.battle-cell[data-x="1"][data-y="5"]');
-      if(!(el instanceof HTMLButtonElement))return false;
-      el.click();
-      return el.classList.contains("is-selected");
-    });
-    assert.ok(checked,name+" playable ally selection");
-    await page.waitForFunction(() => document.querySelector("#selection-name")?.textContent==="岚锋");
-    // On touch screens red is the union over legal destinations, without hover.
-    // On desktop red appears only when a legal destination is hovered.
-    const attackSelector=".tactical-highlight-attack .route-attack";
-    const initialAttackCount=await page.locator(attackSelector).count();
-    if(isMobile) {
-      assert.equal(await page.evaluate(() =>
-        matchMedia("(hover: none) and (pointer: coarse)").matches),true,
-        "mobile context should use touch-first range preview");
-      assert.ok(initialAttackCount>0,"mobile selection must show projected attack cells");
-      assert.ok(await page.locator(".tactical-highlight-move .route-move-ally").count()>0,
-        "mobile selection must retain movement cells");
-      // Each color is painted in a separate layer; merely checking that both
-      // classes exist would miss a full-screen red overlap regression.
-      const colorState=await page.evaluate(() => {
-        const blues=[...document.querySelectorAll(".tactical-highlight-move .range-cell")];
-        const reds=[...document.querySelectorAll(".tactical-highlight-attack .range-cell")];
-        const blue=blues.find(cell=>cell.classList.contains("route-move-ally"));
-        const red=reds.find(cell=>cell.classList.contains("route-attack"));
-        return {
-          overlap:blues.filter((cell,index)=>cell.classList.contains("route-move-ally") &&
-            reds[index]?.classList.contains("route-attack")).length,
-          blueColor:blue?getComputedStyle(blue).backgroundColor:null,
-          redColor:red?getComputedStyle(red).backgroundColor:null
-        };
-      });
-      assert.equal(colorState.overlap,0,"red union must not cover mobile blue movement");
-      const rgb=value=>value?.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/)?.slice(1,4).map(Number);
-      const blueRgb=rgb(colorState.blueColor),redRgb=rgb(colorState.redColor);
-      assert.ok(blueRgb && blueRgb[2]>blueRgb[0],
-        "mobile movement needs a visible blue background");
-      assert.ok(redRgb && redRgb[0]>redRgb[2],
-        "mobile attack-only cells need a visible red background");
-    } else {
-      assert.equal(initialAttackCount,0,"desktop selection must not show attack union");
-    }
-    const cameraBefore=await page.locator(".map-world").getAttribute("style");
-    const rect=await page.locator("#game").boundingBox();
-    assert.ok(rect);
-    if(!isMobile) {
-      await page.mouse.move(rect.x+rect.width*.42,rect.y+rect.height*.42);
-      await page.mouse.wheel(0,-250);
-      await page.waitForTimeout(180);
-      assert.notEqual(await page.locator(".map-world").getAttribute("style"),cameraBefore,name+" zoom");
-    } else {
-      assert.equal(await page.locator(".mobile-dock").isVisible(),true,"mobile dock");
-      assert.ok((await page.locator("#game").boundingBox()).width>260);
-      const allies=await page.locator(".screen-unit-labels").locator("*").count();
-      assert.ok(allies>=4,"mobile ally labels remain present");
-      const view=await page.locator("#game").boundingBox();
-      const allyPosition=await page.evaluate(() => {
-        const el=document.querySelector('.battle-cell[data-x="1"][data-y="5"]');
-        const box=el.getBoundingClientRect();
-        return {x:(box.left+box.right)/2,y:(box.top+box.bottom)/2};
-      });
-      assert.ok(allyPosition.x>view.x+45 && allyPosition.x<view.x+view.width-45,
-        "mobile camera should frame the initial allied deployment");
-    }
-    await page.screenshot({path:`${out}/${name}.png`,animations:"disabled"});
+    assert.equal(await page.locator("#campaign-preparation-overlay").isVisible(),true,
+      name+" independent prep stage opens on initial load");
+    assert.equal(await page.locator("#campaign-roster button").count(),4);
+    assert.equal(await page.locator("#campaign-start-sortie").isVisible(),true);
     // C1 end-to-end: settings -> preparation -> reclass -> return.
     // Run on both desktop sizes and the real mobile/touch viewport.
-    await page.locator("#settings-button").click();
-    await page.locator("#settings-preparation").click();
+    await page.locator("#campaign-change-class").click();
     await page.locator("#class-preparation-overlay").waitFor({state:"visible"});
     assert.equal(await page.locator("#class-roster button").count(),4,name+" ally roster");
     assert.equal(await page.locator("#class-options button").count(),9,name+" available class list");
@@ -217,10 +154,92 @@ try {
     await page.locator("#class-preparation-close").click();
     assert.equal(await page.locator("#class-preparation-overlay").isVisible(),false,
       name+" modal closed without consuming an action");
+    assert.equal(await page.locator("#campaign-preparation-overlay").isVisible(),true,
+      name+" closing class selector returns to camp");
+    const checkpoint=await page.evaluate(()=>localStorage.getItem("wildfield-tactics.campaign.v1"));
+    assert.ok(checkpoint&&JSON.parse(checkpoint).allies.length===4,
+      name+" preparation changes are saved as a party-only checkpoint");
+    await page.reload({waitUntil:"networkidle"});
+    assert.equal(await page.locator("#campaign-preparation-overlay").isVisible(),true,
+      name+" browser reload resumes the preparation stage");
+    assert.equal(await page.locator("#campaign-roster button").count(),4);
+    await page.locator("#campaign-start-sortie").click();
+    assert.equal(await page.locator("#campaign-preparation-overlay").isVisible(),false,
+      name+" sortie confirmation enters the field");
+    assert.equal(await page.locator("#settings-end-turn").isEnabled(),true,
+      name+" normal battle actions resume after sortie start");
     await page.locator('.battle-cell[data-x="1"][data-y="5"]').evaluate(el=>el.click());
     assert.equal(await page.locator("#selection-role").innerText(),"剑士 · 我方单位",
-      name+" battle sidebar uses the restored class");
+      name+" battle sidebar reflects persisted class");
+
     assert.deepEqual(errors,[],name+" C1 reclass must not throw errors");
+
+    const checked=await page.evaluate(() => {
+      const el=document.querySelector('.battle-cell[data-x="1"][data-y="5"]');
+      if(!(el instanceof HTMLButtonElement))return false;
+      el.click();
+      return el.classList.contains("is-selected");
+    });
+    assert.ok(checked,name+" playable ally selection");
+    await page.waitForFunction(() => document.querySelector("#selection-name")?.textContent==="岚锋");
+    // On touch screens red is the union over legal destinations, without hover.
+    // On desktop red appears only when a legal destination is hovered.
+    const attackSelector=".tactical-highlight-attack .route-attack";
+    const initialAttackCount=await page.locator(attackSelector).count();
+    if(isMobile) {
+      assert.equal(await page.evaluate(() =>
+        matchMedia("(hover: none) and (pointer: coarse)").matches),true,
+        "mobile context should use touch-first range preview");
+      assert.ok(initialAttackCount>0,"mobile selection must show projected attack cells");
+      assert.ok(await page.locator(".tactical-highlight-move .route-move-ally").count()>0,
+        "mobile selection must retain movement cells");
+      // Each color is painted in a separate layer; merely checking that both
+      // classes exist would miss a full-screen red overlap regression.
+      const colorState=await page.evaluate(() => {
+        const blues=[...document.querySelectorAll(".tactical-highlight-move .range-cell")];
+        const reds=[...document.querySelectorAll(".tactical-highlight-attack .range-cell")];
+        const blue=blues.find(cell=>cell.classList.contains("route-move-ally"));
+        const red=reds.find(cell=>cell.classList.contains("route-attack"));
+        return {
+          overlap:blues.filter((cell,index)=>cell.classList.contains("route-move-ally") &&
+            reds[index]?.classList.contains("route-attack")).length,
+          blueColor:blue?getComputedStyle(blue).backgroundColor:null,
+          redColor:red?getComputedStyle(red).backgroundColor:null
+        };
+      });
+      assert.equal(colorState.overlap,0,"red union must not cover mobile blue movement");
+      const rgb=value=>value?.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/)?.slice(1,4).map(Number);
+      const blueRgb=rgb(colorState.blueColor),redRgb=rgb(colorState.redColor);
+      assert.ok(blueRgb && blueRgb[2]>blueRgb[0],
+        "mobile movement needs a visible blue background");
+      assert.ok(redRgb && redRgb[0]>redRgb[2],
+        "mobile attack-only cells need a visible red background");
+    } else {
+      assert.equal(initialAttackCount,0,"desktop selection must not show attack union");
+    }
+    const cameraBefore=await page.locator(".map-world").getAttribute("style");
+    const rect=await page.locator("#game").boundingBox();
+    assert.ok(rect);
+    if(!isMobile) {
+      await page.mouse.move(rect.x+rect.width*.42,rect.y+rect.height*.42);
+      await page.mouse.wheel(0,-250);
+      await page.waitForTimeout(180);
+      assert.notEqual(await page.locator(".map-world").getAttribute("style"),cameraBefore,name+" zoom");
+    } else {
+      assert.equal(await page.locator(".mobile-dock").isVisible(),true,"mobile dock");
+      assert.ok((await page.locator("#game").boundingBox()).width>260);
+      const allies=await page.locator(".screen-unit-labels").locator("*").count();
+      assert.ok(allies>=4,"mobile ally labels remain present");
+      const view=await page.locator("#game").boundingBox();
+      const allyPosition=await page.evaluate(() => {
+        const el=document.querySelector('.battle-cell[data-x="1"][data-y="5"]');
+        const box=el.getBoundingClientRect();
+        return {x:(box.left+box.right)/2,y:(box.top+box.bottom)/2};
+      });
+      assert.ok(allyPosition.x>view.x+45 && allyPosition.x<view.x+view.width-45,
+        "mobile camera should frame the initial allied deployment");
+    }
+    await page.screenshot({path:`${out}/${name}.png`,animations:"disabled"});
     // End-to-end: first click selects, destination click opens commands AFTER
     // animation, right-click/mobile back safely restores the original tile.
     if (name === "desktop-1920x1080" || isMobile) {
