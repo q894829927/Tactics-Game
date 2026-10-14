@@ -8,7 +8,7 @@ test("player control is restored when combat animation finishes or is skipped",(
   assert.match(board,/onCombatPresentationEnded: \(\(\)=>void\) \| null = null/);
   assert.match(board,/this\.combatPlaying=false;[\s\S]*?this\.refresh\(\);[\s\S]*?this\.onCombatPresentationEnded\?\.\(\)/);
   assert.match(main,/board\.onCombatPresentationEnded=\(\)=>\{[\s\S]*?renderSelection\(\);[\s\S]*?maybeAutoEndTurn\(\);[\s\S]*?\};/);
-  assert.match(main,/battle\.phase !== "player" \|\| endingTurn \|\| board\.isAnimating/);
+  assert.match(main,/battle\.phase !== "player" \|\|[\s\S]*?battle\.campaignStage!=="battle"[\s\S]*?endingTurn \|\| board\.isAnimating/);
 });
 
 test("selection cancellation and map dragging reject both movement and combat playback",()=>{

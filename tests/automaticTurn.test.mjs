@@ -73,7 +73,7 @@ test("browser defers auto end to post-commit microtask and combat presentation c
   const main=readFileSync(new URL("../src/main.ts",import.meta.url),"utf8");
   assert.match(main,/battle\.onChange = \(\)=>\{[\s\S]*?queueMicrotask\(maybeAutoEndTurn\)/);
   assert.match(main,/board\.onCombatPresentationEnded=\(\)=>\{[\s\S]*?maybeAutoEndTurn\(\)/);
-  assert.match(main,/function maybeAutoEndTurn\(\): void \{[\s\S]*?endingTurn \|\| board\.isAnimating \|\| !battle\.allLivingAlliesSpent/);
+  assert.match(main,/function maybeAutoEndTurn\(\): void \{[\s\S]*?endingTurn \|\| board\.isAnimating \|\| battle\.campaignStage!=="battle"[\s\S]*?!battle\.allLivingAlliesSpent/);
   assert.match(main,/function startEnemyTurn\(\): void \{[\s\S]*?if \(endingTurn \|\| board\.isAnimating/);
   assert.match(main,/button\("settings-end-turn"\)\.addEventListener\("click", startEnemyTurn\)/);
   assert.match(main,/mobileEndTurn\.addEventListener\("click",\(\)=>\{[\s\S]*?button\("settings-end-turn"\)\.click\(\)/);

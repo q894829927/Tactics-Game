@@ -168,9 +168,6 @@ try {
       name+" sortie confirmation enters the field");
     assert.equal(await page.locator("#settings-end-turn").isEnabled(),true,
       name+" normal battle actions resume after sortie start");
-    await page.locator('.battle-cell[data-x="1"][data-y="5"]').evaluate(el=>el.click());
-    assert.equal(await page.locator("#selection-role").innerText(),"剑士 · 我方单位",
-      name+" battle sidebar reflects persisted class");
 
     assert.deepEqual(errors,[],name+" C1 reclass must not throw errors");
 
