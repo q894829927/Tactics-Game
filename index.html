@@ -127,6 +127,7 @@
           <div class="equipment-row"><span>⚔ 当前武装</span><strong id="weapon-name">—</strong></div>
           <div class="equipment-row"><span>◈ 攻击距离</span><strong id="weapon-range">—</strong></div>
           <div id="inventory-list" class="inventory-list" aria-label="角色背包"></div>
+          <button id="class-preparation-button" class="class-prep-entry" type="button">职业整备 · 战前转职</button>
           <p id="selection-hint" class="equipment-note">点选友军，再点目的格移动；右键撤回移动。</p>
         </section>
         <section class="sidebar-section combat-log">
@@ -140,6 +141,7 @@
       <div class="settings-panel" role="dialog" aria-modal="true" aria-labelledby="settings-title">
         <div class="settings-title"><h2 id="settings-title">战场设置</h2><button id="close-settings" type="button" aria-label="关闭设置">×</button></div>
         <p>赤旗要塞 · 撤离走廊</p>
+        <button id="settings-preparation" type="button">职业整备 · 自由转职</button>
         <button id="settings-end-turn" type="button">结束我方回合</button>
         <button id="reset-view" type="button">重置地图视角</button>
         <button id="restart-button" type="button">重新开始关卡</button>
@@ -148,6 +150,25 @@
       </div>
     </div>
   </div>
+    <div id="class-preparation-overlay" class="class-preparation-overlay" role="presentation" hidden>
+      <section class="class-preparation-panel" role="dialog" aria-modal="true"
+        aria-labelledby="class-preparation-title">
+        <header class="class-preparation-header">
+          <div><h2 id="class-preparation-title">职业整备</h2>
+            <p>仅限第一回合行动前 · 初级职业免费认证，已认证职业免费切换</p></div>
+          <button id="class-preparation-close" type="button" aria-label="关闭职业整备">关闭 ✕</button>
+        </header>
+        <div class="class-preparation-columns">
+          <div><h3>选择人物</h3><div id="class-roster" class="class-roster"></div></div>
+          <div><h3>目标职业</h3><div id="class-options" class="class-options"></div></div>
+        </div>
+        <div id="class-preparation-details" class="class-preparation-details" aria-live="polite"></div>
+        <footer class="class-preparation-footer">
+          <button id="class-preparation-cancel" type="button">返回战场</button>
+          <button id="class-preparation-confirm" type="button">确认转职</button>
+        </footer>
+      </section>
+    </div>
   <script type="module" src="/src/main.ts"></script>
 </body>
 </html>

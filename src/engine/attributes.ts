@@ -35,14 +35,14 @@ export function deriveCombat(c:CharacterData & {weapon:Weapon},terrainDefense=0)
     critAvoid:Math.max(0,a.luck+w.dodge),
     range:w.minRange===w.maxRange?String(w.minRange):w.minRange+"–"+w.maxRange};
 }
-export function awardExperience(c:CharacterData,amount:number,rng:()=>number):number {
+export function awardExperience(c:CharacterData,amount:number,rng:()=>number, growthRates:GrowthRates=c.growths):number {
   if(amount<=0||c.level>=99)return 0;
   c.exp+=Math.floor(amount);
   let levels=0;
   while(c.exp>=100&&c.level<99){
     c.level++;levels++;c.exp-=100;
     for(const f of GROWTH_KEYS){
-      if(rng()*100>=clampChance(c.growths[f]))continue;
+      if(rng()*100>=clampChance(growthRates[f]))continue;
       if(f==="hp"){c.maxHp++;c.hp++;}
       else c.stats[f]++;
     }

@@ -5,7 +5,10 @@ import {initialLoadout,weaponFor,canWield,MAX_INVENTORY,type WeaponId} from "./w
 import {deriveCombat,awardExperience,clampChance,
   type CharacterData,type CombatStats} from "./attributes.ts";
 import {CHARACTER_LIBRARY,createCharacter,type CharacterId} from "./characters.ts";
-import type {ClassId} from "./classes.ts";
+import {CLASS_LIBRARY,effectiveClassStats,effectiveClassGrowths,type ClassId} from "./classes.ts";
+import {PLAYER_CLASS_CHOICES,INITIAL_PREPARATION_FUNDS,certificationRequirements,
+  classCertificationStatus,classWeaponAvailable,loanerForClass,
+  type PreparationFunds,type CertificationStatus} from "./classCertification.ts";
 import type {Weapon} from "./equipmentTypes.ts";
 import {awardWeaponExperience} from "./proficiency.ts";
 import {activeWeaponId} from "./combatResources.ts";
@@ -63,6 +66,10 @@ export type Unit = CharacterData & {
   weapon:Weapon;
   weaponInstances:Array<WeaponInstance|null>;
   spellCharges:SpellCharges;
+  /** Certified jobs never alter permanent weapon XP or personal growths. */
+  classLicenses:ClassId[];
+  /** One replaceable loaned basic weapon for classes outside owned inventory. */
+  trainingSlot:number|null;
   /** Legacy mirrors for older client/tests; battle calculations read weapon directly. */
   minRange:number;maxRange:number;
   moved:boolean;acted:boolean;spent:boolean;
@@ -94,6 +101,7 @@ function unit(id:CharacterId,team:Team,x:number,y:number):Unit {
     weapon:equipped,inventory,equippedIndex:0,
     weaponInstances:initialWeaponInstances(id,inventory),
     spellCharges:initialSpellCharges(inventory),
+    classLicenses:[classId],trainingSlot:null,
     minRange:equipped.minRange,maxRange:equipped.maxRange,
     moved:false,acted:false,spent:false};
 }
@@ -117,6 +125,11 @@ export class Battle {
   /** Immutable copies of the most recent completed combat's ordered strikes. */
   lastCombatEvents: CombatEvent[] = [];
   onChange: (() => void) | null = null;
+  preparationOpen=true;
+  /** C1 supports credential checks. The E1 reward/economy loop is future work. */
+  preparationFunds:PreparationFunds={
+    reputation:0,gold:0,vouchers:{intermediate:0},
+  };
   private moveOrigin: Point | null = null;
   private enemyQueue: string[] = [];
   private randomState=0x2946e73b;
@@ -147,6 +160,12 @@ export class Battle {
       unit("e6","enemy",9,7),
     ];
     this.round = 1;
+    this.preparationOpen=true;
+    this.preparationFunds={
+      reputation:INITIAL_PREPARATION_FUNDS.reputation,
+      gold:INITIAL_PREPARATION_FUNDS.gold,
+      vouchers:{...INITIAL_PREPARATION_FUNDS.vouchers},
+    };
     this.phase = "player";
     this.enemyQueue = [];
     this.result = "playing";
@@ -156,6 +175,64 @@ export class Battle {
     this.log = [];
     this.lastCombatEvents = [];
     this.emit();
+  }
+
+  get classChoices():readonly ClassId[]{return PLAYER_CLASS_CHOICES;}
+
+  /** Reclassing is only available in the initial preparation window. */
+  classStatus(unit:Unit,target:ClassId):CertificationStatus {
+    return classCertificationStatus(target,unit.weaponExp,
+      unit.classLicenses,this.preparationFunds);
+  }
+  canPrepareClass(unit:Unit):boolean {
+    return this.preparationOpen&&this.round===1&&this.phase==="player"&&
+      this.result==="playing"&&this.units.includes(unit)&&
+      unit.team==="ally"&&unit.hp>0&&!unit.moved&&!unit.acted&&!unit.spent;
+  }
+  /** No fixed promotion tree. First basic certification is free; earned
+   * intermediate credentials are consumed once and licenses persist.
+   */
+  changeClass(unitId:string,target:ClassId):boolean {
+    const actor=this.units.find(unit=>unit.id===unitId);
+    if(!actor||!this.canPrepareClass(actor)||
+      !Object.prototype.hasOwnProperty.call(CLASS_LIBRARY,target))return false;
+    if(actor.classId===target)return false;
+    const qualification=this.classStatus(actor,target);
+    if(!qualification.eligible||
+      !classWeaponAvailable(target,actor.inventory,actor.weaponExp))return false;
+    const ownedIndex=actor.inventory.findIndex(id=>
+      canWield(target,id,actor.weaponExp));
+    const needsLoaner=ownedIndex<0;
+    const loaner=needsLoaner?loanerForClass(target,actor.weaponExp):null;
+    const loanerIndex=actor.trainingSlot??actor.inventory.length;
+    if(needsLoaner&&(!loaner||loanerIndex>=MAX_INVENTORY))return false;
+    const costs=certificationRequirements(target);
+    // Every validation above is read-only. Only now mutate atomically.
+    if(!qualification.alreadyCertified){
+      this.preparationFunds.gold-=costs.gold;
+      if(costs.voucher)this.preparationFunds.vouchers[costs.voucher]--;
+      actor.classLicenses.push(target);
+    }
+    let index=ownedIndex;
+    if(needsLoaner&&loaner){
+      index=loanerIndex;
+      actor.trainingSlot=loanerIndex;
+      actor.inventory[index]=loaner;
+      actor.weaponInstances[index]=makeWeaponInstance(actor.characterId,index,loaner);
+      if(isSpell(weaponFor(loaner)))
+        actor.spellCharges[loaner]??=weaponFor(loaner).maxCharges??0;
+    }
+    actor.classId=target;
+    actor.role=target; // read-only compatibility mirror for old consumers
+    actor.equippedIndex=index;
+    actor.weapon=weaponFor(actor.inventory[index]!);
+    actor.minRange=actor.weapon.minRange;
+    actor.maxRange=actor.weapon.maxRange;
+    // Do not mutate personal stats/growths, HP, level or permanent XP.
+    this.selectedId=null;
+    this.moveOrigin=null;
+    this.emit();
+    return true;
   }
 
   /** Equipping is reversible and does not spend movement, attack or log an action. */
@@ -212,7 +289,8 @@ export class Battle {
   }
 
   combatStats(unit:Unit):CombatStats {
-    return deriveCombat({...unit,weapon:resourceWeapon(unit)},
+    return deriveCombat({...unit,stats:effectiveClassStats(unit.stats,unit.classId),
+        weapon:resourceWeapon(unit)},
       TERRAIN_INFO[this.tile(unit.x,unit.y)].defense);
   }
   hitChance(from:Unit,to:Unit):number {
@@ -409,10 +487,11 @@ export class Battle {
   }
   damage(attacker:Unit,defender:Unit):number {
     const to=this.combatStats(defender);
+    const from=effectiveClassStats(attacker.stats,attacker.classId);
     const might=effectiveMight(resourceWeapon(attacker),defender.classId);
     const base=attacker.weapon.kind==="magical"
-      ? attacker.stats.magic+might-to.magicalProtection
-      : attacker.stats.strength+might-to.physicalProtection;
+      ? from.magic+might-to.magicalProtection
+      : from.strength+might-to.physicalProtection;
     return strikeDamage(base,attacker.weapon.category);
   }
 
@@ -436,6 +515,7 @@ export class Battle {
     }
     if (actor.moved) return;
     if (!this.reachable(actor).has(key({ x, y }))) return;
+    this.preparationOpen=false;
     this.moveOrigin = {x: actor.x, y: actor.y};
     actor.x = x;
     actor.y = y;
@@ -458,6 +538,7 @@ export class Battle {
   private commitSelectedAttack(actor:Unit,defender:Unit,artId?:string):boolean {
     if(this.selected?.id!==actor.id||actor.team!=="ally"||
       !this.units.includes(defender)||!this.forecastAttack(actor,defender,artId))return false;
+    this.preparationOpen=false;
     const moved=this.completedMovement(actor);
     const result=this.strike(actor,defender,artId);
     const action=artId===this.basicArt.id?"使用试验战技攻击":"攻击";
@@ -476,6 +557,7 @@ export class Battle {
     if (this.phase !== "player" || this.result !== "playing") return;
     const actor = this.selected;
     if (!actor || actor.team !== "ally" || actor.spent) return;
+    this.preparationOpen=false;
     this.committedLog(actor.name + " " + this.completedMovement(actor) + "待机");
     actor.spent = true;
     actor.acted = true;
@@ -505,6 +587,7 @@ export class Battle {
       this.emit();
       return false;
     }
+    this.preparationOpen=false;
     this.phase = "enemy";
     this.selectedId = null;
     this.moveOrigin = null;
@@ -666,11 +749,13 @@ export class Battle {
     }
     if(gainedNotes.length)levelNote+="；熟练度升级 "+gainedNotes.join("、");
     if(actor.team==="ally"&&actor.hp>0){
-      if(awardExperience(actor,10+(defender.hp===0?25:0),()=>this.nextRandom()))
+      if(awardExperience(actor,10+(defender.hp===0?25:0),()=>this.nextRandom(),
+          effectiveClassGrowths(actor.growths,actor.classId)))
         levelNote+="；"+actor.name+" Lv."+actor.level;
     }
     if(defender.team==="ally"&&defender.hp>0&&countered){
-      if(awardExperience(defender,10,()=>this.nextRandom()))
+      if(awardExperience(defender,10,()=>this.nextRandom(),
+          effectiveClassGrowths(defender.growths,defender.classId)))
         levelNote+="；"+defender.name+" Lv."+defender.level;
     }
     return {damage,counterDamage,defenderFell:defender.hp<=0,attackerFell:actor.hp<=0,

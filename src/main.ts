@@ -6,7 +6,8 @@ import {BASIC_KEYS,BASIC_LABELS,GROWTH_KEYS,GROWTH_LABELS} from "./engine/attrib
 import {WEAPON_LIBRARY,weaponRange,canWield} from "./engine/weapons.ts";
 import {weaponRankForExp,weaponExperienceText} from "./engine/proficiency.ts";
 import {weaponResourceText} from "./engine/combatResources.ts";
-import {CLASS_LIBRARY} from "./engine/classes.ts";
+import {CLASS_LIBRARY,effectiveClassStats,effectiveClassGrowths,type ClassId} from "./engine/classes.ts";
+import {classWeaponAvailable} from "./engine/classCertification.ts";
 import "./style.css";
 
 const get = (id: string): HTMLElement => {
@@ -109,8 +110,9 @@ function renderSelection(): void {
       line.append(label,text);root.appendChild(line);
     }
   };
+  const shownStats=selected?effectiveClassStats(selected.stats,selected.classId):null;
   paint("basic-attributes", BASIC_KEYS.map(k=>
-    [BASIC_LABELS[k],selected?String(selected.stats[k]):"—"] as const));
+    [BASIC_LABELS[k],shownStats?String(shownStats[k]):"—"] as const));
   const combatFields=[
     ["物攻","physicalAttack"],["耐物","physicalProtection"],["攻速","attackSpeed"],
     ["耐魔","magicalProtection"],["命中","hit"],["回避","avoid"],
@@ -118,8 +120,9 @@ function renderSelection(): void {
   ] as const;
   paint("combat-attributes",combatFields.map(([label,key])=>
     [label,combat?String(combat[key]):"—"] as const));
+  const shownGrowths=selected?effectiveClassGrowths(selected.growths,selected.classId):null;
   paint("growth-attributes",GROWTH_KEYS.map(k=>
-    [GROWTH_LABELS[k],selected?selected.growths[k]+"%":"—"] as const));
+    [GROWTH_LABELS[k],shownGrowths?shownGrowths[k]+"%":"—"] as const));
   get("selection-hint").textContent = selected?.team === "enemy"
     ? "敌军仅供查看；选中友军后点击合法目的格"
     : selected
@@ -131,6 +134,10 @@ function renderSelection(): void {
   button("settings-end-turn").disabled =
     battle.result !== "playing" || battle.phase !== "player" || endingTurn || board.isAnimating;
   mobileEndTurn.disabled=button("settings-end-turn").disabled;
+  const canPrepare=battle.preparationOpen&&battle.phase==="player"&&
+    battle.result==="playing"&&!endingTurn&&!board.isAnimating;
+  button("class-preparation-button").disabled=!canPrepare;
+  button("settings-preparation").disabled=!canPrepare;
   mobileCommands.textContent = battle.selected?.team==="ally" && !battle.selected.moved &&
     !battle.selected.spent ? "◎ 原地行动" : "⚔ 指令";
   mobileCommands.disabled=!(battle.selected?.team==="ally" && !battle.selected.spent &&
@@ -190,6 +197,107 @@ window.addEventListener("resize",()=>{
 setMobileInfo(false);
 
 get("minimap-grid").addEventListener("dblclick", () => board.resetCamera());
+
+
+const classOverlay=get("class-preparation-overlay");
+let preparationUnitId="a1";
+let preparationClassId:ClassId="sword";
+function closeClassPreparation():void {
+  classOverlay.hidden=true;
+  renderSelection();
+}
+function renderClassPreparation():void {
+  const roster=get("class-roster"),options=get("class-options");
+  roster.replaceChildren();options.replaceChildren();
+  const allies=battle.units.filter(u=>u.team==="ally"&&u.hp>0);
+  let actor=allies.find(u=>u.id===preparationUnitId);
+  if(!actor){
+    actor=allies[0];
+    if(actor)preparationUnitId=actor.id;
+  }
+  if(!actor){closeClassPreparation();return;}
+  for(const unit of allies){
+    const item=document.createElement("button");
+    item.type="button";
+    item.className=unit.id===preparationUnitId?"active":"";
+    item.textContent=unit.name+" · "+CLASS_LIBRARY[unit.classId].name;
+    const sub=document.createElement("small");
+    sub.textContent=unit.classId===unit.role?"已认证职业 "+unit.classLicenses.length:"职业资格";
+    item.appendChild(sub);
+    item.addEventListener("click",()=>{
+      preparationUnitId=unit.id;preparationClassId=unit.classId;
+      renderClassPreparation();
+    });
+    roster.appendChild(item);
+  }
+  if(!battle.classChoices.includes(preparationClassId))
+    preparationClassId=actor.classId;
+  const status=battle.classStatus(actor,preparationClassId);
+  const hasWeapon=classWeaponAvailable(preparationClassId,actor.inventory,actor.weaponExp);
+  for(const id of battle.classChoices){
+    const cls=CLASS_LIBRARY[id],eligibility=battle.classStatus(actor,id);
+    const equippable=classWeaponAvailable(id,actor.inventory,actor.weaponExp);
+    const item=document.createElement("button");
+    item.type="button";
+    item.className=(id===preparationClassId?"active ":"")+
+      (eligibility.eligible&&equippable?"":"locked");
+    const headline=document.createElement("strong");
+    headline.textContent=cls.emblem+" "+cls.name+" · "+
+      (cls.tier==="basic"?"初级":"中级");
+    const detail=document.createElement("small");
+    detail.textContent=id===actor.classId?"当前职业":
+      !eligibility.eligible?eligibility.reason:
+      !equippable?"没有可用的训练武器":eligibility.reason;
+    item.append(headline,detail);
+    item.addEventListener("click",()=>{preparationClassId=id;renderClassPreparation();});
+    options.appendChild(item);
+  }
+  const cls=CLASS_LIBRARY[preparationClassId];
+  const changes=Object.entries(cls.statModifiers).map(([k,v])=>
+    (BASIC_LABELS as Record<string,string>)[k]+" "+(Number(v)>=0?"+":"")+v).join(" · ");
+  const growth=Object.entries(cls.growthModifiers).map(([k,v])=>
+    (GROWTH_LABELS as Record<string,string>)[k]+"成长 "+
+    (Number(v)>=0?"+":"")+v+"%").join(" · ");
+  const req=Object.entries(cls.requiredWeaponRanks).map(([k,v])=>k+" "+v).join("、");
+  get("class-preparation-details").textContent=
+    actor.name+" → "+cls.name+"｜武器要求："+req+
+    "｜能力："+(changes||"无修正")+"｜成长："+(growth||"无修正")+
+    "｜"+(status.eligible?(hasWeapon?"资格满足":"无可用训练装备"):status.reason)+
+    "。个人属性、等级与熟练度不会因转职改变。"+
+    (cls.tier!=="basic"?"中级职业须有名声、考试凭证和金币；目前尚无获取入口。":"");
+  const canApply=battle.canPrepareClass(actor)&&status.eligible&&hasWeapon&&
+    preparationClassId!==actor.classId;
+  button("class-preparation-confirm").disabled=!canApply;
+}
+function openClassPreparation():void {
+  if(!battle.preparationOpen||battle.phase!=="player"||
+      battle.result!=="playing"||endingTurn||board.isAnimating)return;
+  setSettings(false);setMobileInfo(false);board.hideCommandMenu();
+  const selected=battle.selected;
+  preparationUnitId=selected?.team==="ally"?selected.id:preparationUnitId;
+  const actor=battle.units.find(u=>u.id===preparationUnitId);
+  preparationClassId=actor?.classId??"sword";
+  classOverlay.hidden=false;
+  renderClassPreparation();
+  button("class-preparation-close").focus();
+}
+button("class-preparation-button").addEventListener("click",openClassPreparation);
+button("settings-preparation").addEventListener("click",openClassPreparation);
+button("class-preparation-close").addEventListener("click",closeClassPreparation);
+button("class-preparation-cancel").addEventListener("click",closeClassPreparation);
+classOverlay.addEventListener("click",e=>{
+  if(e.target===classOverlay)closeClassPreparation();
+});
+document.addEventListener("keydown",e=>{
+  if(e.key==="Escape"&&!classOverlay.hidden)closeClassPreparation();
+});
+button("class-preparation-confirm").addEventListener("click",()=>{
+  const actor=battle.units.find(u=>u.id===preparationUnitId);
+  if(!actor||!battle.changeClass(actor.id,preparationClassId)){
+    renderClassPreparation();return;
+  }
+  board.refresh();renderSelection();renderClassPreparation();
+});
 
 const overlay = get("settings-overlay");
 function setSettings(open: boolean): void {
