@@ -356,9 +356,16 @@ function renderClassPreparation():void {
     const dest=document.createElement("strong");
     dest.className="class-stat-after "+(before!==null&&after!==null&&after>before?"increased":
       before!==null&&after!==null&&after<before?"decreased":"unchanged");
-    dest.textContent=format(after)+(before!==null&&after!==null&&after>before?" ▲":
-      before!==null&&after!==null&&after<before?" ▼":"");
-    row.append(name,from,arrow,dest);statsRoot.appendChild(row);
+    // Keep the comparison number and ▲/▼ in different grid tracks:
+    // changing trend indicators must never shift either number or the › glyph.
+    dest.textContent=format(after);
+    const trend=document.createElement("span");
+    trend.className="class-stat-trend";
+    const direction=before!==null&&after!==null
+      ? after>before?"up":after<before?"down":"none" : "none";
+    trend.textContent=direction==="up"?"▲":direction==="down"?"▼":"";
+    trend.setAttribute("aria-label",direction==="up"?"提升":direction==="down"?"下降":"无变化");
+    row.append(name,from,arrow,dest,trend);statsRoot.appendChild(row);
   }
   const requirementsRoot=get("class-requirement-list");
   requirementsRoot.replaceChildren();

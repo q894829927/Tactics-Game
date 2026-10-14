@@ -112,6 +112,32 @@ try {
     assert.deepEqual(orderedStatNames,[
       "HP","移动力","力量","防守","魔力","魔防","速度","幸运","技巧","魅力",
     ],name+" exact row-major five-pair base attribute order");
+    // Each row reserves identical-sized left/right numeric tracks plus a
+    // separate, always-present trend track, so ▲/▼ can never shift digits.
+    const readComparisonGeometry=async()=>page.locator("#class-stat-grid .class-stat-row")
+      .evaluateAll(rows=>rows.map(row=>{
+        const center=selector=>{
+          const rect=row.querySelector(selector).getBoundingClientRect();
+          return {mid:rect.left+rect.width/2,width:rect.width};
+        };
+        return {left:center(".class-stat-before"),arrow:center(".class-stat-arrow"),
+          right:center(".class-stat-after"),trend:center(".class-stat-trend")};
+      }));
+    const assertAlignedGeometry=metrics=>{
+      assert.equal(metrics.length,10,name+" comparison rows");
+      for(let i=0;i<metrics.length;i++){
+        const m=metrics[i],anchor=metrics[i%2];
+        assert.ok(Math.abs((m.arrow.mid-m.left.mid)-(m.right.mid-m.arrow.mid))<=1,
+          name+" equal number-to-arrow spacing on row "+i);
+        assert.ok(Math.abs(m.left.mid-anchor.left.mid)<=1 &&
+          Math.abs(m.arrow.mid-anchor.arrow.mid)<=1 &&
+          Math.abs(m.right.mid-anchor.right.mid)<=1,
+          name+" numeric columns aligned across rows "+i);
+        assert.ok(m.trend.width>=8,name+" reserved indicator width "+i);
+      }
+    };
+    const initialGeometry=await readComparisonGeometry();
+    assertAlignedGeometry(initialGeometry);
     assert.equal(await page.locator("#class-exam-panel").isVisible(),false,
       name+" free basic class must not show exam cost");
     assert.equal(await page.locator("#class-preparation-confirm").isDisabled(),true,
@@ -143,9 +169,17 @@ try {
     const speed=page.locator("#class-stat-grid .class-stat-row").filter({hasText:"速度"});
     assert.equal((await speed.locator(".class-stat-before").innerText()).trim(),"9",
       name+" original blade speed");
-    assert.match(await speed.locator(".class-stat-after").innerText(),/^10\s*▲$/,
+    assert.equal((await speed.locator(".class-stat-after").innerText()).trim(),"10",
       name+" speed increases to 10 as brawler");
+    assert.equal((await speed.locator(".class-stat-trend").innerText()).trim(),"▲",
+      name+" increase indicator is in its own reserved column");
     assert.match(await speed.locator(".class-stat-after").getAttribute("class"),/increased/);
+    const changedGeometry=await readComparisonGeometry();
+    assertAlignedGeometry(changedGeometry);
+    for(let i=0;i<initialGeometry.length;i++){
+      assert.ok(Math.abs(initialGeometry[i].right.mid-changedGeometry[i].right.mid)<=1,
+        name+" ▲ indicator never moves the numeric column on row "+i);
+    }
     await page.locator("#class-tab-growth").click();
     assert.equal(await page.locator("#class-stats-title").innerText(),"成长值对比");
     assert.deepEqual(await page.locator("#class-stat-grid .class-stat-label").allTextContents(),
@@ -155,8 +189,11 @@ try {
     const growthSpeed=page.locator("#class-stat-grid .class-stat-row").filter({hasText:"速度"});
     assert.equal((await growthSpeed.locator(".class-stat-before").innerText()).trim(),"55%",
       name+" original speed growth");
-    assert.match(await growthSpeed.locator(".class-stat-after").innerText(),/^60%\s*▲$/,
+    assert.equal((await growthSpeed.locator(".class-stat-after").innerText()).trim(),"60%",
       name+" class growth bonus raises speed rate to 60%");
+    assert.equal((await growthSpeed.locator(".class-stat-trend").innerText()).trim(),"▲",
+      name+" growth increase indicator must not move the percentage");
+    assertAlignedGeometry(await readComparisonGeometry());
     await page.locator("#class-tab-stats").click();
     assert.equal(await page.locator("#class-stat-grid .class-stat-row").count(),10);
     const modalSize=await page.locator(".class-preparation-panel").evaluate(el=>

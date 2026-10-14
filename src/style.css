@@ -1148,12 +1148,23 @@ button:disabled { cursor: not-allowed; }
 .class-stat-head{display:flex;justify-content:flex-end;gap:17px;font-size:11px;
  color:#dcc494;padding:6px 10px 3px}
 .class-stat-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 8px;padding:0 7px 8px}
-.class-stat-row{display:flex;align-items:center;gap:4px;min-width:0;min-height:31px;
- padding:3px 2px;border-bottom:1px solid #6b6e663b;font-family:"Noto Sans SC",sans-serif;font-size:12px}
-.class-stat-label{flex:1;min-width:0;white-space:nowrap;color:#d4ba87}
-.class-stat-before{min-width:28px;text-align:right;color:#e2e7e8;font-variant-numeric:tabular-nums}
-.class-stat-arrow{color:#c5a46a;min-width:9px;text-align:center}
-.class-stat-after{min-width:39px;text-align:right;font-variant-numeric:tabular-nums;font-weight:700}
+.class-stat-row{display:grid;align-items:center;
+ /* Matched numeric tracks create equal distances on either side of ›.
+    The dedicated final track reserves room for ▲/▼ on every row. */
+ grid-template-columns:minmax(0,1fr) 5ch 10px 5ch 12px;column-gap:4px;
+ min-width:0;min-height:31px;padding:3px 2px;border-bottom:1px solid #6b6e663b;
+ font-family:"Noto Sans SC",sans-serif;font-size:12px;font-variant-numeric:tabular-nums;
+ font-feature-settings:"tnum" 1}
+.class-stat-label{min-width:0;white-space:nowrap;color:#d4ba87}
+.class-stat-before,.class-stat-after{min-width:0;width:100%;text-align:center;
+ white-space:nowrap;font-variant-numeric:tabular-nums}
+.class-stat-before{color:#e2e7e8}
+.class-stat-arrow{width:100%;color:#c5a46a;text-align:center}
+.class-stat-after{font-weight:700}
+.class-stat-trend{min-width:0;width:100%;text-align:center;line-height:1;
+ color:#c5a46a;font-size:10px}
+.class-stat-after.increased+.class-stat-trend{color:#f0c15d}
+.class-stat-after.decreased+.class-stat-trend{color:#76add9}
 .class-stat-after.increased{color:#f0c15d}
 .class-stat-after.decreased{color:#76add9}
 .class-stat-after.unchanged{color:#ebeff0}
@@ -1245,10 +1256,10 @@ button:disabled { cursor: not-allowed; }
  .class-info-heading strong{font-size:17px}
  .class-info-description p{padding-right:48px;font-size:12px}
  .class-preview-silhouette{font-size:50px}
- .class-stat-row{font-size:11px;min-height:28px;gap:2px}
+ .class-stat-row{font-size:11px;min-height:28px;
+  grid-template-columns:minmax(0,1fr) 5ch 9px 5ch 11px;column-gap:2px}
  .class-stat-grid{gap:0 3px;padding:0 4px 6px}
- .class-stat-before{min-width:23px}
- .class-stat-after{min-width:36px}
+ .class-stat-trend{font-size:9px}
  .class-requirements-panel{margin:6px 6px 0}
  .class-requirement-list{padding:6px;gap:4px}
  .class-requirement-chip{padding:4px 6px;font-size:11px}
