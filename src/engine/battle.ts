@@ -5,6 +5,7 @@ import {deriveCombat,awardExperience,clampChance,
   type CharacterData,type CombatStats} from "./attributes.ts";
 import {CHARACTER_LIBRARY,createCharacter,type CharacterId} from "./characters.ts";
 import type {ClassId} from "./classes.ts";
+import type {Weapon} from "./equipmentTypes.ts";
 export type { Terrain } from "./terrain.ts";
 
 export const MAP_WIDTH = 10;
@@ -48,6 +49,8 @@ export type Unit = CharacterData & {
   classId:ClassId;role:Role;team:Team;x:number;y:number;
   /** Weapon inventory, initially 3 character-specific items, at most 5. */
   inventory:WeaponId[]; equippedIndex:number;
+  /** Currently equipped combat weapon, separate from permanent personal data. */
+  weapon:Weapon;
   /** Legacy mirrors for older client/tests; battle calculations read weapon directly. */
   minRange:number;maxRange:number;
   moved:boolean;acted:boolean;spent:boolean;
