@@ -4,7 +4,7 @@ import { BoardView } from "./scene/BoardView.ts";
 import { GAME_VERSION } from "./version.ts";
 import {BASIC_KEYS,BASIC_LABELS,GROWTH_KEYS,GROWTH_LABELS} from "./engine/attributes.ts";
 import {WEAPON_LIBRARY,weaponRange,canWield} from "./engine/weapons.ts";
-import {weaponRankForExp,weaponExperienceText} from "./engine/proficiency.ts";
+import {weaponRankForExp,weaponExperienceText,WEAPON_RANK_THRESHOLDS} from "./engine/proficiency.ts";
 import {weaponResourceText} from "./engine/combatResources.ts";
 import {CLASS_LIBRARY,effectiveClassStats,effectiveClassGrowths,type ClassId} from "./engine/classes.ts";
 import {classWeaponAvailable,certificationRequirements} from "./engine/classCertification.ts";
@@ -314,7 +314,7 @@ function renderClassPreparation():void {
       status.eligible&&hasWeapon?"ready":"locked"],
   ]){
     const tag=document.createElement("span");
-    tag.className="class-state-tag "+kind;tag.textContent=label;
+    tag.className="class-state-tag "+kind;tag.textContent=label??"";
     badges.appendChild(tag);
   }
 
@@ -383,7 +383,7 @@ function renderClassPreparation():void {
         const count=actor.weaponExp[category as keyof typeof actor.weaponExp];
         conditions.push(["技能："+category+" "+rank,
           "当前 "+weaponRankForExp(count),count>=
-          ({E:0,D:40,C:120,B:260,A:450,S:700,"S+":1000} as Record<string,number>)[rank]]);
+          (WEAPON_RANK_THRESHOLDS[rank as keyof typeof WEAPON_RANK_THRESHOLDS]??Infinity)]);
       }
     }
     conditions.push(["名声 ≥"+requirements.reputation,"当前 "+funds.reputation,
