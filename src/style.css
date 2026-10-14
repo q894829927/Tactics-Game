@@ -1157,6 +1157,20 @@ button:disabled { cursor: not-allowed; }
 .class-stat-after.increased{color:#f0c15d}
 .class-stat-after.decreased{color:#76add9}
 .class-stat-after.unchanged{color:#ebeff0}
+.class-requirements-panel{margin:8px 8px 0;flex:none;border:1px solid #746b4c;
+ background:linear-gradient(120deg,#0a2636,#102c3b)}
+.class-requirements-panel .class-pane-heading{padding:7px 10px;font-size:12px}
+.class-requirement-list{display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:8px}
+.class-requirement-chip{min-width:0;display:flex;align-items:center;gap:6px;padding:5px 9px;
+ font:12px "Noto Sans SC",sans-serif;color:#ebdfc9;background:#122c41;
+ border:1px solid #7c7155;border-radius:4px}
+.class-requirement-chip.unmet{border-color:#7d6371;background:#352b3b}
+.class-requirement-icon{display:grid;place-items:center;font-size:18px;color:#edc889;
+ flex:none;width:25px;height:25px;border:1px solid #847044;border-radius:3px}
+.class-requirement-text{font-weight:600;white-space:nowrap}
+.class-requirement-chip strong{color:#f0d29d;font-size:15px}
+.class-requirement-chip small{white-space:nowrap;color:#a9d5b7;font-size:11px}
+.class-requirement-chip.unmet small{color:#e0a2a2}
 .class-feature-panels{margin:8px;display:grid;grid-template-columns:1fr 1fr;gap:8px;flex:none}
 .class-feature-section{min-width:0;border:1px solid #6d684d;background:#092333}
 .class-feature-section .class-pane-heading{font-size:12px;padding:8px 9px}
@@ -1235,6 +1249,9 @@ button:disabled { cursor: not-allowed; }
  .class-stat-grid{gap:0 3px;padding:0 4px 6px}
  .class-stat-before{min-width:23px}
  .class-stat-after{min-width:36px}
+ .class-requirements-panel{margin:6px 6px 0}
+ .class-requirement-list{padding:6px;gap:4px}
+ .class-requirement-chip{padding:4px 6px;font-size:11px}
  .class-feature-panels{margin:6px;gap:6px}
  .class-feature-content{padding:7px;font-size:11px;min-height:28px}
  .class-preparation-footer{padding:6px;gap:6px}

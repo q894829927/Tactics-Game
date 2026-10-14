@@ -105,6 +105,13 @@ try {
     await page.locator("#class-preparation-overlay").waitFor({state:"visible"});
     assert.equal(await page.locator("#class-roster button").count(),4,name+" ally roster");
     assert.equal(await page.locator("#class-options button").count(),9,name+" available class list");
+    assert.equal(await page.locator("#class-requirements-title").innerText(),"职业要求");
+    assert.match(await page.locator("#class-requirement-list").innerText(),/剑术/);
+    assert.match(await page.locator("#class-requirement-list").innerText(),/当前 C/);
+    const orderedStatNames=await page.locator("#class-stat-grid .class-stat-label").allTextContents();
+    assert.deepEqual(orderedStatNames,[
+      "HP","移动力","力量","防守","魔力","魔防","速度","幸运","技巧","魅力",
+    ],name+" exact row-major five-pair base attribute order");
     assert.equal(await page.locator("#class-exam-panel").isVisible(),false,
       name+" free basic class must not show exam cost");
     assert.equal(await page.locator("#class-preparation-confirm").isDisabled(),true,
@@ -120,6 +127,10 @@ try {
     await page.locator("#class-options button").filter({hasText:"游剑士"}).click();
     assert.equal(await page.locator("#class-exam-panel").isVisible(),true,
       name+" uncertified intermediate class reveals actual requirements");
+    assert.match(await page.locator("#class-requirement-list").innerText(),/剑术/);
+    assert.match(await page.locator("#class-requirement-list").innerText(),/D/);
+    assert.equal(await page.locator("#class-exam-content").getByText("技能：",{exact:false}).count(),0,
+      name+" rank requirements live in the right pane, not duplicated in exam resources");
     assert.match(await page.locator("#class-exam-content").innerText(),/中级考试凭证/);
     assert.match(await page.locator("#class-exam-content").innerText(),/金币/);
     assert.equal(await page.locator("#class-preparation-confirm").isDisabled(),true,
@@ -127,6 +138,8 @@ try {
     await page.locator("#class-options button").filter({hasText:"拳斗士"}).click();
     assert.equal(await page.locator("#class-exam-panel").isVisible(),false,
       name+" exam panel is absent for free beginner jobs");
+    assert.match(await page.locator("#class-requirement-list").innerText(),/拳术/);
+    assert.match(await page.locator("#class-requirement-list").innerText(),/当前 E/);
     const speed=page.locator("#class-stat-grid .class-stat-row").filter({hasText:"速度"});
     assert.equal((await speed.locator(".class-stat-before").innerText()).trim(),"9",
       name+" original blade speed");
@@ -135,6 +148,10 @@ try {
     assert.match(await speed.locator(".class-stat-after").getAttribute("class"),/increased/);
     await page.locator("#class-tab-growth").click();
     assert.equal(await page.locator("#class-stats-title").innerText(),"成长值对比");
+    assert.deepEqual(await page.locator("#class-stat-grid .class-stat-label").allTextContents(),
+      orderedStatNames,name+" consistent five-pair row order in growth view");
+    assert.equal(await page.locator("#class-stat-grid .class-stat-row").filter({hasText:"移动力"})
+      .locator(".class-stat-after").innerText(),"—",name+" movement has no growth rate");
     const growthSpeed=page.locator("#class-stat-grid .class-stat-row").filter({hasText:"速度"});
     assert.equal((await growthSpeed.locator(".class-stat-before").innerText()).trim(),"55%",
       name+" original speed growth");

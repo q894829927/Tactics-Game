@@ -328,27 +328,20 @@ function renderClassPreparation():void {
   const afterStats=effectiveClassStats(actor.stats,preparationClassId);
   const currentGrowth=effectiveClassGrowths(actor.growths,actor.classId);
   const afterGrowth=effectiveClassGrowths(actor.growths,preparationClassId);
-  const statRows:readonly (readonly [string,number,number])[]=statsMode?[
-    ["HP",actor.maxHp,actor.maxHp],
-    ["力量",currentStats.strength,afterStats.strength],
-    ["魔力",currentStats.magic,afterStats.magic],
-    ["技巧",currentStats.dexterity,afterStats.dexterity],
-    ["速度",currentStats.speed,afterStats.speed],
-    ["防守",currentStats.defense,afterStats.defense],
-    ["魔防",currentStats.resistance,afterStats.resistance],
-    ["幸运",currentStats.luck,afterStats.luck],
-    ["魅力",currentStats.charm,afterStats.charm],
-    ["移动力",actor.move,actor.move],
+  // Grid is row-major: every consecutive pair is one physical row.
+  // Keep the same layout in growth view; movement has no growth rate.
+  const statRows:readonly (readonly [string,number|null,number|null])[]=statsMode?[
+    ["HP",actor.maxHp,actor.maxHp],["移动力",actor.move,actor.move],
+    ["力量",currentStats.strength,afterStats.strength],["防守",currentStats.defense,afterStats.defense],
+    ["魔力",currentStats.magic,afterStats.magic],["魔防",currentStats.resistance,afterStats.resistance],
+    ["速度",currentStats.speed,afterStats.speed],["幸运",currentStats.luck,afterStats.luck],
+    ["技巧",currentStats.dexterity,afterStats.dexterity],["魅力",currentStats.charm,afterStats.charm],
   ]:[
-    ["HP",currentGrowth.hp,afterGrowth.hp],
-    ["力量",currentGrowth.strength,afterGrowth.strength],
-    ["魔力",currentGrowth.magic,afterGrowth.magic],
-    ["技巧",currentGrowth.dexterity,afterGrowth.dexterity],
-    ["速度",currentGrowth.speed,afterGrowth.speed],
-    ["防守",currentGrowth.defense,afterGrowth.defense],
-    ["魔防",currentGrowth.resistance,afterGrowth.resistance],
-    ["幸运",currentGrowth.luck,afterGrowth.luck],
-    ["魅力",currentGrowth.charm,afterGrowth.charm],
+    ["HP",currentGrowth.hp,afterGrowth.hp],["移动力",null,null],
+    ["力量",currentGrowth.strength,afterGrowth.strength],["防守",currentGrowth.defense,afterGrowth.defense],
+    ["魔力",currentGrowth.magic,afterGrowth.magic],["魔防",currentGrowth.resistance,afterGrowth.resistance],
+    ["速度",currentGrowth.speed,afterGrowth.speed],["幸运",currentGrowth.luck,afterGrowth.luck],
+    ["技巧",currentGrowth.dexterity,afterGrowth.dexterity],["魅力",currentGrowth.charm,afterGrowth.charm],
   ];
   const statsRoot=get("class-stat-grid");statsRoot.replaceChildren();
   for(const [label,before,after] of statRows){
@@ -356,13 +349,42 @@ function renderClassPreparation():void {
     row.className="class-stat-row";
     const name=document.createElement("span");name.className="class-stat-label";name.textContent=label;
     const from=document.createElement("span");from.className="class-stat-before";
-    from.textContent=String(before)+(statsMode?"":"%");
-    const arrow=document.createElement("span");arrow.className="class-stat-arrow";arrow.textContent="›";
+    const format=(value:number|null)=>value===null?"—":String(value)+(statsMode?"":"%");
+    from.textContent=format(before);
+    const arrow=document.createElement("span");arrow.className="class-stat-arrow";
+    arrow.textContent=before===null?"":"›";
     const dest=document.createElement("strong");
-    dest.className="class-stat-after "+(after>before?"increased":after<before?"decreased":"unchanged");
-    dest.textContent=String(after)+(statsMode?"":"%")+
-      (after>before?" ▲":after<before?" ▼":"");
+    dest.className="class-stat-after "+(before!==null&&after!==null&&after>before?"increased":
+      before!==null&&after!==null&&after<before?"decreased":"unchanged");
+    dest.textContent=format(after)+(before!==null&&after!==null&&after>before?" ▲":
+      before!==null&&after!==null&&after<before?" ▼":"");
     row.append(name,from,arrow,dest);statsRoot.appendChild(row);
+  }
+  const requirementsRoot=get("class-requirement-list");
+  requirementsRoot.replaceChildren();
+  for(const [category,required] of Object.entries(cls.requiredWeaponRanks)){
+    if(!required)continue;
+    const kind=category as keyof typeof actor.weaponExp;
+    const xp=actor.weaponExp[kind];
+    const current=weaponRankForExp(xp);
+    const passed=xp>=WEAPON_RANK_THRESHOLDS[required as keyof typeof WEAPON_RANK_THRESHOLDS];
+    const chip=document.createElement("div");
+    chip.className="class-requirement-chip "+(passed?"met":"unmet");
+    const emblem=document.createElement("span");
+    emblem.className="class-requirement-icon";
+    emblem.textContent=CLASS_SYMBOLS[kind]??"◆";
+    emblem.setAttribute("aria-hidden","true");
+    const title=document.createElement("span");
+    title.className="class-requirement-text";
+    title.textContent=({sword:"剑术",lance:"枪术",axe:"斧术",bow:"弓术",
+      gauntlet:"拳术",dark:"黑魔法",white:"白魔法"} as Record<string,string>)[category]??category;
+    const rank=document.createElement("strong");
+    rank.textContent=required;
+    const progress=document.createElement("small");
+    progress.textContent="当前 "+current+(passed?" ✓":" · 未达到");
+    chip.append(emblem,title,rank,progress);
+    chip.title=title.textContent+"需求 "+required+"，当前 "+current;
+    requirementsRoot.appendChild(chip);
   }
   get("class-preview-trait").textContent=
     WEAPON_TRAIT_LABELS[cls.weaponCategories[0]]??"暂无可用的武器系规则";
@@ -378,14 +400,6 @@ function renderClassPreparation():void {
     const requirements=certificationRequirements(preparationClassId);
     const funds=battle.preparationFunds;
     const conditions:([string,string,boolean])[]=[];
-    for(const [category,rank] of Object.entries(cls.requiredWeaponRanks)){
-      if(rank){
-        const count=actor.weaponExp[category as keyof typeof actor.weaponExp];
-        conditions.push(["技能："+category+" "+rank,
-          "当前 "+weaponRankForExp(count),count>=
-          (WEAPON_RANK_THRESHOLDS[rank as keyof typeof WEAPON_RANK_THRESHOLDS]??Infinity)]);
-      }
-    }
     conditions.push(["名声 ≥"+requirements.reputation,"当前 "+funds.reputation,
       funds.reputation>=requirements.reputation]);
     conditions.push(["金币 ×"+requirements.gold,"持有 "+funds.gold,
