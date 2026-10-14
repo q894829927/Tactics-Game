@@ -127,15 +127,15 @@ test("W1: attacking white magic uses magic/resistance and can follow up at AS di
  a.classId="acolyte";a.stats.magic=9;a.stats.strength=1;
  d.stats.resistance=2;d.stats.defense=20;
  a.stats.speed=12;d.stats.speed=8;
- assert.equal(game.damage(a,d),9+3-2);
+ assert.equal(game.damage(a,d),9+1+3-2);
  const predicted=game.forecastAttack(a,d);
  assert.equal(predicted.followUp,"attacker");
- assert.equal(predicted.damage,10);
- assert.equal(predicted.followUpDamage,10);
+ assert.equal(predicted.damage,11);
+ assert.equal(predicted.followUpDamage,11);
  const events=commit(game,a,d);
  assert.deepEqual(events.map(e=>e.kind),["attack","counter","follow-up"]);
- assert.equal(events[0].damage,10);
- assert.equal(events[2].damage,10);
+ assert.equal(events[0].damage,11);
+ assert.equal(events[2].damage,11);
 });
 
 test("W1: sword follow-up ×1.2 is only on extra hit; forecast, UI and actual match",()=>{

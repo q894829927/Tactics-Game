@@ -236,11 +236,11 @@ test("W2: white offensive magic shares the same charge rules and magical damage"
  d.stats.defense=20;d.stats.resistance=2;
  a.stats.speed=12;d.stats.speed=8;
  a.spellCharges["light-bolt"]=1;
- assert.equal(game.damage(a,d),11);
+ assert.equal(game.damage(a,d),12,"C1 acolyte adds 1 magic while the base stat remains 10");
  assert.equal(game.forecastAttack(a,d).followUp,"attacker");
  const events=committed(game,a,d);
  assert.equal(events.length,3);
- assert.equal(events[0].damage,11);
+ assert.equal(events[0].damage,12);
  assert.equal(a.spellCharges["light-bolt"],0);
  assert.equal(game.forecastAttack(a,d),null);
 });
