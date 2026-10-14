@@ -7,6 +7,10 @@ import {deriveCombat,awardExperience,clampChance,
 import {CHARACTER_LIBRARY,createCharacter,type CharacterId} from "./characters.ts";
 import type {ClassId} from "./classes.ts";
 import type {Weapon} from "./equipmentTypes.ts";
+import {initialWeaponInstances,initialSpellCharges,makeWeaponInstance,
+  resourceWeapon,remainingSpellCharges,canUseAttack,consumeSpellCast,
+  canUseArt,consumeArtDurability,isSpell,type WeaponInstance,type SpellCharges}
+  from "./combatResources.ts";
 export type { Terrain } from "./terrain.ts";
 
 export const MAP_WIDTH = 10;
@@ -55,6 +59,8 @@ export type Unit = CharacterData & {
   inventory:WeaponId[]; equippedIndex:number;
   /** Currently equipped combat weapon, separate from permanent personal data. */
   weapon:Weapon;
+  weaponInstances:Array<WeaponInstance|null>;
+  spellCharges:SpellCharges;
   /** Legacy mirrors for older client/tests; battle calculations read weapon directly. */
   minRange:number;maxRange:number;
   moved:boolean;acted:boolean;spent:boolean;
@@ -83,6 +89,8 @@ function unit(id:CharacterId,team:Team,x:number,y:number):Unit {
   return {id,characterId:id,name:definition.name,classId,role:classId,team,x,y,
     ...createCharacter(id),
     weapon:equipped,inventory,equippedIndex:0,
+    weaponInstances:initialWeaponInstances(id,inventory),
+    spellCharges:initialSpellCharges(inventory),
     minRange:equipped.minRange,maxRange:equipped.maxRange,
     moved:false,acted:false,spent:false};
 }
@@ -155,6 +163,10 @@ export class Battle {
       index>=unit.inventory.length||unit.inventory.length>MAX_INVENTORY)return false;
     const id=unit.inventory[index]!;
     if(!canWield(unit.classId,id))return false;
+    if(unit.weaponInstances[index]===undefined)
+      unit.weaponInstances[index]=makeWeaponInstance(unit.characterId,index,id);
+    if(isSpell(weaponFor(id))&&unit.spellCharges[id]===undefined)
+      unit.spellCharges[id]=weaponFor(id).maxCharges??0;
     unit.equippedIndex=index;
     unit.weapon=weaponFor(id);
     // Compatibility only: targeting, predictions and AI all use unit.weapon.
@@ -197,7 +209,8 @@ export class Battle {
   }
 
   combatStats(unit:Unit):CombatStats {
-    return deriveCombat(unit,TERRAIN_INFO[this.tile(unit.x,unit.y)].defense);
+    return deriveCombat({...unit,weapon:resourceWeapon(unit)},
+      TERRAIN_INFO[this.tile(unit.x,unit.y)].defense);
   }
   hitChance(from:Unit,to:Unit):number {
     return clampChance(this.combatStats(from).hit-this.combatStats(to).avoid
@@ -206,12 +219,17 @@ export class Battle {
   criticalChance(from:Unit,to:Unit):number {
     return clampChance(this.combatStats(from).crit-this.combatStats(to).critAvoid);
   }
+  /** W2 narrow art proof-of-contract. Full arts and menus arrive in S1. */
+  readonly basicArt={id:"w2-power-strike",durabilityCost:3,damageBonus:2} as const;
+
   /** Pure forecast: normal hits land, no criticals. Actual combat uses seeded RNG. */
-  forecastAttack(attacker:Unit,defender:Unit):AttackForecast|null {
+  forecastAttack(attacker:Unit,defender:Unit,artId?:string):AttackForecast|null {
     if(this.result!=="playing"||attacker.hp<=0||defender.hp<=0||
       attacker.team===defender.team||attacker.spent||attacker.acted||
-      !this.inAttackRange(attacker,defender))return null;
-    const damage=this.damage(attacker,defender);
+      !this.inAttackRange(attacker,defender)||
+      (artId!==undefined && (artId!==this.basicArt.id||
+        isSpell(attacker.weapon)||!canUseArt(attacker,this.basicArt.durabilityCost))))return null;
+    const damage=this.damage(attacker,defender)+(artId===this.basicArt.id?this.basicArt.damageBonus:0);
     const counterDamage=this.damage(defender,attacker);
     const counterInRange=this.inAttackRange(defender,attacker);
     let hpA=attacker.hp,hpD=Math.max(0,defender.hp-damage);
@@ -224,7 +242,7 @@ export class Battle {
         this.combatStats(defender).attackSpeed,canCounter)
       : null;
     const followUpDamage=followUp==="attacker"
-      ? strikeDamage(damage,attacker.weapon.category,false,true)
+      ? strikeDamage(this.damage(attacker,defender),attacker.weapon.category,false,true)
       : followUp==="defender"
         ? strikeDamage(counterDamage,defender.weapon.category,false,true) : 0;
     if(followUp==="attacker")hpD=Math.max(0,hpD-followUpDamage);
@@ -297,6 +315,7 @@ export class Battle {
     const attack = new Set<string>();
     for (const position of endpoints) {
       move.add(position);
+      if(!canUseAttack(unit))continue;
       const [px, py] = position.split(",").map(Number);
       for (let dy = -unit.weapon.maxRange; dy <= unit.weapon.maxRange; dy++) {
         for (let dx = -unit.weapon.maxRange; dx <= unit.weapon.maxRange; dx++) {
@@ -373,7 +392,7 @@ export class Battle {
 
   inAttackRange(attacker: Unit, defender: Unit): boolean {
     const d = distance(attacker, defender);
-    return d >= attacker.weapon.minRange && d <= attacker.weapon.maxRange;
+    return canUseAttack(attacker)&&d >= attacker.weapon.minRange && d <= attacker.weapon.maxRange;
   }
   targets(actor: Unit): Unit[] {
     return this.alive(actor.team === "ally" ? "enemy" : "ally")
@@ -381,7 +400,7 @@ export class Battle {
   }
   damage(attacker:Unit,defender:Unit):number {
     const to=this.combatStats(defender);
-    const might=effectiveMight(attacker.weapon,defender.classId);
+    const might=effectiveMight(resourceWeapon(attacker),defender.classId);
     const base=attacker.weapon.kind==="magical"
       ? attacker.stats.magic+might-to.magicalProtection
       : attacker.stats.strength+might-to.physicalProtection;
@@ -403,23 +422,7 @@ export class Battle {
     const actor = this.selected;
     if (!actor || actor.spent) return;
     if (found?.team === "enemy") {
-      const forecast = this.forecastAttack(actor, found);
-      if (!forecast) return;
-      const moved = this.completedMovement(actor);
-      const result = this.strike(actor, found);
-      const hit = actor.name + (moved ? " " + moved : "") +
-        "攻击 " + found.name + "：造成 " + result.damage + " 点伤害";
-      const retaliation = result.counterDamage > 0 ? "；" + found.name + "反击造成 " +
-        result.counterDamage + " 点伤害" : "";
-      this.committedLog(hit + retaliation +
-        (result.defenderFell ? "；目标被击败" : "") +
-        (result.attackerFell ? "；攻击者被击败" : "") + result.detail);
-      actor.acted = true;
-      actor.spent = true;
-      this.moveOrigin = null;
-      this.selectedId = null;
-      this.resolve();
-      this.emit();
+      this.commitSelectedAttack(actor,found);
       return;
     }
     if (actor.moved) return;
@@ -430,6 +433,34 @@ export class Battle {
     actor.moved = true;
     // A tentative move is NOT a completed action and must not enter the log.
     this.emit();
+  }
+
+  /** S1 will expose a dedicated art choice in the battle UI.
+   * W2 exposes one sample art through the same committed battle path to
+   * verify durability costs without opening the full skill system.
+   */
+  useCombatArt(actor:Unit,defender:Unit,artId:string):boolean {
+    if(this.phase!=="player"||this.result!=="playing"||
+      actor.team!=="ally"||defender.team!=="enemy"||
+      this.selected?.id!==actor.id)return false;
+    return this.commitSelectedAttack(actor,defender,artId);
+  }
+
+  private commitSelectedAttack(actor:Unit,defender:Unit,artId?:string):boolean {
+    if(this.selected?.id!==actor.id||actor.team!=="ally"||
+      !this.units.includes(defender)||!this.forecastAttack(actor,defender,artId))return false;
+    const moved=this.completedMovement(actor);
+    const result=this.strike(actor,defender,artId);
+    const action=artId===this.basicArt.id?"使用试验战技攻击":"攻击";
+    this.committedLog(actor.name+(moved?" "+moved:"")+action+" "+defender.name+
+      "：造成 "+result.damage+" 点伤害"+
+      (result.counterDamage>0?"；"+defender.name+"反击造成 "+result.counterDamage+" 点伤害":"")+
+      (result.defenderFell?"；目标被击败":"")+
+      (result.attackerFell?"；攻击者被击败":"")+result.detail);
+    actor.acted=true;actor.spent=true;
+    this.moveOrigin=null;this.selectedId=null;
+    this.resolve();this.emit();
+    return true;
   }
 
   waitSelected(): void {
@@ -559,22 +590,32 @@ export class Battle {
   private nearest(from: Point, candidates: Unit[]): Unit {
     return [...candidates].sort((a, b) => distance(from, a) - distance(from, b))[0]!;
   }
-  private strike(actor:Unit,defender:Unit):{
+  private strike(actor:Unit,defender:Unit,artId?:string):{
     damage:number;counterDamage:number;defenderFell:boolean;attackerFell:boolean;detail:string;
   } {
-    const forecast=this.forecastAttack(actor,defender);
+    const forecast=this.forecastAttack(actor,defender,artId);
     if(!forecast)return {damage:0,counterDamage:0,defenderFell:false,attackerFell:false,detail:""};
+    // Resource was checked before commit; decrement after resolving every strike,
+    // so a weapon breaking on this use does not weaken that same art mid-combat.
     let damage=0,counterDamage=0,misses=0,crits=0,countered=false;
+    const castersCharged=new Set<string>();
     const events: CombatEvent[] = [];
     this.lastCombatEvents = [];
     let strikeIndex=0;
     const hit=(from:Unit,to:Unit,followUp=false):number=>{
       if(from.hp<=0||to.hp<=0)return 0;
+      if(isSpell(from.weapon)&&!castersCharged.has(from.id)){
+        if(!consumeSpellCast(from))throw Error("Insufficient spell charges for committed attack");
+        castersCharged.add(from.id);
+      }
       const missed=!this.roll(this.hitChance(from,to));
       if(missed) misses++;
       const critical=!missed && this.roll(this.criticalChance(from,to));
       if(critical) crits++;
-      const amount=missed?0:strikeDamage(this.damage(from,to),from.weapon.category,critical,followUp);
+      const artBonus=artId===this.basicArt.id&&from===actor&&strikeIndex===0
+        ? this.basicArt.damageBonus : 0;
+      const amount=missed?0:strikeDamage(this.damage(from,to)+artBonus,
+        from.weapon.category,critical,followUp);
       to.hp=Math.max(0,to.hp-amount);
       events.push({kind: strikeIndex++===0?"attack":from.id===actor.id?"follow-up":
         events.some(e=>e.fromId===from.id)?"follow-up":"counter",
@@ -597,6 +638,8 @@ export class Battle {
         countered=true;counterDamage+=hit(defender,actor,true);
       }
     }
+    if(artId===this.basicArt.id&&!consumeArtDurability(actor,this.basicArt.durabilityCost))
+      throw Error("Combat art durability changed while committing attack");
     this.lastCombatEvents = events.map(event=>({...event}));
     let levelNote="";
     if(actor.team==="ally"&&actor.hp>0){

@@ -4,6 +4,7 @@ import { BoardView } from "./scene/BoardView.ts";
 import { GAME_VERSION } from "./version.ts";
 import {BASIC_KEYS,BASIC_LABELS,GROWTH_KEYS,GROWTH_LABELS} from "./engine/attributes.ts";
 import {WEAPON_LIBRARY,weaponRange} from "./engine/weapons.ts";
+import {weaponResourceText} from "./engine/combatResources.ts";
 import {CLASS_LIBRARY} from "./engine/classes.ts";
 import "./style.css";
 
@@ -66,7 +67,8 @@ function renderSelection(): void {
     : "左键选择地形查看";
   get("terrain-defense").textContent = "防御 +" + (terrain?.defense ?? "—");
   get("terrain-cost").textContent = "移动消耗 " + (terrainCode ? movementCostLabel(terrainCode) : "—");
-  get("weapon-name").textContent = selected ? selected.weapon.name : "—";
+  get("weapon-name").textContent = selected
+    ? selected.weapon.name+" · "+weaponResourceText(selected,selected.equippedIndex) : "—";
   const bag=get("inventory-list");
   bag.replaceChildren();
   if(selected){
@@ -81,7 +83,8 @@ function renderSelection(): void {
       const label=document.createElement("span");
       label.textContent=(index===selected.equippedIndex?"◆ ":"")+weapon.name;
       const spec=document.createElement("small");
-      spec.textContent="威"+weapon.might+" 重"+weapon.weight+" 射"+weaponRange(weapon);
+      spec.textContent="威"+weapon.might+" 重"+weapon.weight+" 射"+weaponRange(weapon)
+        +" · "+weaponResourceText(selected,index);
       item.append(label,spec);
       item.addEventListener("click",()=>{
         if(battle.equipWeapon(selected,index)){board.refresh();renderSelection();}

@@ -1,6 +1,7 @@
 import { Battle, MAP_HEIGHT, MAP_WIDTH, key, type Point, type Unit, type AttackForecast, type EnemyActionPlan, type CombatEvent } from "../engine/battle.ts";
 import { combatPreviewView } from "./combatPreviewView.ts";
 import {WEAPON_LIBRARY,weaponRange} from "../engine/weapons.ts";
+import {weaponResourceText} from "../engine/combatResources.ts";
 import {CLASS_LIBRARY} from "../engine/classes.ts";
 import { TERRAIN_INFO, movementCostLabel } from "../engine/terrain.ts";
 import { leftClickIntent, rightClickIntent } from "./interactionPolicy.ts";
@@ -915,7 +916,8 @@ export class BoardView {
       const name=document.createElement("strong");
       name.textContent=(actor.equippedIndex===index?"◆ ":"")+item.name;
       const spec=document.createElement("small");
-      spec.textContent="威"+item.might+" 重"+item.weight+" 命"+item.hit+" 射"+weaponRange(item);
+      spec.textContent="威"+item.might+" 重"+item.weight+" 命"+item.hit+" 射"+weaponRange(item)
+        +" · "+weaponResourceText(actor,index);
       entry.append(name,spec);
       entry.disabled=!usable;
       entry.title=usable?item.name:"当前没有该武器射程内的目标";

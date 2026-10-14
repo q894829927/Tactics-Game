@@ -8,13 +8,15 @@ export type WeaponRank=typeof WEAPON_RANKS[number];
 export type DamageType="physical"|"magical";
 
 /** Runtime weapon stats remain mutable for the existing battle engine.
- * Later W2 introduces WeaponInstance for per-item durability.
+ * W2 stores instance durability and spell charges separately from definitions.
  */
 export type Weapon={
   name:string;
   category:WeaponCategory;
   kind:DamageType; // compatibility with current physical/magical damage pipeline
-  requiredRank:WeaponRank; // metadata only in F0; P1 will enforce proficiency
+  requiredRank:WeaponRank; // P1 will enforce proficiency
+  maxDurability?:number; // physical weapons only
+  maxCharges?:number; // attacking magic only
   might:number;
   weight:number;
   hit:number;
