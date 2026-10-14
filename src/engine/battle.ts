@@ -7,6 +7,8 @@ import {deriveCombat,awardExperience,clampChance,
 import {CHARACTER_LIBRARY,createCharacter,type CharacterId} from "./characters.ts";
 import type {ClassId} from "./classes.ts";
 import type {Weapon} from "./equipmentTypes.ts";
+import {awardWeaponExperience} from "./proficiency.ts";
+import {activeWeaponId} from "./combatResources.ts";
 import {initialWeaponInstances,initialSpellCharges,makeWeaponInstance,
   resourceWeapon,remainingSpellCharges,canUseAttack,consumeSpellCast,
   canUseArt,consumeArtDurability,isSpell,type WeaponInstance,type SpellCharges}
@@ -81,13 +83,14 @@ function unit(id:CharacterId,team:Team,x:number,y:number):Unit {
   const definition=CHARACTER_LIBRARY[id];
   const classId=definition.startingClassId;
   const inventory=initialLoadout(id);
+  const character=createCharacter(id);
   if(inventory.length===0||inventory.length>MAX_INVENTORY||
-      !inventory.every(weaponId=>canWield(classId,weaponId))){
+      !inventory.every(weaponId=>canWield(classId,weaponId,character.weaponExp))){
     throw Error("Invalid starting equipment for character "+id);
   }
   const equipped=weaponFor(inventory[0]!);
   return {id,characterId:id,name:definition.name,classId,role:classId,team,x,y,
-    ...createCharacter(id),
+    ...character,
     weapon:equipped,inventory,equippedIndex:0,
     weaponInstances:initialWeaponInstances(id,inventory),
     spellCharges:initialSpellCharges(inventory),
@@ -162,7 +165,7 @@ export class Battle {
       !this.units.includes(unit)||!Number.isInteger(index)||index<0||
       index>=unit.inventory.length||unit.inventory.length>MAX_INVENTORY)return false;
     const id=unit.inventory[index]!;
-    if(!canWield(unit.classId,id))return false;
+    if(!canWield(unit.classId,id,unit.weaponExp))return false;
     if(unit.weaponInstances[index]===undefined)
       unit.weaponInstances[index]=makeWeaponInstance(unit.characterId,index,id);
     if(isSpell(weaponFor(id))&&unit.spellCharges[id]===undefined)
@@ -181,8 +184,8 @@ export class Battle {
     if(this.result!=="playing"||this.phase!=="player"||unit.team!=="ally"||
       unit.hp<=0||unit.spent||unit.acted)return [];
     return unit.inventory.flatMap((id,index)=>{
-      if(!canWield(unit.classId,id))return [];
-      const candidate={...unit,weapon:weaponFor(id)};
+      if(!canWield(unit.classId,id,unit.weaponExp))return [];
+      const candidate={...unit,weapon:weaponFor(id),equippedIndex:index};
       return this.targets(candidate).length ? [index] : [];
     });
   }
@@ -392,7 +395,13 @@ export class Battle {
 
   inAttackRange(attacker: Unit, defender: Unit): boolean {
     const d = distance(attacker, defender);
-    return canUseAttack(attacker)&&d >= attacker.weapon.minRange && d <= attacker.weapon.maxRange;
+    if(!canUseAttack(attacker))return false;
+    const active=activeWeaponId(attacker);
+    // Real equipped inventory is authoritative for category and weapon rank.
+    // Isolated combat tests can still use synthetic weapon mocks.
+    if(active&&attacker.inventory[attacker.equippedIndex]===active&&
+        !canWield(attacker.classId,active,attacker.weaponExp))return false;
+    return d >= attacker.weapon.minRange && d <= attacker.weapon.maxRange;
   }
   targets(actor: Unit): Unit[] {
     return this.alive(actor.team === "ally" ? "enemy" : "ally")
@@ -642,6 +651,20 @@ export class Battle {
       throw Error("Combat art durability changed while committing attack");
     this.lastCombatEvents = events.map(event=>({...event}));
     let levelNote="";
+    // Experience is granted once per committed encounter, after all hits.
+    // Counterattacks train even on misses; follow-ups do not grant extra XP.
+    const gainedNotes:string[]=[];
+    for(const [unit,base] of [
+      [actor,artId===this.basicArt.id?6:4],
+      [defender,2],
+    ] as const){
+      if(!events.some(event=>event.fromId===unit.id))continue;
+      const result=awardWeaponExperience(unit.weaponExp,unit.classId,
+        unit.weapon.category,base);
+      if(result.to!==result.from)
+        gainedNotes.push(unit.name+" "+unit.weapon.category+" "+result.from+"→"+result.to);
+    }
+    if(gainedNotes.length)levelNote+="；熟练度升级 "+gainedNotes.join("、");
     if(actor.team==="ally"&&actor.hp>0){
       if(awardExperience(actor,10+(defender.hp===0?25:0),()=>this.nextRandom()))
         levelNote+="；"+actor.name+" Lv."+actor.level;

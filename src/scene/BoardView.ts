@@ -1,6 +1,7 @@
 import { Battle, MAP_HEIGHT, MAP_WIDTH, key, type Point, type Unit, type AttackForecast, type EnemyActionPlan, type CombatEvent } from "../engine/battle.ts";
 import { combatPreviewView } from "./combatPreviewView.ts";
-import {WEAPON_LIBRARY,weaponRange} from "../engine/weapons.ts";
+import {WEAPON_LIBRARY,weaponRange,canWield} from "../engine/weapons.ts";
+import {weaponRankForExp,weaponExperienceText} from "../engine/proficiency.ts";
 import {weaponResourceText} from "../engine/combatResources.ts";
 import {CLASS_LIBRARY} from "../engine/classes.ts";
 import { TERRAIN_INFO, movementCostLabel } from "../engine/terrain.ts";
@@ -909,7 +910,8 @@ export class BoardView {
     const attackable=new Set(this.battle.availableAttackWeapons(actor));
     actor.inventory.forEach((id,index)=>{
       const item=WEAPON_LIBRARY[id];
-      const usable=mode==="equip"||attackable.has(index);
+      const qualified=canWield(actor.classId,id,actor.weaponExp);
+      const usable=qualified&&(mode==="equip"||attackable.has(index));
       const entry=document.createElement("button");
       entry.type="button";
       entry.className="weapon-choice"+(actor.equippedIndex===index?" is-equipped":"");
@@ -917,10 +919,15 @@ export class BoardView {
       name.textContent=(actor.equippedIndex===index?"◆ ":"")+item.name;
       const spec=document.createElement("small");
       spec.textContent="威"+item.might+" 重"+item.weight+" 命"+item.hit+" 射"+weaponRange(item)
-        +" · "+weaponResourceText(actor,index);
+        +" · "+weaponResourceText(actor,index)
+        +" · "+weaponExperienceText(actor.weaponExp,item.category)
+        +" · 需求"+item.requiredRank;
       entry.append(name,spec);
       entry.disabled=!usable;
-      entry.title=usable?item.name:"当前没有该武器射程内的目标";
+      entry.title=!qualified
+        ? "需求"+item.requiredRank+"级熟练度，当前"+weaponRankForExp(actor.weaponExp[item.category])+
+          "；请确认职业允许该类武器"
+        : usable?item.name:"当前没有该武器射程内的目标";
       entry.addEventListener("click",()=>{
         if(this.isAnimating||this.battle.phase!=="player"||this.battle.selected?.id!==actor.id)return;
         if(!this.battle.equipWeapon(actor,index))return;

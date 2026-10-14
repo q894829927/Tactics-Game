@@ -10,7 +10,7 @@ test("catalog and starting inventories have valid role-limited weapons",()=>{
  for(const unit of battle.units){
    assert.ok(unit.inventory.length>=2 && unit.inventory.length<=MAX_INVENTORY);
    assert.equal(unit.equippedIndex,0);
-   assert.ok(unit.inventory.every(id=>canWield(unit.role,id)));
+   assert.ok(unit.inventory.every(id=>canWield(unit.classId,id,unit.weaponExp)));
    assert.deepEqual(unit.weapon,weaponFor(unit.inventory[0]));
  }
 });

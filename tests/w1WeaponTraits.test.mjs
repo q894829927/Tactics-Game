@@ -30,10 +30,11 @@ test("W1: active equipment catalog covers seven families, no weapon triangle",()
  assert.deepEqual([...categories].sort(),["sword","lance","axe","bow","gauntlet","dark","white"].sort());
  assert.equal(WEAPON_LIBRARY["training-gauntlet"].kind,"physical");
  assert.equal(WEAPON_LIBRARY["light-bolt"].kind,"magical");
- assert.equal(canWield("brawler","training-gauntlet"),true);
- assert.equal(canWield("acolyte","light-bolt"),true);
- assert.equal(canWield("sword","training-gauntlet"),false);
- assert.equal(canWield("mage","light-bolt"),false);
+ const e={sword:0,lance:0,axe:0,bow:0,gauntlet:0,dark:0,white:0};
+ assert.equal(canWield("brawler","training-gauntlet",e),true);
+ assert.equal(canWield("acolyte","light-bolt",e),true);
+ assert.equal(canWield("sword","training-gauntlet",e),false);
+ assert.equal(canWield("mage","light-bolt",e),false);
  const g=new Battle();
  assert.equal(g.units.length,10,"do not silently alter first map roster");
  assert.equal(g.alive("ally").length,4);

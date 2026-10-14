@@ -102,11 +102,12 @@ test("F0: category permissions cover current classes and dormant seven-family te
  assert.equal(classAllowsWeapon("brawler","gauntlet"),true);
  assert.equal(classAllowsWeapon("acolyte","white"),true);
  assert.equal(classAllowsWeapon("mage","white"),false);
- assert.equal(canWield("sword","iron-sword"),true);
- assert.equal(canWield("sword","steel-sword"),true,
-   "F0 rank metadata is informational, not enforced until P1");
- assert.equal(canWield("sword","long-bow"),false);
- assert.equal(canWield("commander","steel-sword"),true);
+ const trained=createCharacter("a1").weaponExp;
+ assert.equal(canWield("sword","iron-sword",trained),true);
+ assert.equal(canWield("sword","steel-sword",trained),true,
+   "P1 explicitly seeds C-level proficiency for existing advanced equipment");
+ assert.equal(canWield("sword","long-bow",trained),false);
+ assert.equal(canWield("commander","steel-sword",trained),true);
 });
 
 test("F0: battle equipment authority follows classId, never the legacy role",()=>{

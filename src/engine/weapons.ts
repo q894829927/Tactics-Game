@@ -1,6 +1,7 @@
 import type {Weapon} from "./equipmentTypes.ts";
 import {CHARACTER_LIBRARY,type CharacterId} from "./characters.ts";
 import {classAllowsWeapon,type ClassId} from "./classes.ts";
+import {meetsWeaponRank,type WeaponExperience} from "./proficiency.ts";
 
 export const WEAPON_LIBRARY = {
   "iron-sword": {category:"sword",requiredRank:"E",maxDurability:24,name:"铁剑",kind:"physical",might:4,weight:5,hit:110,crit:0,dodge:0,minRange:1,maxRange:1},
@@ -34,12 +35,13 @@ export function initialLoadout(characterId:CharacterId):WeaponId[] {
 export function weaponFor(id:WeaponId):Weapon {
   return {...WEAPON_LIBRARY[id]};
 }
-/** Category permission is controlled by the current class; ranks come in P1.
- * Keep the old helper name as a compatibility API for existing callers.
+/** Two independent permissions: CURRENT class category and CHARACTER weapon XP.
+ * No implicit E-level fallback: callers must supply the character's progress.
  */
-export function canWield(classId:ClassId,id:WeaponId):boolean {
+export function canWield(classId:ClassId,id:WeaponId,experience:WeaponExperience):boolean {
   const weapon:Weapon|undefined=WEAPON_LIBRARY[id];
-  return !!weapon && classAllowsWeapon(classId,weapon.category);
+  return !!weapon&&!!experience&&classAllowsWeapon(classId,weapon.category)&&
+    meetsWeaponRank(experience[weapon.category],weapon.requiredRank);
 }
 export function weaponRange(w:Weapon):string {
   return w.minRange===w.maxRange?String(w.minRange):w.minRange+"–"+w.maxRange;

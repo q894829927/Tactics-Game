@@ -6,11 +6,13 @@ export type GrowthKey=typeof GROWTH_KEYS[number];
 export type BasicStats=Record<BasicKey,number>;
 export type GrowthRates=Record<GrowthKey,number>;
 import type {Weapon} from "./equipmentTypes.ts";
+import type {WeaponExperience} from "./proficiency.ts";
 
 /** Personal character attributes are independent of equipped weapon and class. */
 export type CharacterData={
   stats:BasicStats; growths:GrowthRates;
   build:number; move:number; hp:number; maxHp:number; level:number; exp:number;
+  weaponExp:WeaponExperience;
 };
 export type CombatStats={
   physicalAttack:number; magicalAttack:number; physicalProtection:number;

@@ -1,6 +1,7 @@
 import type {BasicStats,CharacterData,GrowthRates} from "./attributes.ts";
 import type {ClassId} from "./classes.ts";
 import type {WeaponId} from "./weapons.ts";
+import {emptyWeaponExperience,type WeaponExperience} from "./proficiency.ts";
 
 export type PersonalProfile={
   stats:BasicStats;
@@ -53,6 +54,8 @@ export type CharacterDefinition={
   move:number;
   level:number;
   statOverrides?:Partial<BasicStats>;
+  /** Explicit starting experience for pre-equipped advanced weapons. */
+  startingWeaponExp?:Partial<WeaponExperience>;
 };
 
 /** Stable IDs identify people/individual enemies, even if their class changes.
@@ -60,27 +63,27 @@ export type CharacterDefinition={
  */
 export const CHARACTER_LIBRARY={
   a1:{name:"岚锋",profileId:"blade",startingClassId:"sword",
-    startingWeapons:["iron-sword","steel-sword","slim-sword"],maxHp:30,move:3,level:1},
+    startingWeapons:["iron-sword","steel-sword","slim-sword"],startingWeaponExp:{sword:120},maxHp:30,move:3,level:1},
   a2:{name:"槿卫",profileId:"guard",startingClassId:"lancer",
-    startingWeapons:["iron-lance","steel-lance","javelin"],maxHp:36,move:2,level:1},
+    startingWeapons:["iron-lance","steel-lance","javelin"],startingWeaponExp:{lance:120},maxHp:36,move:2,level:1},
   a3:{name:"霜羽",profileId:"marksman",startingClassId:"archer",
-    startingWeapons:["iron-bow","steel-bow","long-bow"],maxHp:24,move:3,level:1},
+    startingWeapons:["iron-bow","steel-bow","long-bow"],startingWeaponExp:{bow:120},maxHp:24,move:3,level:1},
   a4:{name:"星烬",profileId:"caster",startingClassId:"mage",
     startingWeapons:["fire-tome","thunder-tome","wind-tome"],maxHp:23,move:3,level:1},
   e1:{name:"掠夺者 A",profileId:"marauder",startingClassId:"raider",
-    startingWeapons:["iron-axe","steel-axe","hand-axe"],maxHp:21,move:3,level:1},
+    startingWeapons:["iron-axe","steel-axe","hand-axe"],startingWeaponExp:{axe:120},maxHp:21,move:3,level:1},
   e2:{name:"长枪兵",profileId:"guard",startingClassId:"lancer",
-    startingWeapons:["iron-lance","steel-lance","javelin"],maxHp:26,move:2,level:1,
+    startingWeapons:["iron-lance","steel-lance","javelin"],startingWeaponExp:{lance:120},maxHp:26,move:2,level:1,
     statOverrides:{strength:5,defense:4}},
   e3:{name:"弩手",profileId:"marksman",startingClassId:"archer",
-    startingWeapons:["iron-bow","steel-bow","long-bow"],maxHp:20,move:2,level:1,
+    startingWeapons:["iron-bow","steel-bow","long-bow"],startingWeaponExp:{bow:120},maxHp:20,move:2,level:1,
     statOverrides:{strength:4}},
   e4:{name:"掠夺者 B",profileId:"marauder",startingClassId:"raider",
-    startingWeapons:["iron-axe","steel-axe","hand-axe"],maxHp:21,move:3,level:1},
+    startingWeapons:["iron-axe","steel-axe","hand-axe"],startingWeaponExp:{axe:120},maxHp:21,move:3,level:1},
   e5:{name:"掠夺者 C",profileId:"marauder",startingClassId:"raider",
-    startingWeapons:["iron-axe","steel-axe","hand-axe"],maxHp:21,move:3,level:1},
+    startingWeapons:["iron-axe","steel-axe","hand-axe"],startingWeaponExp:{axe:120},maxHp:21,move:3,level:1},
   e6:{name:"赤旗统领",profileId:"leader",startingClassId:"commander",
-    startingWeapons:["command-sword","steel-sword","slim-sword"],maxHp:38,move:2,level:4},
+    startingWeapons:["command-sword","steel-sword","slim-sword"],startingWeaponExp:{sword:120},maxHp:38,move:2,level:4},
 } as const satisfies Record<string,CharacterDefinition>;
 export type CharacterId=keyof typeof CHARACTER_LIBRARY;
 
@@ -99,5 +102,6 @@ export function createCharacter(characterId:CharacterId):CharacterData {
     maxHp:character.maxHp,
     level:character.level,
     exp:0,
+    weaponExp:{...emptyWeaponExperience(),...("startingWeaponExp" in character?character.startingWeaponExp:{})},
   };
 }

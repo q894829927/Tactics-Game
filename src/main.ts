@@ -3,7 +3,8 @@ import { TERRAIN_INFO, movementCostLabel } from "./engine/terrain.ts";
 import { BoardView } from "./scene/BoardView.ts";
 import { GAME_VERSION } from "./version.ts";
 import {BASIC_KEYS,BASIC_LABELS,GROWTH_KEYS,GROWTH_LABELS} from "./engine/attributes.ts";
-import {WEAPON_LIBRARY,weaponRange} from "./engine/weapons.ts";
+import {WEAPON_LIBRARY,weaponRange,canWield} from "./engine/weapons.ts";
+import {weaponRankForExp,weaponExperienceText} from "./engine/proficiency.ts";
 import {weaponResourceText} from "./engine/combatResources.ts";
 import {CLASS_LIBRARY} from "./engine/classes.ts";
 import "./style.css";
@@ -79,12 +80,18 @@ function renderSelection(): void {
       const item=document.createElement("button");
       item.type="button";
       item.className="inventory-entry"+(index===selected.equippedIndex?" equipped":"");
-      item.disabled=!editable;
+      const allowed=canWield(selected.classId,id,selected.weaponExp);
+      item.disabled=!editable||!allowed;
+      item.title=allowed?weapon.name:
+        "需要"+weapon.requiredRank+"级"+weapon.category+"熟练度，当前"+
+        weaponRankForExp(selected.weaponExp[weapon.category]);
       const label=document.createElement("span");
       label.textContent=(index===selected.equippedIndex?"◆ ":"")+weapon.name;
       const spec=document.createElement("small");
       spec.textContent="威"+weapon.might+" 重"+weapon.weight+" 射"+weaponRange(weapon)
-        +" · "+weaponResourceText(selected,index);
+        +" · "+weaponResourceText(selected,index)
+        +" · "+weaponExperienceText(selected.weaponExp,weapon.category)
+        +" · 需求"+weapon.requiredRank;
       item.append(label,spec);
       item.addEventListener("click",()=>{
         if(battle.equipWeapon(selected,index)){board.refresh();renderSelection();}
