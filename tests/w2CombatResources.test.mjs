@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import {readFileSync} from "node:fs";
 import {Battle} from "../src/engine/battle.ts";
 import {WEAPON_LIBRARY,weaponFor} from "../src/engine/weapons.ts";
 import {
@@ -271,9 +272,8 @@ test("W2: per-instance repairs do not heal other identical weapons",()=>{
 });
 
 test("W2: inspector and weapon picker expose remaining resources",()=>{
- const repo=await import("node:fs");
- const main=repo.readFileSync(new URL("../src/main.ts",import.meta.url),"utf8");
- const board=repo.readFileSync(new URL("../src/scene/BoardView.ts",import.meta.url),"utf8");
+ const main=readFileSync(new URL("../src/main.ts",import.meta.url),"utf8");
+ const board=readFileSync(new URL("../src/scene/BoardView.ts",import.meta.url),"utf8");
  assert.match(main,/weaponResourceText\(selected,index\)/);
  assert.match(main,/weaponResourceText\(selected,selected\.equippedIndex\)/);
  assert.match(board,/weaponResourceText\(actor,index\)/);
