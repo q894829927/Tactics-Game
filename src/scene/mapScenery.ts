@@ -1,5 +1,5 @@
 import { MAP_HEIGHT, MAP_WIDTH } from "../engine/battle.ts";
-import { TILE, WORLD_COLS, WORLD_ROWS, TACTICAL_X, TACTICAL_Y } from "./worldGeometry.ts";
+import { TILE, WORLD_COLS, WORLD_ROWS, WORLD_HEIGHT, TACTICAL_X, TACTICAL_Y } from "./worldGeometry.ts";
 import { MAP_ASSET_FILES } from "./mapAssetFiles.ts";
 
 export type ScenerySprite = {
@@ -29,6 +29,11 @@ export function buildMapScenery(terrain: readonly string[]): ScenerySprite[] {
   const sprites: ScenerySprite[] = [];
   const add = (id: string, file: ScenerySprite["file"], x: number, y: number, width: number, height: number,
     terrainCells: ScenerySprite["terrainCells"] = []) => {
+    // Keep the whole crown/prop landward of every bend, including the top border.
+    // Check its visible height, leaving a small gap before the water's shoreline stroke.
+    for (let bankY = Math.max(0, Math.floor(y)); bankY <= Math.min(WORLD_HEIGHT, Math.ceil(y + height)); bankY++) {
+      if (x + width + 12 > riverBankX(bankY)) return;
+    }
     sprites.push({id, file, x, y, width, height, footY: y + height * .87, terrainCells});
   };
   const treeFile = (index: number) => artNoise(index + 1300) > .66

@@ -4,7 +4,7 @@ import { readFileSync, existsSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { Battle } from "../src/engine/battle.ts";
 import { buildMapScenery, riverBankX } from "../src/scene/mapScenery.ts";
-import { TILE, TACTICAL_X, TACTICAL_Y, TACTICAL_WIDTH, TACTICAL_HEIGHT } from "../src/scene/worldGeometry.ts";
+import { TILE, WORLD_HEIGHT, TACTICAL_X, TACTICAL_Y, TACTICAL_WIDTH, TACTICAL_HEIGHT } from "../src/scene/worldGeometry.ts";
 import { MAP_ASSET_FILES } from "../src/scene/mapAssetFiles.ts";
 
 test("forest, hill and rock sprites stay inside their corresponding terrain cells", () => {
@@ -72,6 +72,21 @@ test("decorations and water stay outside playable cells and scenery is stable", 
   }
   // Include the stroke and scattered gravel, not only the water boundary.
   for(let y=0;y<=1104;y++)assert.ok(riverBankX(y)-25>TACTICAL_X+TACTICAL_WIDTH);
+});
+
+test("whole tree crowns and other props stay on land along the entire curved river", () => {
+  const scenery=buildMapScenery(new Battle().terrain);
+  // These six top-border trees were drawn partly or wholly over the water.
+  for(const id of ["edge-tree-13-0","edge-tree-14-0","edge-tree-15-0",
+    "edge-tree-13-1","edge-tree-14-1","edge-tree-15-1"])
+    assert.equal(scenery.some(prop=>prop.id===id),false,id);
+  assert.ok(scenery.some(prop=>prop.id==="edge-tree-12-0"),"Preserve landward top-border trees");
+  assert.ok(scenery.some(prop=>prop.id==="edge-tree-12-10"),"Preserve landward bottom-border trees");
+  for(const prop of scenery) {
+    const right=prop.x+prop.width;
+    for(let y=Math.max(0,Math.floor(prop.y));y<=Math.min(WORLD_HEIGHT,Math.ceil(prop.y+prop.height));y++)
+      assert.ok(right<=riverBankX(y)-12,`${prop.id} reaches the river at y=${y}`);
+  }
 });
 
 test("content-hashed runtime WebP art stays within 1 MiB and retains alpha/source provenance", () => {
