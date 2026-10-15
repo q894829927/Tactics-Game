@@ -9,6 +9,8 @@ import {weaponRankForExp,weaponExperienceText,WEAPON_RANK_THRESHOLDS} from "./en
 import {weaponResourceText} from "./engine/combatResources.ts";
 import {CLASS_LIBRARY,effectiveClassStats,effectiveClassGrowths,type ClassId} from "./engine/classes.ts";
 import {classWeaponAvailable,certificationRequirements} from "./engine/classCertification.ts";
+import {MASTERY_LIBRARY,MASTERY_SLOTS,classExperienceFor,
+  classMastered,unlockedMasteries} from "./engine/mastery.ts";
 import "./style.css";
 
 const get = (id: string): HTMLElement => {
@@ -272,7 +274,8 @@ function renderCampaign():void{
         const stats=document.createElement("span");
         stats.textContent="Lv."+unit.levelBefore+" → "+unit.levelAfter+
           " · EXP "+unit.experienceBefore+" → "+unit.experienceAfter+
-          " · 武器经验 +"+unit.weaponExpGained;
+          " · 武器经验 +"+unit.weaponExpGained+
+          " · 职业经验 +"+unit.classExpGained;
         row.append(label,stats);rows.appendChild(row);
       }
     }
@@ -380,7 +383,9 @@ function renderClassPreparation():void {
     const caption=document.createElement("small");
     const label=isCurrent?"当前职业":eligibility.alreadyCertified?"已认证":
       !eligibility.eligible||!equippable?"资格不足":"可转职";
-    caption.textContent=label;
+    const experience=classExperienceFor(actor.classExperience,id);
+    caption.textContent=label+" · "+(classMastered(actor.classExperience,id)
+      ?"已精通":("职业经验 "+experience+"/"+cls.masteryThreshold));
     info.append(headline,caption);
     const flag=document.createElement("span");
     flag.className="class-option-status "+(isCurrent?"is-current":
@@ -493,9 +498,38 @@ function renderClassPreparation():void {
   }
   get("class-preview-trait").textContent=
     WEAPON_TRAIT_LABELS[cls.weaponCategories[0]]??"暂无可用的武器系规则";
-  get("class-preview-mastery").textContent=
-    cls.masteryRewardIds.length>0?cls.masteryRewardIds.join(" · "):
-    "尚未开放 · C3 职业精通";
+  const progress=classExperienceFor(actor.classExperience,preparationClassId);
+  const reward=cls.masteryRewardIds[0];
+  const ability=reward&&Object.hasOwn(MASTERY_LIBRARY,reward)
+    ? MASTERY_LIBRARY[reward as keyof typeof MASTERY_LIBRARY]:null;
+  get("class-preview-mastery").textContent=ability
+    ? (classMastered(actor.classExperience,preparationClassId)?"已精通":"职业经验 "+
+      progress+"/"+cls.masteryThreshold)+" · "+ability.name+"（"+ability.description+"）"
+    : "当前职业无开放的精通奖励";
+  const unlocked=unlockedMasteries(actor.classExperience);
+  get("class-mastery-slots").textContent=
+    actor.equippedMasteries.length+" / "+MASTERY_SLOTS;
+  const loadout=get("class-mastery-equipment");loadout.replaceChildren();
+  if(!unlocked.length){
+    const empty=document.createElement("p");
+    empty.className="class-mastery-empty";
+    empty.textContent="尚未精通任何职业。战斗积累职业经验后解锁可继承特技。";
+    loadout.appendChild(empty);
+  }
+  for(const id of unlocked){
+    const item=MASTERY_LIBRARY[id];
+    const active=actor.equippedMasteries.includes(id);
+    const toggle=document.createElement("button");
+    toggle.type="button";
+    toggle.className="class-mastery-toggle"+(active?" active":"");
+    toggle.setAttribute("aria-pressed",String(active));
+    toggle.disabled=!active&&actor.equippedMasteries.length>=MASTERY_SLOTS;
+    toggle.textContent=(active?"✓ 已装备 · ":"可装备 · ")+item.name+" · "+item.description;
+    toggle.addEventListener("click",()=>{
+      if(battle.toggleMastery(actor.id,id))renderClassPreparation();
+    });
+    loadout.appendChild(toggle);
+  }
 
   const exam=get("class-exam-panel"),examContent=get("class-exam-content");
   examContent.replaceChildren();

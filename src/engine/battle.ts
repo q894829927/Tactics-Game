@@ -15,6 +15,9 @@ import {ALLY_IDS,captureAlly,applyAlly,parseCampaign,settlementFrom,
 import {refillSpells} from "./combatResources.ts";
 import {calculateSortieReward,creditSortieReward} from "./sortieRewards.ts";
 import {awardWeaponExperience} from "./proficiency.ts";
+import {MASTERY_LIBRARY,MASTERY_SLOTS,unlockedMasteries,gainClassExperience,
+  applyEquippedMasteries,type MasteryId,type ClassExperience}
+  from "./mastery.ts";
 import {activeWeaponId} from "./combatResources.ts";
 import {initialWeaponInstances,initialSpellCharges,makeWeaponInstance,
   resourceWeapon,remainingSpellCharges,canUseAttack,consumeSpellCast,
@@ -72,6 +75,10 @@ export type Unit = CharacterData & {
   spellCharges:SpellCharges;
   /** Certified jobs never alter permanent weapon XP or personal growths. */
   classLicenses:ClassId[];
+  /** XP is tracked separately for each class, capped at its mastery threshold. */
+  classExperience:ClassExperience;
+  /** At most two unlocked cross-class passives selected during preparation. */
+  equippedMasteries:MasteryId[];
   /** One replaceable loaned basic weapon for classes outside owned inventory. */
   trainingSlot:number|null;
   /** Legacy mirrors for older client/tests; battle calculations read weapon directly. */
@@ -105,7 +112,7 @@ function unit(id:CharacterId,team:Team,x:number,y:number):Unit {
     weapon:equipped,inventory,equippedIndex:0,
     weaponInstances:initialWeaponInstances(id,inventory),
     spellCharges:initialSpellCharges(inventory),
-    classLicenses:[classId],trainingSlot:null,
+    classLicenses:[classId],classExperience:{},equippedMasteries:[],trainingSlot:null,
     minRange:equipped.minRange,maxRange:equipped.maxRange,
     moved:false,acted:false,spent:false};
 }
@@ -212,7 +219,8 @@ export class Battle {
         vouchers:{...this.preparationFunds.vouchers}},
       allies:units.map(x=>({...x,stats:{...x.stats},growths:{...x.growths},
         weaponExp:{...x.weaponExp},inventory:[...x.inventory],
-        classLicenses:[...x.classLicenses],
+        classLicenses:[...x.classLicenses],classExperience:{...x.classExperience},
+        equippedMasteries:[...x.equippedMasteries],
         spellCharges:{...x.spellCharges},
         weaponInstances:x.weaponInstances.map(w=>w?{...w}:null)})),
       pendingSettlement:this.pendingSettlement
@@ -333,6 +341,21 @@ export class Battle {
       this.result==="playing"&&this.units.includes(unit)&&
       unit.team==="ally"&&unit.hp>0&&!unit.moved&&!unit.acted&&!unit.spent;
   }
+  /** Mastery inherits across jobs but must be equipped during preparation. */
+  toggleMastery(unitId:string,id:MasteryId):boolean{
+    const actor=this.units.find(u=>u.id===unitId&&u.team==="ally");
+    if(!actor||!this.canPrepareClass(actor)||!Object.hasOwn(MASTERY_LIBRARY,id))
+      return false;
+    const position=actor.equippedMasteries.indexOf(id);
+    if(position>=0)actor.equippedMasteries.splice(position,1);
+    else {
+      if(actor.equippedMasteries.length>=MASTERY_SLOTS||
+          !unlockedMasteries(actor.classExperience).includes(id))return false;
+      actor.equippedMasteries.push(id);
+    }
+    this.emit();
+    return true;
+  }
   /** No fixed promotion tree. First basic certification is free; earned
    * intermediate credentials are consumed once and licenses persist.
    */
@@ -433,9 +456,12 @@ export class Battle {
   }
 
   combatStats(unit:Unit):CombatStats {
-    return deriveCombat({...unit,stats:effectiveClassStats(unit.stats,unit.classId),
+    const base=deriveCombat({...unit,stats:effectiveClassStats(unit.stats,unit.classId),
         weapon:resourceWeapon(unit)},
       TERRAIN_INFO[this.tile(unit.x,unit.y)].defense);
+    return unit.team==="ally"
+      ? applyEquippedMasteries(base,unit.equippedMasteries)
+      : base;
   }
   hitChance(from:Unit,to:Unit):number {
     return clampChance(this.combatStats(from).hit-this.combatStats(to).avoid
@@ -725,7 +751,10 @@ export class Battle {
     const actor = this.selected;
     if (!actor || actor.team !== "ally" || actor.spent) return;
     this.preparationOpen=false;
-    this.committedLog(actor.name + " " + this.completedMovement(actor) + "待机");
+    const trained=actor.team==="ally"
+      ? gainClassExperience(actor.classExperience,actor.classId,4) : {gained:0,mastered:false};
+    this.committedLog(actor.name + " " + this.completedMovement(actor) + "待机"+
+      (trained.mastered?"；"+CLASS_LIBRARY[actor.classId].name+"精通":""));
     actor.spent = true;
     actor.acted = true;
     this.moveOrigin = null;
@@ -916,6 +945,15 @@ export class Battle {
         gainedNotes.push(unit.name+" "+unit.weapon.category+" "+result.from+"→"+result.to);
     }
     if(gainedNotes.length)levelNote+="；熟练度升级 "+gainedNotes.join("、");
+    // Once per participant per committed encounter: hits, misses and follow-ups
+    // do not multiply job XP. Enemy job progress is not campaign progression.
+    for(const [unit,amount] of [[actor,10],[defender,5]] as const){
+      if(unit.team!=="ally"||
+        !events.some(event=>event.fromId===unit.id))continue;
+      const trained=gainClassExperience(unit.classExperience,unit.classId,amount);
+      if(trained.mastered)
+        levelNote+="；"+unit.name+" "+CLASS_LIBRARY[unit.classId].name+"精通";
+    }
     if(actor.team==="ally"&&actor.hp>0){
       if(awardExperience(actor,10+(defender.hp===0?25:0),()=>this.nextRandom(),
           effectiveClassGrowths(actor.growths,actor.classId)))

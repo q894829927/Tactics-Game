@@ -12,6 +12,8 @@ import {PLAYER_CLASS_CHOICES,type PreparationFunds} from "./classCertification.t
 import type {WeaponExperience} from "./proficiency.ts";
 import type {WeaponInstance,SpellCharges} from "./combatResources.ts";
 import {emptySortieReward,RESOURCE_CAPS,type SortieReward} from "./sortieRewards.ts";
+import {MASTERY_LIBRARY,MASTERY_SLOTS,unlockedMasteries,
+  type MasteryId,type ClassExperience} from "./mastery.ts";
 
 export const CAMPAIGN_STORAGE_KEY="wildfield-tactics.campaign.v1";
 export const CAMPAIGN_SCHEMA=1 as const;
@@ -19,6 +21,7 @@ export const ALLY_IDS=["a1","a2","a3","a4"] as const;
 export type AllyId=typeof ALLY_IDS[number];
 export type AllyProgress={
   id:AllyId;classId:ClassId;classLicenses:ClassId[];
+  classExperience:ClassExperience;equippedMasteries:MasteryId[];
   stats:BasicStats;growths:GrowthRates;maxHp:number;level:number;exp:number;
   weaponExp:WeaponExperience;inventory:WeaponId[];
   weaponInstances:Array<WeaponInstance|null>;spellCharges:SpellCharges;
@@ -28,6 +31,7 @@ export type UnitProgressDelta={
   id:AllyId;name:string;levelBefore:number;levelAfter:number;
   experienceBefore:number;experienceAfter:number;
   weaponExpGained:number;
+  classExpGained:number;
 };
 export type SortieSettlement={
   result:Exclude<GameResult,"playing">;
@@ -50,6 +54,8 @@ export function captureAlly(unit:Unit):AllyProgress {
   return {
     id:unit.id as AllyId,classId:unit.classId,
     classLicenses:[...unit.classLicenses],
+    classExperience:{...unit.classExperience},
+    equippedMasteries:[...unit.equippedMasteries],
     stats:copyStats(unit.stats),growths:copyGrowths(unit.growths),
     maxHp:unit.maxHp,level:unit.level,exp:unit.exp,
     weaponExp:{...unit.weaponExp},inventory:[...unit.inventory],
@@ -63,6 +69,8 @@ export function applyAlly(unit:Unit,p:AllyProgress):void {
   unit.classId=p.classId;
   unit.role=p.classId;
   unit.classLicenses=[...p.classLicenses];
+  unit.classExperience={...p.classExperience};
+  unit.equippedMasteries=[...p.equippedMasteries];
   unit.stats=copyStats(p.stats);
   unit.growths=copyGrowths(p.growths);
   unit.maxHp=p.maxHp;
@@ -92,7 +100,10 @@ export function settlementFrom(
     return {id,name:unit.name,levelBefore:start.level,levelAfter:unit.level,
       experienceBefore:start.exp,experienceAfter:unit.exp,
       weaponExpGained:WEAPON_CATEGORIES.reduce((sum,kind)=>
-        sum+Math.max(0,unit.weaponExp[kind]-start.weaponExp[kind]),0)};
+        sum+Math.max(0,unit.weaponExp[kind]-start.weaponExp[kind]),0),
+      classExpGained:(Object.keys(CLASS_LIBRARY) as ClassId[]).reduce((sum,id)=>
+        sum+Math.max(0,(unit.classExperience[id]??0)-
+          (start.classExperience[id]??0)),0)};
   })};
 }
 const obj=(v:unknown):v is Record<string,unknown> =>
@@ -101,6 +112,19 @@ const integer=(v:unknown,min:number,max:number):v is number =>
   typeof v==="number"&&Number.isSafeInteger(v)&&v>=min&&v<=max;
 const keysAreInts=(v:unknown,keys:readonly string[],max:number):boolean =>
   obj(v)&&keys.every(k=>integer(v[k],0,max));
+function validClassExperience(value:unknown):value is ClassExperience {
+  if(!obj(value))return false;
+  return Object.entries(value).every(([id,xp])=>
+    Object.hasOwn(CLASS_LIBRARY,id)&&integer(xp,0,
+      CLASS_LIBRARY[id as ClassId].masteryThreshold));
+}
+function validMasteryEquipment(value:unknown,exp:ClassExperience):value is MasteryId[] {
+  return Array.isArray(value)&&value.length<=MASTERY_SLOTS&&
+    new Set(value).size===value.length&&
+    value.every((id:unknown)=>typeof id==="string"&&
+      Object.hasOwn(MASTERY_LIBRARY,id)&&
+      unlockedMasteries(exp).includes(id as MasteryId));
+}
 function validAlly(v:unknown):v is AllyProgress {
   if(!obj(v)||!ALLY_IDS.includes(v.id as AllyId)||
     typeof v.classId!=="string"||!Object.hasOwn(CLASS_LIBRARY,v.classId)||
@@ -108,6 +132,10 @@ function validAlly(v:unknown):v is AllyProgress {
     !integer(v.maxHp,1,9999)||!integer(v.level,1,99)||!integer(v.exp,0,99)||
     !keysAreInts(v.stats,BASIC_KEYS,9999)||!keysAreInts(v.growths,GROWTH_KEYS,100)||
     !keysAreInts(v.weaponExp,WEAPON_CATEGORIES,1000)||
+    !(v.classExperience===undefined||validClassExperience(v.classExperience))||
+    !(v.equippedMasteries===undefined||
+      validMasteryEquipment(v.equippedMasteries,
+        (v.classExperience??{}) as ClassExperience))||
     !Array.isArray(v.classLicenses)||v.classLicenses.length>PLAYER_CLASS_CHOICES.length||
     !v.classLicenses.includes(v.classId)||new Set(v.classLicenses).size!==v.classLicenses.length||
     !v.classLicenses.every((id:unknown)=>typeof id==="string"&&
@@ -162,7 +190,8 @@ function validSettlement(v:unknown):v is SortieSettlement {
     typeof row.name==="string"&&row.name.length<=80&&
     integer(row.levelBefore,1,99)&&integer(row.levelAfter,1,99)&&
     integer(row.experienceBefore,0,99)&&integer(row.experienceAfter,0,99)&&
-    integer(row.weaponExpGained,0,7000)));
+    integer(row.weaponExpGained,0,7000)&&
+    (row.classExpGained===undefined||integer(row.classExpGained,0,1300))));
 }
 /** Read-only validator. Invalid, old, truncated and corrupt saves are rejected. */
 export function parseCampaign(raw:unknown):CampaignSave|null{
@@ -179,11 +208,21 @@ export function parseCampaign(raw:unknown):CampaignSave|null{
     return null;
   if(raw.pendingSettlement&&raw.pendingSettlement.sortie!==raw.sortiesCompleted)
     return null;
-  const old=raw.pendingSettlement as Record<string,unknown>|null;
-  // Normalize a pre-C2-1 settlement without modifying the stored JSON.
-  if(old&&old.reward===undefined)
-    return {...raw,pendingSettlement:{...old,reward:emptySortieReward()}} as CampaignSave;
-  return raw as CampaignSave;
+  // Migrate C2-0/C2-1 saves without erasing prior progression. Missing C3
+  // fields mean no class XP and no equipped passives; invalid fields reject.
+  const allies=(raw.allies as AllyProgress[]).map(ally=>({
+    ...ally,classExperience:{...(ally.classExperience??{})},
+    equippedMasteries:[...(ally.equippedMasteries??[])],
+  }));
+  const pending=raw.pendingSettlement as SortieSettlement|null;
+  const normalized=pending?{
+    ...pending,
+    reward:pending.reward??emptySortieReward(),
+    units:pending.units.map(unit=>({
+      ...unit,classExpGained:unit.classExpGained??0,
+    })),
+  }:null;
+  return {...raw,allies,pendingSettlement:normalized} as CampaignSave;
 }
 /** Returns a deep, validated copy, never a reference to a browser-owned object. */
 export function readCampaignJson(text:string|null):CampaignSave|null {

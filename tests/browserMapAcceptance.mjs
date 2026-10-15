@@ -47,6 +47,10 @@ try {
     await page.locator("#campaign-change-class").click();
     await page.locator("#class-preparation-overlay").waitFor({state:"visible"});
     assert.equal(await page.locator("#class-roster button").count(),4,name+" ally roster");
+    assert.match(await page.locator("#class-preview-mastery").innerText(),/职业经验 0\/80/);
+    assert.match(await page.locator("#class-preview-mastery").innerText(),/剑术专注/);
+    assert.equal((await page.locator("#class-mastery-slots").innerText()).trim(),"0 / 2");
+    assert.match(await page.locator("#class-mastery-equipment").innerText(),/尚未精通/);
     assert.equal(await page.locator("#class-options button").count(),9,name+" available class list");
     assert.equal(await page.locator("#class-requirements-title").innerText(),"职业要求");
     assert.match(await page.locator("#class-requirement-list").innerText(),/剑术/);

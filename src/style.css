@@ -1337,3 +1337,25 @@ button:disabled { cursor: not-allowed; }
   .campaign-wallet span{padding:7px 10px;min-height:28px}
   .campaign-wallet strong{font-size:15px}
 }
+
+/* C3 independent job XP and actively equipped inherited passives */
+.class-mastery-loadout{margin:0 8px 9px;border:1px solid #786b49;background:#0b2636}
+.class-mastery-loadout-heading{display:flex;justify-content:space-between;align-items:center;
+ gap:9px;border-bottom:1px solid #6c5c40}
+.class-mastery-loadout-heading .class-pane-heading{border:0;background:transparent;
+ font-size:12px;padding:9px}
+#class-mastery-slots{font-size:12px;padding:0 12px;color:#e9c995;
+ font-family:"Noto Sans SC",sans-serif;font-variant-numeric:tabular-nums}
+.class-mastery-equipment{display:flex;flex-wrap:wrap;gap:6px;padding:8px}
+.class-mastery-empty{margin:0;padding:5px 3px;color:#b3c2cc;font-size:12px;line-height:1.5}
+.class-mastery-toggle{cursor:pointer;border:1px solid #5a7887;border-radius:3px;
+ background:#123449;color:#cbd7dc;text-align:left;padding:8px 10px;
+ font-size:12px;line-height:1.45}
+.class-mastery-toggle.active{border-color:#dfbb79;color:#f3dfb3;background:#314b50}
+.class-mastery-toggle:disabled{opacity:.44;cursor:not-allowed}
+.class-mastery-toggle:focus-visible{outline:2px solid #f4c87e;outline-offset:1px}
+@media(max-width:600px){
+ .class-mastery-loadout{margin:2px 6px 6px}
+ .class-mastery-equipment{padding:6px}
+ .class-mastery-toggle{font-size:11px;padding:7px}
+}
