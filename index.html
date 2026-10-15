@@ -6,8 +6,8 @@
   <meta name="description" content="Wildfield Tactics：原创奇幻战棋，可缩放的战场地图与回合制战斗。"/>
   <meta name="theme-color" content="#071522"/>
   <title>Wildfield Tactics · 赤旗要塞</title>
-  <script type="module" crossorigin src="/games/tactics/assets/index-ClRA5SWD.js"></script>
-  <link rel="stylesheet" crossorigin href="/games/tactics/assets/index-DciVAfRC.css">
+  <script type="module" crossorigin src="/games/tactics/assets/index-B7CJO9Wf.js"></script>
+  <link rel="stylesheet" crossorigin href="/games/tactics/assets/index-CI3htHIf.css">
 </head>
 <body>
   <div id="app" class="battle-shell">
@@ -160,6 +160,11 @@
           <small id="campaign-sortie-number">第 1 次出击</small>
         </header>
         <p class="campaign-subtitle">出击前调整职业与装备；确认出击后进入战场。</p>
+        <div id="campaign-wallet" class="campaign-wallet" aria-label="战役资源">
+          <span>金币 <strong id="campaign-gold">0</strong></span>
+          <span>名声 <strong id="campaign-reputation">0</strong></span>
+          <span>中级考试凭证 <strong id="campaign-intermediate-vouchers">0</strong></span>
+        </div>
         <div id="campaign-roster" class="campaign-roster"></div>
         <div id="campaign-equipment" class="campaign-equipment" aria-live="polite"></div>
         <div id="campaign-save-status" class="campaign-save-status" role="status"></div>
@@ -177,6 +182,14 @@
           <h2 id="campaign-settlement-title">战后结算</h2>
         </header>
         <p id="campaign-settlement-result" class="campaign-subtitle"></p>
+        <section class="campaign-rewards" aria-labelledby="campaign-rewards-title">
+          <h3 id="campaign-rewards-title">本次出击奖励</h3>
+          <div class="campaign-wallet">
+            <span>金币 <strong id="campaign-reward-gold">+0</strong></span>
+            <span>名声 <strong id="campaign-reward-reputation">+0</strong></span>
+            <span>中级考试凭证 <strong id="campaign-reward-vouchers">+0</strong></span>
+          </div>
+        </section>
         <div id="campaign-settlement-roster" class="campaign-settlement-roster"></div>
         <p class="campaign-save-status">人物与武器熟练度保留。下次出击恢复生命与本关魔法次数；武器耐久不会自动修复。</p>
         <footer class="campaign-footer">
