@@ -16,7 +16,12 @@ test("lowest-cost path is adjacent, legal and agrees with weighted reachable", (
       let spent=0;
       for(let i=1;i<route.length;i++){
         assert.equal(distance(route[i-1],route[i]),1);
-        assert.ok(!battle.occupant(route[i].x,route[i].y));
+        const occupant=battle.occupant(route[i].x,route[i].y);
+        if(i===route.length-1)
+          assert.equal(occupant,undefined,"movement must end on an empty cell");
+        else
+          assert.ok(!occupant||occupant.team===actor.team,
+            "only allies may occupy an intermediate path tile");
         spent+=TERRAIN_INFO[battle.tile(route[i].x,route[i].y)].moveCost;
       }
       assert.equal(spent,cost);
