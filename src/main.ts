@@ -6,6 +6,7 @@ import { GAME_VERSION } from "./version.ts";
 import {BASIC_KEYS,BASIC_LABELS,GROWTH_KEYS,GROWTH_LABELS} from "./engine/attributes.ts";
 import {WEAPON_LIBRARY,weaponRange,canWield} from "./engine/weapons.ts";
 import {weaponRankForExp,weaponExperienceText,WEAPON_RANK_THRESHOLDS} from "./engine/proficiency.ts";
+import {WEAPON_CATEGORIES} from "./engine/equipmentTypes.ts";
 import {weaponResourceText} from "./engine/combatResources.ts";
 import {CLASS_LIBRARY,effectiveClassStats,effectiveClassGrowths,type ClassId} from "./engine/classes.ts";
 import {classWeaponAvailable,certificationRequirements} from "./engine/classCertification.ts";
@@ -24,6 +25,7 @@ const storedText=(()=>{try{return localStorage.getItem(CAMPAIGN_STORAGE_KEY);}ca
 const loadedCampaign=readCampaignJson(storedText);
 const battle=new Battle({campaign:true,save:loadedCampaign});
 let campaignSelectedId:AllyId="a1";
+let campaignAttributeMode:"stats"|"growth"="stats";
 let saveStatus=storedText&&!loadedCampaign
   ?"旧存档不可识别，已开启新队伍。":"队伍进度保存在当前浏览器。";
 const board = new BoardView(battle, get("game"));
@@ -231,30 +233,150 @@ function renderCampaign():void{
     get("campaign-reputation").textContent=String(battle.preparationFunds.reputation);
     get("campaign-intermediate-vouchers").textContent=
       String(battle.preparationFunds.vouchers.intermediate);
+    const categoryNames={
+      sword:"剑",lance:"枪",axe:"斧",bow:"弓",gauntlet:"拳套",
+      dark:"黑魔法",white:"白魔法",
+    } as const;
     for(const id of ALLY_IDS){
       const ally=battle.units.find(u=>u.id===id)!;
+      const job=CLASS_LIBRARY[ally.classId];
       const item=document.createElement("button");
       item.type="button";
       item.className="campaign-unit"+(id===campaignSelectedId?" selected":"");
       item.setAttribute("aria-pressed",String(id===campaignSelectedId));
-      item.textContent=ally.name+" · "+CLASS_LIBRARY[ally.classId].name+" · Lv."+ally.level;
+      const portrait=document.createElement("span");
+      portrait.className="campaign-unit-portrait";
+      portrait.textContent=job.portrait;
+      portrait.setAttribute("aria-hidden","true");
+      const info=document.createElement("span");info.className="campaign-unit-info";
+      const name=document.createElement("strong");name.textContent=ally.name;
+      const subtitle=document.createElement("small");
+      subtitle.textContent=job.name+" · Lv."+ally.level;
+      const weapon=document.createElement("small");
+      weapon.textContent="装备："+WEAPON_LIBRARY[ally.inventory[ally.equippedIndex]!].name;
+      info.append(name,subtitle,weapon);
+      item.append(portrait,info);
       item.addEventListener("click",()=>{campaignSelectedId=id;renderCampaign();});
       roster.appendChild(item);
     }
     const selected=battle.units.find(u=>u.id===campaignSelectedId)!;
-    const heading=document.createElement("h3");
-    heading.textContent=selected.name+" · 出击装备";
-    equipment.appendChild(heading);
+    const job=CLASS_LIBRARY[selected.classId];
+    get("campaign-character-portrait").textContent=job.portrait;
+    get("campaign-character-title").textContent=selected.name;
+    get("campaign-character-subtitle").textContent=
+      job.name+" · Lv."+selected.level+" · 体格 "+selected.build;
+    const classExp=classExperienceFor(selected.classExperience,selected.classId);
+    const mastered=classMastered(selected.classExperience,selected.classId);
+    const progress=get("campaign-character-progress");progress.replaceChildren();
+    for(const [label,current,max,complete] of [
+      ["人物经验",selected.exp,100,selected.level===99],
+      ["职业精通",classExp,job.masteryThreshold,mastered],
+    ] as const){
+      const line=document.createElement("div");line.className="campaign-progress-row";
+      const title=document.createElement("span");title.textContent=label;
+      const amount=document.createElement("strong");
+      amount.textContent=complete?(label==="职业精通"?"已精通":"满级"):
+        current+"/"+max;
+      const meter=document.createElement("span");meter.className="campaign-progress-meter";
+      const fill=document.createElement("span");fill.className="campaign-progress-fill";
+      fill.style.width=(complete?100:Math.min(100,current/max*100))+"%";
+      meter.appendChild(fill);line.append(title,meter,amount);progress.appendChild(line);
+    }
+
+    const statsMode=campaignAttributeMode==="stats";
+    button("campaign-tab-stats").classList.toggle("active",statsMode);
+    button("campaign-tab-growth").classList.toggle("active",!statsMode);
+    button("campaign-tab-stats").setAttribute("aria-pressed",String(statsMode));
+    button("campaign-tab-growth").setAttribute("aria-pressed",String(!statsMode));
+    const attributes=effectiveClassStats(selected.stats,selected.classId);
+    const growths=effectiveClassGrowths(selected.growths,selected.classId);
+    const attributeRows:readonly (readonly [string,string])[]=statsMode?[
+      ["HP",selected.hp+"/"+selected.maxHp],["移动力",String(selected.move)],
+      ["力量",String(attributes.strength)],["防守",String(attributes.defense)],
+      ["魔力",String(attributes.magic)],["魔防",String(attributes.resistance)],
+      ["速度",String(attributes.speed)],["幸运",String(attributes.luck)],
+      ["技巧",String(attributes.dexterity)],["魅力",String(attributes.charm)],
+    ]:[
+      ["HP",growths.hp+"%"],["移动力","—"],
+      ["力量",growths.strength+"%"],["防守",growths.defense+"%"],
+      ["魔力",growths.magic+"%"],["魔防",growths.resistance+"%"],
+      ["速度",growths.speed+"%"],["幸运",growths.luck+"%"],
+      ["技巧",growths.dexterity+"%"],["魅力",growths.charm+"%"],
+    ];
+    const drawValues=(root:HTMLElement,rows:readonly (readonly [string,string])[],className:string)=>{
+      root.replaceChildren();
+      for(const [label,value] of rows){
+        const line=document.createElement("div");line.className=className;
+        const name=document.createElement("span");name.textContent=label;
+        const content=document.createElement("strong");content.textContent=value;
+        line.append(name,content);root.appendChild(line);
+      }
+    };
+    drawValues(get("campaign-basic-stats"),attributeRows,"campaign-attribute");
+    const combat=battle.combatStats(selected);
+    drawValues(get("campaign-combat-stats"),[
+      ["物理攻击",String(combat.physicalAttack)],
+      ["魔法攻击",String(combat.magicalAttack)],
+      ["物理防护",String(combat.physicalProtection)],
+      ["魔法防护",String(combat.magicalProtection)],
+      ["命中",String(combat.hit)],
+      ["回避",String(combat.avoid)],
+      ["攻速",String(combat.attackSpeed)],
+      ["必杀",String(combat.crit)],
+      ["必杀回避",String(combat.critAvoid)],
+    ],"campaign-combat-stat");
+
     selected.inventory.forEach((id,index)=>{
-      const item=document.createElement("button");
-      item.type="button";item.className="campaign-weapon"+
-        (selected.equippedIndex===index?" selected":"");
-      item.disabled=!canWield(selected.classId,id,selected.weaponExp);
-      item.textContent=(selected.equippedIndex===index?"◆ ":"")+
-        WEAPON_LIBRARY[id].name+" · "+weaponResourceText(selected,index);
-      item.addEventListener("click",()=>{battle.prepareEquipWeapon(selected.id,index);});
-      equipment.appendChild(item);
+      const weapon=WEAPON_LIBRARY[id];
+      const allowed=canWield(selected.classId,id,selected.weaponExp);
+      const active=selected.equippedIndex===index;
+      const entry=document.createElement("button");entry.type="button";
+      entry.className="campaign-weapon"+(active?" selected":"");
+      entry.disabled=!allowed;entry.setAttribute("aria-pressed",String(active));
+      entry.title=allowed?"选择此武器作为出击装备":
+        "当前职业或武器熟练度不符合装备要求";
+      const headline=document.createElement("span");headline.className="campaign-weapon-title";
+      const name=document.createElement("strong");name.textContent=weapon.name;
+      const status=document.createElement("small");
+      status.textContent=active?"已装备":allowed?"可装备":"无法装备";
+      headline.append(name,status);
+      const specs=document.createElement("span");specs.className="campaign-weapon-specs";
+      specs.textContent="威力 "+weapon.might+" · 命中 "+weapon.hit+
+        " · 射程 "+weaponRange(weapon)+" · 需求 "+weapon.requiredRank;
+      const resource=document.createElement("span");
+      resource.className="campaign-weapon-resource";
+      resource.textContent=weaponResourceText(selected,index);
+      entry.append(headline,specs,resource);
+      entry.addEventListener("click",()=>{battle.prepareEquipWeapon(selected.id,index);});
+      equipment.appendChild(entry);
     });
+
+    const prof=get("campaign-proficiency");prof.replaceChildren();
+    for(const category of WEAPON_CATEGORIES){
+      const xp=selected.weaponExp[category];
+      const row=document.createElement("div");
+      row.className="campaign-proficiency-item";
+      const label=document.createElement("span");label.textContent=categoryNames[category];
+      const rank=document.createElement("strong");rank.textContent=weaponRankForExp(xp);
+      const value=document.createElement("small");
+      value.textContent=weaponExperienceText(selected.weaponExp,category);
+      row.append(label,rank,value);prof.appendChild(row);
+    }
+    const equipped=get("campaign-masteries");equipped.replaceChildren();
+    get("campaign-mastery-count").textContent=
+      selected.equippedMasteries.length+" / "+MASTERY_SLOTS;
+    if(!selected.equippedMasteries.length){
+      const empty=document.createElement("span");
+      empty.className="campaign-mastery-empty";
+      empty.textContent="尚未装备精通特技，可前往「职业整备」解锁和配置。";
+      equipped.appendChild(empty);
+    }
+    for(const id of selected.equippedMasteries){
+      const mastery=MASTERY_LIBRARY[id];
+      const item=document.createElement("span");item.className="campaign-mastery-tag";
+      item.textContent=mastery.name+" · "+mastery.description;
+      equipped.appendChild(item);
+    }
     get("campaign-save-status").textContent=saveStatus;
   }
   if(settling){
@@ -281,6 +403,12 @@ function renderCampaign():void{
     }
   }
 }
+button("campaign-tab-stats").addEventListener("click",()=>{
+  campaignAttributeMode="stats";renderCampaign();
+});
+button("campaign-tab-growth").addEventListener("click",()=>{
+  campaignAttributeMode="growth";renderCampaign();
+});
 button("campaign-change-class").addEventListener("click",()=>{
   preparationUnitId=campaignSelectedId;openClassPreparation();
 });

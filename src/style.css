@@ -1359,3 +1359,135 @@ button:disabled { cursor: not-allowed; }
  .class-mastery-equipment{padding:6px}
  .class-mastery-toggle{font-size:11px;padding:7px}
 }
+
+/* v0.1.30.3: data-driven character inspector inside battle preparation. */
+.campaign-preparation-panel{display:flex;flex-direction:column;width:min(1110px,100%);
+ max-height:94dvh;overflow:hidden;padding:14px 17px}
+.campaign-preparation-panel .campaign-subtitle{margin:8px 0 0;flex:none}
+.campaign-preparation-panel .campaign-wallet{flex:none;margin:8px 0 11px}
+.campaign-preparation-body{display:grid;grid-template-columns:minmax(200px,.8fr) minmax(0,2.2fr);
+ gap:12px;flex:1;min-height:0;overflow:hidden}
+.campaign-roster-pane,.campaign-detail-pane{min-width:0;min-height:0;
+ background:#071d2b;border:1px solid #776846;border-radius:4px}
+.campaign-roster-pane{display:flex;flex-direction:column;overflow:hidden}
+.campaign-section-title{font-size:15px;font-weight:700;color:#ebcc98;
+ border-bottom:1px solid #7d684a;margin:0;padding:12px}
+.campaign-roster-pane .campaign-roster{display:flex;flex-direction:column;gap:8px;
+ margin:0;padding:10px;min-height:0;overflow-y:auto;scrollbar-width:thin;
+ scrollbar-color:#9f8657 #102b3e}
+.campaign-roster-pane .campaign-unit{display:flex;align-items:center;gap:9px;
+ width:100%;min-width:0;padding:9px}
+.campaign-unit-portrait{display:grid;place-items:center;flex:none;width:45px;height:50px;
+ border:1px solid #8a744b;background:radial-gradient(circle at 30% 12%,#3e5669,#0c2538);
+ color:#eed1a1;font-size:27px}
+.campaign-unit-info{min-width:0;display:flex;flex-direction:column;gap:3px}
+.campaign-unit-info strong{font-size:16px}
+.campaign-unit-info small{font-size:11px;color:#bfd0d6;
+ white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.campaign-detail-pane{overflow-y:auto;overscroll-behavior:contain;
+ scrollbar-width:thin;scrollbar-color:#9f8657 #102b3e;padding:10px}
+.campaign-character-header{display:flex;gap:12px;align-items:center;
+ padding:9px 11px;border:1px solid #716647;
+ background:radial-gradient(ellipse at 70% -30%,#31576a,#102a3a 70%)}
+.campaign-character-portrait{display:grid;place-items:center;flex:none;width:62px;height:71px;
+ border:1px solid #d0a76b;color:#f5d49c;background:#173447;
+ font-size:40px;text-shadow:0 1px 7px #000}
+.campaign-character-identity{min-width:0;flex:1}
+.campaign-character-identity h3{font-size:22px;color:#f1d19c;margin:0 0 4px}
+.campaign-character-subtitle{color:#d6e1e5;font-size:12px}
+.campaign-character-progress{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px}
+.campaign-progress-row{min-width:0;display:grid;grid-template-columns:auto minmax(12px,1fr) auto;
+ gap:6px;align-items:center;font-size:10px;color:#d3c4a3}
+.campaign-progress-row strong{font-size:10px;white-space:nowrap;font-variant-numeric:tabular-nums}
+.campaign-progress-meter{display:block;height:6px;min-width:12px;
+ background:#061522;border:1px solid #6e684c;border-radius:3px;overflow:hidden}
+.campaign-progress-fill{display:block;height:100%;background:#d6a963}
+.campaign-detail-section{margin-top:9px;border:1px solid #5f6d65;background:#0b2636}
+.campaign-detail-heading{display:flex;align-items:center;justify-content:space-between;
+ gap:8px;padding:8px 11px;border-bottom:1px solid #6d6a50;background:#143448}
+.campaign-detail-heading h4{font-size:13px;color:#e9c88f;margin:0}
+.campaign-detail-heading small{font-size:11px;color:#b1c0c8}
+.campaign-attribute-tabs{display:flex;gap:0;border:1px solid #96774e;border-radius:3px;overflow:hidden}
+.campaign-attribute-tabs button{font-size:11px;cursor:pointer;padding:5px 9px;color:#bfcbd4;
+ border:0;background:#102637}
+.campaign-attribute-tabs button.active{background:#a47d4c;color:#fff4df;font-weight:700}
+.campaign-attribute-tabs button:focus-visible{outline:2px solid #f2c87e;outline-offset:-2px}
+.campaign-basic-stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
+ gap:5px 10px;padding:10px}
+.campaign-attribute{display:grid;grid-template-columns:minmax(0,1fr) 62px;align-items:center;
+ min-width:0;padding:7px 10px;background:#123246;border:1px solid #395365;
+ border-radius:3px;font-size:12px}
+.campaign-attribute span,.campaign-combat-stat span{color:#cad6da}
+.campaign-attribute strong,.campaign-combat-stat strong{color:#f3debc;
+ font-variant-numeric:tabular-nums;text-align:right}
+.campaign-combat-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px;padding:9px}
+.campaign-combat-stat{display:flex;justify-content:space-between;gap:5px;align-items:center;
+ padding:6px 8px;font-size:11px;border-bottom:1px solid #536d7766}
+.campaign-detail-pane .campaign-equipment{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
+ gap:6px;padding:9px;border:none;background:none}
+.campaign-detail-pane .campaign-weapon{display:flex;flex-direction:column;align-items:stretch;
+ min-width:0;min-height:77px;padding:9px;gap:5px}
+.campaign-weapon-title{display:flex;align-items:center;justify-content:space-between;gap:5px}
+.campaign-weapon-title strong{color:#f4dfbc;font-size:13px;
+ overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.campaign-weapon-title small{flex:none;color:#c8bd9b;font-size:10px}
+.campaign-weapon.selected .campaign-weapon-title small{color:#f2d18e}
+.campaign-weapon-specs{font-size:11px;color:#b8cbd2;line-height:1.35}
+.campaign-weapon-resource{font-size:11px;color:#e6c89a}
+.campaign-detail-pane .campaign-weapon:disabled{opacity:.54}
+.campaign-proficiency{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px;padding:9px}
+.campaign-proficiency-item{display:grid;grid-template-columns:1fr auto;align-items:center;
+ gap:2px 5px;border:1px solid #3b5767;background:#112f40;padding:7px 9px;
+ min-width:0;font-size:12px}
+.campaign-proficiency-item strong{color:#e9c78a}
+.campaign-proficiency-item small{grid-column:1/-1;font-size:10px;color:#b1c6cf}
+.campaign-masteries{padding:9px;display:flex;flex-wrap:wrap;gap:5px}
+.campaign-mastery-tag{font-size:11px;color:#f0d7a6;background:#1b4451;
+ padding:7px 10px;border:1px solid #b59159;border-radius:3px}
+.campaign-mastery-empty{font-size:11px;color:#b3c5cb;line-height:1.45}
+.campaign-preparation-panel .campaign-save-status{flex:none;min-height:0;margin:8px 0 5px}
+.campaign-preparation-panel .campaign-footer{flex:none}
+@media(max-width:800px){
+ .campaign-preparation-body{grid-template-columns:minmax(160px,.72fr) minmax(0,2fr);gap:7px}
+ .campaign-roster-pane .campaign-unit{padding:6px;gap:5px}
+ .campaign-unit-portrait{width:33px;height:40px;font-size:22px}
+ .campaign-unit-info strong{font-size:13px}
+ .campaign-unit-info small{font-size:10px}
+ .campaign-proficiency{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:600px){
+ .campaign-preparation-panel{height:97dvh;max-height:97dvh;padding:8px}
+ .campaign-preparation-panel .campaign-header{padding-bottom:6px}
+ .campaign-preparation-panel .campaign-subtitle{font-size:11px;margin:5px 0 0}
+ .campaign-preparation-panel .campaign-wallet{grid-template-columns:repeat(3,minmax(0,1fr));
+   gap:4px;margin:6px 0}
+ .campaign-preparation-panel .campaign-wallet span{display:flex;flex-direction:column;
+   align-items:center;gap:2px;padding:5px 2px;font-size:10px;text-align:center}
+ .campaign-preparation-panel .campaign-wallet strong{font-size:13px}
+ .campaign-preparation-body{display:flex;flex-direction:column;
+   gap:6px;min-height:0;overflow-y:auto;overflow-x:hidden}
+ .campaign-roster-pane,.campaign-detail-pane{overflow:visible;flex:none}
+ .campaign-roster-pane .campaign-section-title{padding:7px 9px;font-size:12px}
+ .campaign-roster-pane .campaign-roster{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
+   overflow:visible;gap:5px;padding:6px}
+ .campaign-roster-pane .campaign-unit{min-height:42px}
+ .campaign-unit-portrait{width:29px;height:34px;font-size:18px}
+ .campaign-unit-info strong{font-size:12px}
+ .campaign-unit-info small{font-size:9px}
+ .campaign-detail-pane{padding:6px}
+ .campaign-character-header{padding:6px;gap:8px}
+ .campaign-character-portrait{width:42px;height:53px;font-size:28px}
+ .campaign-character-identity h3{font-size:18px}
+ .campaign-character-progress{gap:5px;margin-top:5px}
+ .campaign-progress-row{font-size:9px}
+ .campaign-progress-row strong{font-size:9px}
+ .campaign-basic-stats{padding:6px;gap:4px}
+ .campaign-attribute{grid-template-columns:minmax(0,1fr) 48px;font-size:11px;padding:6px}
+ .campaign-combat-stats{grid-template-columns:repeat(2,minmax(0,1fr));padding:6px}
+ .campaign-detail-pane .campaign-equipment{grid-template-columns:1fr;padding:6px}
+ .campaign-detail-pane .campaign-weapon{min-height:0}
+ .campaign-proficiency{grid-template-columns:repeat(2,minmax(0,1fr));padding:6px}
+ .campaign-detail-heading{padding:6px 8px}
+ .campaign-preparation-panel .campaign-save-status{font-size:10px;margin:5px 0 2px}
+ .campaign-preparation-panel .campaign-footer{padding-top:6px}
+}

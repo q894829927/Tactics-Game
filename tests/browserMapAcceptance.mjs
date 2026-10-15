@@ -36,6 +36,45 @@ try {
       name+" independent prep stage opens on initial load");
     assert.equal(await page.locator("#campaign-roster button").count(),4);
     assert.equal(await page.locator("#campaign-start-sortie").isVisible(),true);
+    // Camp inspector must expose real character data, not just short weapon names.
+    assert.equal((await page.locator("#campaign-character-title").innerText()).trim(),"岚锋");
+    assert.match(await page.locator("#campaign-character-subtitle").innerText(),/剑士 · Lv\.1/);
+    assert.deepEqual(await page.locator("#campaign-basic-stats .campaign-attribute span")
+      .allTextContents(),["HP","移动力","力量","防守","魔力","魔防","速度","幸运","技巧","魅力"],
+      name+" prep attributes retain the designed two-column sequence");
+    assert.match(await page.locator("#campaign-basic-stats .campaign-attribute").first().innerText(),/30\/30/);
+    assert.equal(await page.locator("#campaign-combat-stats .campaign-combat-stat").count(),9);
+    assert.equal(await page.locator("#campaign-proficiency .campaign-proficiency-item").count(),7);
+    assert.match(await page.locator("#campaign-proficiency").innerText(),/熟练 C/);
+    assert.match(await page.locator("#campaign-character-progress").innerText(),/职业精通/);
+    assert.equal((await page.locator("#campaign-mastery-count").innerText()).trim(),"0 / 2");
+    assert.match(await page.locator("#campaign-masteries").innerText(),/尚未装备精通/);
+    assert.equal(await page.locator("#campaign-equipment button").count(),3);
+    assert.match(await page.locator("#campaign-equipment button.selected").innerText(),/铁剑/);
+    assert.match(await page.locator("#campaign-equipment button").first().innerText(),/耐久 24\/24/);
+    const initialCombat=await page.locator("#campaign-combat-stats").innerText();
+    await page.locator("#campaign-equipment button").nth(1).click();
+    assert.match(await page.locator("#campaign-equipment button.selected").innerText(),/钢剑/);
+    assert.notEqual(await page.locator("#campaign-combat-stats").innerText(),initialCombat,
+      name+" combat numbers update after changing active weapon");
+    await page.locator("#campaign-tab-growth").click();
+    assert.equal(await page.locator("#campaign-basic-stats .campaign-attribute")
+      .filter({hasText:"移动力"}).locator("strong").innerText(),"—");
+    assert.equal(await page.locator("#campaign-tab-growth").getAttribute("aria-pressed"),"true");
+    await page.locator("#campaign-tab-stats").click();
+    await page.locator("#campaign-roster button").nth(1).click();
+    assert.equal((await page.locator("#campaign-character-title").innerText()).trim(),"槿卫");
+    assert.match(await page.locator("#campaign-equipment button.selected").innerText(),/铁枪/);
+    await page.locator("#campaign-roster button").first().click();
+    assert.match(await page.locator("#campaign-equipment button.selected").innerText(),/钢剑/,
+      name+" weapon change stays with the original character");
+    await page.locator("#campaign-equipment button").first().click();
+    assert.match(await page.locator("#campaign-equipment button.selected").innerText(),/铁剑/);
+    const campBounds=await page.locator(".campaign-preparation-panel").evaluate(el=>({
+      width:el.clientWidth,scrollWidth:el.scrollWidth,
+    }));
+    assert.ok(campBounds.scrollWidth<=campBounds.width+2,
+      name+" inspector panel must not overflow horizontally");
     assert.equal((await page.locator("#campaign-gold").innerText()).trim(),"0",
       name+" new campaign starts with zero gold");
     assert.equal((await page.locator("#campaign-reputation").innerText()).trim(),"0",
