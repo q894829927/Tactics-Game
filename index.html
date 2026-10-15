@@ -163,8 +163,52 @@
           <span>名声 <strong id="campaign-reputation">0</strong></span>
           <span>中级考试凭证 <strong id="campaign-intermediate-vouchers">0</strong></span>
         </div>
-        <div id="campaign-roster" class="campaign-roster"></div>
-        <div id="campaign-equipment" class="campaign-equipment" aria-live="polite"></div>
+        <div class="campaign-preparation-body">
+          <section class="campaign-roster-pane" aria-labelledby="campaign-roster-title">
+            <h3 id="campaign-roster-title" class="campaign-section-title">出击成员</h3>
+            <div id="campaign-roster" class="campaign-roster"></div>
+          </section>
+          <section class="campaign-detail-pane" aria-labelledby="campaign-character-title">
+            <div class="campaign-character-header">
+              <span id="campaign-character-portrait" class="campaign-character-portrait" aria-hidden="true">⚔</span>
+              <div class="campaign-character-identity">
+                <h3 id="campaign-character-title">角色详情</h3>
+                <div id="campaign-character-subtitle" class="campaign-character-subtitle"></div>
+                <div id="campaign-character-progress" class="campaign-character-progress"></div>
+              </div>
+            </div>
+            <section class="campaign-detail-section" aria-labelledby="campaign-attributes-title">
+              <div class="campaign-detail-heading">
+                <h4 id="campaign-attributes-title">角色属性</h4>
+                <div class="campaign-attribute-tabs" role="group" aria-label="角色属性展示模式">
+                  <button id="campaign-tab-stats" type="button" aria-pressed="true" class="active">基础属性</button>
+                  <button id="campaign-tab-growth" type="button" aria-pressed="false">成长值</button>
+                </div>
+              </div>
+              <div id="campaign-basic-stats" class="campaign-basic-stats"></div>
+            </section>
+            <section class="campaign-detail-section" aria-labelledby="campaign-combat-title">
+              <div class="campaign-detail-heading"><h4 id="campaign-combat-title">战斗能力</h4></div>
+              <div id="campaign-combat-stats" class="campaign-combat-stats"></div>
+            </section>
+            <section class="campaign-detail-section" aria-labelledby="campaign-equipment-title">
+              <div class="campaign-detail-heading"><h4 id="campaign-equipment-title">随身装备</h4>
+                <small>点击切换出击武器</small>
+              </div>
+              <div id="campaign-equipment" class="campaign-equipment" aria-live="polite"></div>
+            </section>
+            <section class="campaign-detail-section" aria-labelledby="campaign-proficiency-title">
+              <div class="campaign-detail-heading"><h4 id="campaign-proficiency-title">武器熟练度</h4></div>
+              <div id="campaign-proficiency" class="campaign-proficiency"></div>
+            </section>
+            <section class="campaign-detail-section" aria-labelledby="campaign-masteries-title">
+              <div class="campaign-detail-heading"><h4 id="campaign-masteries-title">已装备精通</h4>
+                <small id="campaign-mastery-count">0 / 2</small>
+              </div>
+              <div id="campaign-masteries" class="campaign-masteries"></div>
+            </section>
+          </section>
+        </div>
         <div id="campaign-save-status" class="campaign-save-status" role="status"></div>
         <footer class="campaign-footer">
           <button id="campaign-reset-save" type="button" class="campaign-text-action">清除队伍进度</button>
