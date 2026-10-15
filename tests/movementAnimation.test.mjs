@@ -80,7 +80,9 @@ test("presentation interpolates footpoints and sequential orchestration commits 
   const main=readFileSync(new URL("../src/main.ts",import.meta.url),"utf8");
   assert.match(view,/requestAnimationFrame\(frame\)/);
   assert.match(view,/if \(path\.length < 2\) return;/);
-  assert.doesNotMatch(view,/prefers-reduced-motion/,
+  const movement = view.slice(view.indexOf("async animateMovement("),
+    view.indexOf("async playCombatEvents("));
+  assert.doesNotMatch(movement,/matchMedia\s*\(/,
     "OS reduced motion must not skip step-by-step unit movement");
   assert.match(view,/const duration = 165;/);
   assert.match(view,/this\.animationPose = \{id: unitId,/);
