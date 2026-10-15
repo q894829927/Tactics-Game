@@ -315,15 +315,15 @@ function renderCampaign():void{
     drawValues(get("campaign-basic-stats"),attributeRows,"campaign-attribute");
     const combat=battle.combatStats(selected);
     drawValues(get("campaign-combat-stats"),[
-      ["物理攻击",String(combat.physicalAttack)],
-      ["魔法攻击",String(combat.magicalAttack)],
-      ["物理防护",String(combat.physicalProtection)],
-      ["魔法防护",String(combat.magicalProtection)],
+      ["物攻",String(combat.physicalAttack)],
+      ["魔攻",String(combat.magicalAttack)],
+      ["耐物",String(combat.physicalProtection)],
+      ["耐魔",String(combat.magicalProtection)],
       ["命中",String(combat.hit)],
       ["回避",String(combat.avoid)],
       ["攻速",String(combat.attackSpeed)],
       ["必杀",String(combat.crit)],
-      ["必杀回避",String(combat.critAvoid)],
+      ["必避",String(combat.critAvoid)],
     ],"campaign-combat-stat");
 
     selected.inventory.forEach((id,index)=>{
