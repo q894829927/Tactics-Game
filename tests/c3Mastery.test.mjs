@@ -64,9 +64,13 @@ test("C3 counter XP is five and only goes to a surviving participating ally",()=
   // Fix combatant survivability so this test specifically checks counter XP.
   a.maxHp=999;a.hp=999;e.maxHp=999;e.hp=999;
   e.x=2;e.y=5;
+  // The archer initially at (2,6) is also adjacent and has less HP.
+  // Move it away so the deterministic AI actually targets the intended ally.
+  actor(b,"a3").x=9;actor(b,"a3").y=0;
   assert.equal(b.beginEnemyTurn(),true);
   const plan=b.planEnemyAction();
   assert.equal(plan.unitId,"e1");
+  assert.equal(plan.targetId,a.id);
   assert.equal(b.commitEnemyAction(plan),true);
   assert.ok(b.lastCombatEvents.some(evt=>evt.fromId===a.id));
   assert.equal(a.classExperience.sword,5);
