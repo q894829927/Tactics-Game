@@ -13,6 +13,7 @@ import type {Weapon} from "./equipmentTypes.ts";
 import {ALLY_IDS,captureAlly,applyAlly,parseCampaign,settlementFrom,
   type AllyProgress,type CampaignSave,type SortieSettlement} from "./campaign.ts";
 import {refillSpells} from "./combatResources.ts";
+import {calculateSortieReward,creditSortieReward} from "./sortieRewards.ts";
 import {awardWeaponExperience} from "./proficiency.ts";
 import {activeWeaponId} from "./combatResources.ts";
 import {initialWeaponInstances,initialSpellCharges,makeWeaponInstance,
@@ -216,6 +217,9 @@ export class Battle {
         weaponInstances:x.weaponInstances.map(w=>w?{...w}:null)})),
       pendingSettlement:this.pendingSettlement
         ? {result:this.pendingSettlement.result,sortie:this.pendingSettlement.sortie,
+          reward:{gold:this.pendingSettlement.reward.gold,
+            reputation:this.pendingSettlement.reward.reputation,
+            vouchers:{...this.pendingSettlement.reward.vouchers}},
           units:this.pendingSettlement.units.map(u=>({...u}))}:null};
   }
   private aliveAndDefeatedAllies():Unit[]{
@@ -933,10 +937,15 @@ export class Battle {
     }
     if (this.result !== "playing") {
       if(this.campaignEnabled&&this.campaignStage==="battle"){
+        // Atomic terminal transition: one outcome, one fixed payout.
+        // No reward processing in the UI, save/restore, or return-to-camp.
+        const earned=calculateSortieReward(this.result);
+        const credited=creditSortieReward(this.preparationFunds,earned);
+        this.preparationFunds=credited.funds;
         this.sortiesCompleted++;
         this.pendingSettlement=settlementFrom(this.result,this.sortiesCompleted,
           this.sortieStart?.allies??this.aliveAndDefeatedAllies().map(captureAlly),
-          this.units);
+          this.units,credited.awarded);
         this.campaignStage="settlement";
       }
       this.selectedId = null;

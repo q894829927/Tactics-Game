@@ -1320,3 +1320,20 @@ button:disabled { cursor: not-allowed; }
  .campaign-settlement-row{flex-direction:column;gap:4px}
  .campaign-settlement-row span{text-align:left}
 }
+
+/* C2-1 earned, persistent campaign economy; same navy/gold treatment as camp. */
+.campaign-wallet{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;
+  margin:10px 0;padding:0}
+.campaign-wallet span{display:flex;align-items:center;justify-content:space-between;gap:7px;
+  padding:10px 12px;background:linear-gradient(130deg,#0e283b,#193b4e);
+  border:1px solid #8b744b;border-radius:4px;color:#d6dfdf;font-size:12px;min-width:0}
+.campaign-wallet strong{font-size:17px;color:#f1c881;font-variant-numeric:tabular-nums}
+.campaign-rewards{border:1px solid #8e784c;padding:10px 11px;
+  margin:10px 0;background:#081e30}
+.campaign-rewards h3{margin:0 0 4px;font-size:15px;color:#edd09b}
+.campaign-rewards .campaign-wallet{margin-bottom:0}
+@media(max-width:600px){
+  .campaign-wallet{grid-template-columns:1fr;gap:4px}
+  .campaign-wallet span{padding:7px 10px;min-height:28px}
+  .campaign-wallet strong{font-size:15px}
+}

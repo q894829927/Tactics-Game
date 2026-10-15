@@ -36,6 +36,12 @@ try {
       name+" independent prep stage opens on initial load");
     assert.equal(await page.locator("#campaign-roster button").count(),4);
     assert.equal(await page.locator("#campaign-start-sortie").isVisible(),true);
+    assert.equal((await page.locator("#campaign-gold").innerText()).trim(),"0",
+      name+" new campaign starts with zero gold");
+    assert.equal((await page.locator("#campaign-reputation").innerText()).trim(),"0",
+      name+" new campaign starts with zero reputation");
+    assert.equal((await page.locator("#campaign-intermediate-vouchers").innerText()).trim(),"0",
+      name+" no free certificate granted without combat victory");
     // C1 end-to-end: settings -> preparation -> reclass -> return.
     // Run on both desktop sizes and the real mobile/touch viewport.
     await page.locator("#campaign-change-class").click();

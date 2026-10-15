@@ -11,6 +11,7 @@ import {CLASS_LIBRARY,type ClassId} from "./classes.ts";
 import {PLAYER_CLASS_CHOICES,type PreparationFunds} from "./classCertification.ts";
 import type {WeaponExperience} from "./proficiency.ts";
 import type {WeaponInstance,SpellCharges} from "./combatResources.ts";
+import {emptySortieReward,RESOURCE_CAPS,type SortieReward} from "./sortieRewards.ts";
 
 export const CAMPAIGN_STORAGE_KEY="wildfield-tactics.campaign.v1";
 export const CAMPAIGN_SCHEMA=1 as const;
@@ -32,6 +33,8 @@ export type SortieSettlement={
   result:Exclude<GameResult,"playing">;
   sortie:number;
   units:UnitProgressDelta[];
+  /** Fixed victory/defeat payout, already deposited at settlement. */
+  reward:SortieReward;
 };
 export type CampaignSave={
   schema:typeof CAMPAIGN_SCHEMA;
@@ -79,9 +82,10 @@ export function applyAlly(unit:Unit,p:AllyProgress):void {
 }
 export function settlementFrom(
   result:Exclude<GameResult,"playing">,sortie:number,before:AllyProgress[],
-  units:readonly Unit[],
+  units:readonly Unit[],reward:SortieReward=emptySortieReward(),
 ):SortieSettlement {
-  return {result,sortie,units:ALLY_IDS.map(id=>{
+  return {result,sortie,reward:{gold:reward.gold,reputation:reward.reputation,
+    vouchers:{intermediate:reward.vouchers.intermediate}},units:ALLY_IDS.map(id=>{
     const start=before.find(p=>p.id===id);
     const unit=units.find(u=>u.id===id&&u.team==="ally");
     if(!start||!unit)throw Error("Missing ally for settlement: "+id);
@@ -142,9 +146,17 @@ function validAlly(v:unknown):v is AllyProgress {
   }
   return true;
 }
+function validReward(v:unknown):v is SortieReward{
+  return obj(v)&&integer(v.gold,0,RESOURCE_CAPS.gold)&&
+    integer(v.reputation,0,RESOURCE_CAPS.reputation)&&
+    obj(v.vouchers)&&integer(v.vouchers.intermediate,0,RESOURCE_CAPS.intermediate);
+}
 function validSettlement(v:unknown):v is SortieSettlement {
+  // C2-0 saves had no reward field. Accept those historical settlements
+  // as already paid zero; never grant resources when migrating.
   if(!obj(v)||!(v.result==="victory"||v.result==="defeat")||
-    !integer(v.sortie,1,1000000)||!Array.isArray(v.units)||v.units.length!==4)return false;
+    !integer(v.sortie,1,1000000)||!Array.isArray(v.units)||v.units.length!==4||
+    !(v.reward===undefined||validReward(v.reward)))return false;
   const rows=v.units as unknown[];
   return ALLY_IDS.every(id=>rows.some((row:unknown)=>obj(row)&&row.id===id&&
     typeof row.name==="string"&&row.name.length<=80&&
@@ -167,6 +179,10 @@ export function parseCampaign(raw:unknown):CampaignSave|null{
     return null;
   if(raw.pendingSettlement&&raw.pendingSettlement.sortie!==raw.sortiesCompleted)
     return null;
+  const old=raw.pendingSettlement as Record<string,unknown>|null;
+  // Normalize a pre-C2-1 settlement without modifying the stored JSON.
+  if(old&&old.reward===undefined)
+    return {...raw,pendingSettlement:{...old,reward:emptySortieReward()}} as CampaignSave;
   return raw as CampaignSave;
 }
 /** Returns a deep, validated copy, never a reference to a browser-owned object. */

@@ -225,6 +225,10 @@ function renderCampaign():void{
     const roster=get("campaign-roster"),equipment=get("campaign-equipment");
     roster.replaceChildren();equipment.replaceChildren();
     get("campaign-sortie-number").textContent="第 "+(battle.sortiesCompleted+1)+" 次出击";
+    get("campaign-gold").textContent=String(battle.preparationFunds.gold);
+    get("campaign-reputation").textContent=String(battle.preparationFunds.reputation);
+    get("campaign-intermediate-vouchers").textContent=
+      String(battle.preparationFunds.vouchers.intermediate);
     for(const id of ALLY_IDS){
       const ally=battle.units.find(u=>u.id===id)!;
       const item=document.createElement("button");
@@ -257,6 +261,10 @@ function renderCampaign():void{
       get("campaign-settlement-result").textContent=
         (outcome.result==="victory"?"战斗胜利":"战斗失败")+
         " · 第 "+outcome.sortie+" 次出击";
+      get("campaign-reward-gold").textContent="+"+outcome.reward.gold;
+      get("campaign-reward-reputation").textContent="+"+outcome.reward.reputation;
+      get("campaign-reward-vouchers").textContent=
+        "+"+outcome.reward.vouchers.intermediate;
       const rows=get("campaign-settlement-roster");rows.replaceChildren();
       for(const unit of outcome.units){
         const row=document.createElement("div");row.className="campaign-settlement-row";
