@@ -60,6 +60,9 @@ test("C3 committed attacks grant once per engagement, not again for follow-ups",
 
 test("C3 counter XP is five and only goes to a surviving participating ally",()=>{
   const b=new Battle(),a=actor(b),e=actor(b,"e1");
+  // A seeded critical can KO a normal-HP ally before it counters.
+  // Fix combatant survivability so this test specifically checks counter XP.
+  a.maxHp=999;a.hp=999;e.maxHp=999;e.hp=999;
   e.x=2;e.y=5;
   assert.equal(b.beginEnemyTurn(),true);
   const plan=b.planEnemyAction();
