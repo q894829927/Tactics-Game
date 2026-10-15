@@ -79,6 +79,10 @@ test("presentation interpolates footpoints and sequential orchestration commits 
   const view=readFileSync(new URL("../src/scene/BoardView.ts",import.meta.url),"utf8");
   const main=readFileSync(new URL("../src/main.ts",import.meta.url),"utf8");
   assert.match(view,/requestAnimationFrame\(frame\)/);
+  assert.match(view,/if \(path\.length < 2\) return;/);
+  assert.doesNotMatch(view,/prefers-reduced-motion/,
+    "OS reduced motion must not skip step-by-step unit movement");
+  assert.match(view,/const duration = 165;/);
   assert.match(view,/this\.animationPose = \{id: unitId,/);
   assert.match(view,/this\.paintAnimationPose\(\)/);
   assert.match(view,/this\.battle\.movementPath\(mover, \{x, y\}\)/);

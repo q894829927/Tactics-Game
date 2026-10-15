@@ -1113,7 +1113,8 @@ export class BoardView {
    */
   async animateMovement(unitId: string, path: readonly Point[]): Promise<void> {
     if (this.animationLocked) return;
-    if (path.length < 2 || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    // Movement must remain visible on every device, regardless of OS animation preferences.
+    if (path.length < 2) return;
     this.animationLocked = true;
     const epoch = ++this.animationEpoch;
     try {
