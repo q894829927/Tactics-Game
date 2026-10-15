@@ -12,7 +12,7 @@ test("10x8 battlefield with four allies and six enemies", () => {
   assert.equal(game.round, 1);
 });
 
-test("movement uses weighted path costs, blocks walls and occupied units", () => {
+test("movement uses weighted costs and excludes walls and occupied stopping tiles", () => {
   const game = new Battle();
   const ally = game.units.find(u => u.id === "a1");
   assert.ok(ally);

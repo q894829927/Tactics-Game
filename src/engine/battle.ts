@@ -506,12 +506,15 @@ export class Battle {
     return this.terrain[y]![x] as Terrain;
   }
 
-  // Dijkstra, not naive Manhattan radius: terrain costs and occupied tiles matter.
-  reachable(actor: Unit): Map<string, number> {
+  /** Minimum weighted traversal costs. Living teammates may be crossed
+   * at the normal terrain cost, while living enemies and cliffs still block.
+   * Do not expose this map as legal move endpoints: occupied friendly tiles
+   * are transit-only. Both teams share the same rule.
+   */
+  private movementCosts(actor: Unit): Map<string, number> {
     const best = new Map<string, number>();
     if (actor.hp <= 0) return best;
-    const start = key(actor);
-    best.set(start, 0);
+    best.set(key(actor), 0);
     const queue: Array<{ x: number; y: number; cost: number }> =
       [{ x: actor.x, y: actor.y, cost: 0 }];
     while (queue.length) {
@@ -520,12 +523,28 @@ export class Battle {
       if (current.cost !== best.get(key(current))) continue;
       for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
         const x = current.x + dx!, y = current.y + dy!;
-        if (!inBounds(x, y) || this.occupant(x, y)) continue;
+        if (!inBounds(x, y)) continue;
+        const occupant = this.occupant(x, y);
+        if (occupant && occupant.team !== actor.team) continue;
         const cost = current.cost + TERRAIN_INFO[this.tile(x, y)].moveCost;
         if (cost > actor.move || cost >= (best.get(key({ x, y })) ?? Infinity)) continue;
         best.set(key({ x, y }), cost);
         queue.push({ x, y, cost });
       }
+    }
+    return best;
+  }
+
+  /** Legal stopping tiles only. Teammates are pass-through, never endpoints.
+   * The actor's own origin remains reachable with cost zero.
+   */
+  reachable(actor: Unit): Map<string, number> {
+    const best = this.movementCosts(actor);
+    const origin = key(actor);
+    for (const position of best.keys()) {
+      if (position === origin) continue;
+      const [x, y] = position.split(",").map(Number);
+      if (this.occupant(x!, y!)) best.delete(position);
     }
     return best;
   }
@@ -591,7 +610,10 @@ export class Battle {
    */
   movementPath(actor: Unit, destination: Point): Point[] | null {
     if (!inBounds(destination.x, destination.y)) return null;
-    const costs = this.reachable(actor);
+    const target = this.occupant(destination.x, destination.y);
+    if (target && (target.id !== actor.id || target !== actor)) return null;
+    // Reconstruct over transit-only friendly tiles as well as empty tiles.
+    const costs = this.movementCosts(actor);
     if (!costs.has(key(destination))) return null;
     const path: Point[] = [{x: destination.x, y: destination.y}];
     let current = path[0]!;
