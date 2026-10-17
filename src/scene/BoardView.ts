@@ -77,7 +77,8 @@ export class BoardView {
   private suppressMiniClick = false;
   private readonly menu: HTMLDivElement;
   private readonly weaponPicker: HTMLDivElement;
-  private pickerMode: "attack"|"equip"|null=null;
+  private pickerMode: "attack"|"art"|"equip"|null=null;
+  private attackArtId:string|null=null;
   private readonly minimap: HTMLElement;
   private readonly viewportMarker: HTMLDivElement;
   private offsetX = 0;
@@ -434,6 +435,7 @@ export class BoardView {
     this.pickerMode = null;
     this.forecastTargetId = null;
     this.attackMode = false;
+    this.attackArtId=null;
     this.menuVisible = true;
     this.refresh();
     this.onInspectionChange?.();
@@ -449,7 +451,7 @@ export class BoardView {
     }
     if (this.attackMode) {
       this.attackMode = false;
-      this.pickerMode = "attack";
+      this.pickerMode = this.attackArtId?"art":"attack";
       this.menuVisible = false;
       this.refresh();
       return true;
@@ -473,6 +475,7 @@ export class BoardView {
     this.pickerMode = null;
     this.forecastTargetId = null;
     this.attackMode = false;
+    this.attackArtId=null;
     this.menuVisible = false;
     this.renderForecast();
     this.refresh();
@@ -483,6 +486,7 @@ export class BoardView {
     if (selectedId !== this.previousSelection) {
       this.pickerMode = null;
       this.attackMode = false;
+      this.attackArtId=null;
       this.forecastTargetId = null;
       // Commands appear only after choosing a destination or confirming stay.
       this.menuVisible = false;
@@ -671,7 +675,8 @@ export class BoardView {
     if (intent === "attack") {
       const selected = this.battle.selected;
       const target = this.battle.occupant(x, y);
-      if (selected && target && this.battle.forecastAttack(selected, target)) {
+      if (selected && target && this.battle.forecastAttack(selected, target,
+          this.attackArtId??undefined)) {
         this.forecastTargetId = target.id;
         this.menuVisible = false;
         this.refresh();
@@ -792,7 +797,8 @@ export class BoardView {
     }
     const attacker = this.battle.selected;
     const defender = this.battle.units.find(u => u.id === this.forecastTargetId && u.hp > 0);
-    const forecast = attacker && defender ? this.battle.forecastAttack(attacker, defender) : null;
+    const forecast = attacker && defender ? this.battle.forecastAttack(attacker, defender,
+      this.attackArtId??undefined) : null;
     if (!attacker || !defender || !forecast) {
       this.forecastPanel.hidden = true;
       this.forecastTargetId = null;
@@ -826,6 +832,12 @@ export class BoardView {
     ] as const) {
       byId(id).style.width = Math.max(0, Math.min(100, amount * 100)) + "%";
     }
+    const cost=document.getElementById("forecast-action-cost")!;
+    const isArt=!!this.attackArtId&&!this.enemyForecast;
+    cost.textContent=isArt?"试验战技 · 耐久 -"+this.battle.basicArt.durabilityCost+
+      " · 本次伤害 +"+this.battle.basicArt.damageBonus:
+      (attacker.weapon.kind==="magical"?"法术交战 · 次数 -1":"普通攻击 · 耐久不消耗");
+    document.getElementById("forecast-confirm")!.textContent=isArt?"确认试验战技":"攻击";
     this.forecastPanel.hidden = false;
   }
 
@@ -833,7 +845,8 @@ export class BoardView {
     if (this.isAnimating || this.battle.phase !== "player") return;
     const attacker = this.battle.selected;
     const target = this.battle.units.find(u => u.id === this.forecastTargetId && u.hp > 0);
-    if (!attacker || !target || !this.battle.forecastAttack(attacker, target)) {
+    if (!attacker || !target || !this.battle.forecastAttack(attacker, target,
+      this.attackArtId??undefined)) {
       this.forecastTargetId = null;
       this.refresh();
       return;
@@ -842,7 +855,13 @@ export class BoardView {
     this.attackMode = false;
     this.menuVisible = false;
     this.inspectCell(target.x, target.y);
-    this.battle.click(target.x, target.y);
+    if(this.attackArtId){
+      if(!this.battle.useCombatArt(attacker,target,this.attackArtId)){
+        this.refresh();
+        return;
+      }
+    }else this.battle.click(target.x,target.y);
+    this.attackArtId=null;
     void this.playCombatEvents(this.battle.lastCombatEvents);
     this.onCombatCommitted?.();
     this.refresh();
@@ -858,6 +877,7 @@ export class BoardView {
     }
     const commands = [
       { text: "攻击", icon: "⚔", enabled: this.battle.availableAttackWeapons(actor).length > 0, key: "attack" },
+      { text: "战技·试验", icon: "✧", enabled: this.battle.availableArtWeapons(actor).length>0, key: "art" },
       { text: "背包", icon: "▣", enabled: true, key: "item" },
       { text: "术法", icon: "✦", enabled: false, key: "magic" },
       { text: "交换", icon: "⇄", enabled: false, key: "trade" },
@@ -881,11 +901,12 @@ export class BoardView {
           this.refresh();
         } else if (cmd.key === "undo") {
           this.undoTentativeMove();
-        } else if (cmd.key === "attack" || cmd.key === "item") {
+        } else if (cmd.key === "attack" || cmd.key === "art" || cmd.key === "item") {
           this.menuVisible = false;
           this.forecastTargetId = null;
           this.attackMode = false;
-          this.pickerMode = cmd.key === "attack" ? "attack" : "equip";
+          this.attackArtId=null;
+          this.pickerMode = cmd.key === "attack" ? "attack" : cmd.key === "art"?"art":"equip";
           this.refresh();
         }
       });
@@ -905,9 +926,11 @@ export class BoardView {
     }
     const title=document.createElement("div");
     title.className="weapon-picker-title";
-    title.textContent=mode==="attack"?"选择攻击武器":"装备背包";
+    title.textContent=mode==="attack"?"选择攻击武器":
+      mode==="art"?"选择试验战技武器 · 耗耐久3":"装备背包";
     this.weaponPicker.appendChild(title);
-    const attackable=new Set(this.battle.availableAttackWeapons(actor));
+    const attackable=new Set(mode==="art"
+      ?this.battle.availableArtWeapons(actor):this.battle.availableAttackWeapons(actor));
     actor.inventory.forEach((id,index)=>{
       const item=WEAPON_LIBRARY[id];
       const qualified=canWield(actor.classId,id,actor.weaponExp);
@@ -932,9 +955,10 @@ export class BoardView {
         if(this.isAnimating||this.battle.phase!=="player"||this.battle.selected?.id!==actor.id)return;
         if(!this.battle.equipWeapon(actor,index))return;
         this.pickerMode=null;
-        if(mode==="attack"){
+        if(mode==="attack"||mode==="art"){
+          this.attackArtId=mode==="art"?this.battle.basicArt.id:null;
           this.attackMode=true;
-          this.onHint?.("选择红色攻击目标");
+          this.onHint?.(mode==="art"?"选择目标 · 试验战技消耗3耐久":"选择红色攻击目标");
         }else this.menuVisible=true;
         this.refresh();
         this.onInspectionChange?.();
@@ -943,7 +967,7 @@ export class BoardView {
     });
     const back=document.createElement("button");
     back.type="button";back.className="weapon-back";back.textContent="返回";
-    back.addEventListener("click",()=>{this.pickerMode=null;this.menuVisible=true;this.refresh();});
+    back.addEventListener("click",()=>{this.pickerMode=null;this.attackArtId=null;this.menuVisible=true;this.refresh();});
     this.weaponPicker.appendChild(back);
     this.weaponPicker.hidden=false;
     this.positionWeaponPicker(actor);

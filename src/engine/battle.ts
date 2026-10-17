@@ -19,9 +19,11 @@ import {MASTERY_LIBRARY,MASTERY_SLOTS,unlockedMasteries,gainClassExperience,
   applyEquippedMasteries,type MasteryId,type ClassExperience}
   from "./mastery.ts";
 import {activeWeaponId} from "./combatResources.ts";
+import {makeAttackAction,canPayActionCosts,payActionCosts,
+  type ActionSpec,type ActionCost} from "./actionSpec.ts";
 import {initialWeaponInstances,initialSpellCharges,makeWeaponInstance,
-  resourceWeapon,remainingSpellCharges,canUseAttack,consumeSpellCast,
-  canUseArt,consumeArtDurability,isSpell,type WeaponInstance,type SpellCharges}
+  resourceWeapon,remainingSpellCharges,canUseAttack,
+  canUseArt,isSpell,type WeaponInstance,type SpellCharges}
   from "./combatResources.ts";
 export type { Terrain } from "./terrain.ts";
 
@@ -53,6 +55,14 @@ export type CombatEvent = {
   fromHpAfter: number; toHpAfter: number;
   defeated: boolean;
 };
+
+export type ActionCommitEvent={
+  kind:"confirmed"|"resource"|"strike";
+  actorId:string;targetId:string;actionId:string;
+  cost?:ActionCost;combat?:CombatEvent;
+};
+
+export type ActionPreview={spec:ActionSpec;forecast:AttackForecast};
 
 export type AttackForecast = {
   damage:number; counterDamage:number; canCounter:boolean;
@@ -135,6 +145,10 @@ export class Battle {
   log: string[] = [];
   /** Immutable copies of the most recent completed combat's ordered strikes. */
   lastCombatEvents: CombatEvent[] = [];
+  /** S1-0 ordered action receipt, separate from legacy visual combat events. */
+  lastActionEvents:ActionCommitEvent[]=[];
+  /** Keeps the just-spent physical weapon's effectiveness for this encounter. */
+  private committingWeapon:Map<string,Weapon>|null=null;
   onChange: (() => void) | null = null;
   preparationOpen=true;
   readonly campaignEnabled:boolean;
@@ -199,6 +213,8 @@ export class Battle {
     this.moveOrigin = null;
     this.log = [];
     this.lastCombatEvents = [];
+    this.lastActionEvents = [];
+    this.committingWeapon=null;
     this.campaignStage=this.campaignEnabled?"preparation":"battle";
     if(this.campaignEnabled){
       this.sortieStart=null;
@@ -423,6 +439,19 @@ export class Battle {
     return true;
   }
 
+  /** S1-0 sample-art chooser; no full skill or mastery unlocks in this stage. */
+  availableArtWeapons(unit:Unit):number[]{
+    if(this.phase!=="player"||this.result!=="playing"||
+      unit.team!=="ally"||unit.hp<=0||unit.spent||unit.acted)return [];
+    return unit.inventory.flatMap((id,index)=>{
+      if(!canWield(unit.classId,id,unit.weaponExp))return [];
+      const candidate={...unit,weapon:weaponFor(id),equippedIndex:index};
+      if(isSpell(candidate.weapon)||!canUseArt(candidate,this.basicArt.durabilityCost))
+        return [];
+      return this.targets(candidate).length?[index]:[];
+    });
+  }
+
   /** Has this ally any owned weapon that can hit an enemy from its present tile? */
   availableAttackWeapons(unit:Unit):number[] {
     if(this.result!=="playing"||this.phase!=="player"||unit.team!=="ally"||
@@ -457,7 +486,7 @@ export class Battle {
 
   combatStats(unit:Unit):CombatStats {
     const base=deriveCombat({...unit,stats:effectiveClassStats(unit.stats,unit.classId),
-        weapon:resourceWeapon(unit)},
+        weapon:this.committingWeapon?.get(unit.id)??resourceWeapon(unit)},
       TERRAIN_INFO[this.tile(unit.x,unit.y)].defense);
     return unit.team==="ally"
       ? applyEquippedMasteries(base,unit.equippedMasteries)
@@ -473,13 +502,28 @@ export class Battle {
   /** W2 narrow art proof-of-contract. Full arts and menus arrive in S1. */
   readonly basicArt={id:"w2-power-strike",durabilityCost:3,damageBonus:2} as const;
 
-  /** Pure forecast: normal hits land, no criticals. Actual combat uses seeded RNG. */
-  forecastAttack(attacker:Unit,defender:Unit,artId?:string):AttackForecast|null {
+  /** One authoritative specification builder for player, AI, preview and commit. */
+  private attackSpec(attacker:Unit,defender:Unit,artId?:string):ActionSpec|null{
     if(this.result!=="playing"||attacker.hp<=0||defender.hp<=0||
+      !this.units.includes(attacker)||!this.units.includes(defender)||
       attacker.team===defender.team||attacker.spent||attacker.acted||
       !this.inAttackRange(attacker,defender)||
-      (artId!==undefined && (artId!==this.basicArt.id||
-        isSpell(attacker.weapon)||!canUseArt(attacker,this.basicArt.durabilityCost))))return null;
+      (artId!==undefined&&artId!==this.basicArt.id))return null;
+    const spec=makeAttackAction(attacker,attacker.id,defender.id,
+      artId===this.basicArt.id?this.basicArt:undefined);
+    return spec&&canPayActionCosts(attacker,spec.costs)?spec:null;
+  }
+
+  /** S1-0 read-only interface; previews do not spend resources or RNG. */
+  previewAction(attacker:Unit,defender:Unit,artId?:string):ActionPreview|null{
+    const spec=this.attackSpec(attacker,defender,artId);
+    const forecast=spec?this.forecastAttack(attacker,defender,artId):null;
+    return spec&&forecast?{spec,forecast}:null;
+  }
+
+  /** Pure forecast: normal hits land, no criticals. Actual combat uses seeded RNG. */
+  forecastAttack(attacker:Unit,defender:Unit,artId?:string):AttackForecast|null {
+    if(!this.attackSpec(attacker,defender,artId))return null;
     const damage=this.damage(attacker,defender)+(artId===this.basicArt.id?this.basicArt.damageBonus:0);
     const counterDamage=this.damage(defender,attacker);
     const counterInRange=this.inAttackRange(defender,attacker);
@@ -680,7 +724,8 @@ export class Battle {
   damage(attacker:Unit,defender:Unit):number {
     const to=this.combatStats(defender);
     const from=effectiveClassStats(attacker.stats,attacker.classId);
-    const might=effectiveMight(resourceWeapon(attacker),defender.classId);
+    const might=effectiveMight(this.committingWeapon?.get(attacker.id)??
+      resourceWeapon(attacker),defender.classId);
     const base=attacker.weapon.kind==="magical"
       ? from.magic+might-to.magicalProtection
       : from.strength+might-to.physicalProtection;
@@ -728,12 +773,38 @@ export class Battle {
     return this.commitSelectedAttack(actor,defender,artId);
   }
 
+  /** Atomic S1-0 attack entry. Costs are reserved before any RNG, damage or XP. */
+  private commitAttackAction(actor:Unit,defender:Unit,artId?:string):ReturnType<Battle["strike"]>|null{
+    const preview=this.previewAction(actor,defender,artId);
+    if(!preview)return null;
+    const {spec}=preview;
+    const preserved=resourceWeapon(actor);
+    if(!payActionCosts(actor,spec.costs))return null;
+    this.committingWeapon=new Map([[actor.id,preserved]]);
+    let result:ReturnType<Battle["strike"]>;
+    try{
+      result=this.strike(actor,defender,artId);
+    }finally{
+      this.committingWeapon=null;
+    }
+    this.lastActionEvents=[
+      {kind:"confirmed",actorId:actor.id,targetId:defender.id,actionId:spec.actionId},
+      ...spec.costs.map(cost=>({kind:"resource" as const,actorId:actor.id,
+        targetId:defender.id,actionId:spec.actionId,cost:{...cost}})),
+      ...this.lastCombatEvents.map(combat=>({kind:"strike" as const,
+        actorId:actor.id,targetId:defender.id,actionId:spec.actionId,
+        combat:{...combat}})),
+    ];
+    return result;
+  }
+
   private commitSelectedAttack(actor:Unit,defender:Unit,artId?:string):boolean {
     if(this.selected?.id!==actor.id||actor.team!=="ally"||
-      !this.units.includes(defender)||!this.forecastAttack(actor,defender,artId))return false;
+      !this.units.includes(defender))return false;
+    const result=this.commitAttackAction(actor,defender,artId);
+    if(!result)return false;
     this.preparationOpen=false;
     const moved=this.completedMovement(actor);
-    const result=this.strike(actor,defender,artId);
     const action=artId===this.basicArt.id?"使用试验战技攻击":"攻击";
     this.committedLog(actor.name+(moved?" "+moved:"")+action+" "+defender.name+
       "：造成 "+result.damage+" 点伤害"+
@@ -837,14 +908,16 @@ export class Battle {
     const prefix = enemy.name + (moved
       ? " 移动至 (" + enemy.x + ", " + enemy.y + ") 后" : " ");
     const target = this.units.find(u => u.id === plan.targetId && u.hp > 0);
-    if (target && this.inAttackRange(enemy, target)) {
-      const result = this.strike(enemy, target);
-      this.committedLog(prefix + "攻击 " + target.name + "：造成 " +
+    const result=target?this.commitAttackAction(enemy,target):null;
+    if(result){
+      this.committedLog(prefix + "攻击 " + target!.name + "：造成 " +
         result.damage + " 点伤害" +
-        (result.counterDamage ? "；" + target.name + "反击造成 " + result.counterDamage + " 点伤害" : "") +
+        (result.counterDamage ? "；" + target!.name + "反击造成 " + result.counterDamage + " 点伤害" : "") +
         (result.defenderFell ? "；目标被击败" : "") +
         (result.attackerFell ? "；攻击者被击败" : "") + result.detail);
-    } else {
+    }else{
+      this.lastCombatEvents=[];
+      this.lastActionEvents=[];
       this.committedLog(enemy.name + (moved
         ? " 移动至 (" + enemy.x + ", " + enemy.y + ")" : " 待机"));
     }
@@ -882,19 +955,20 @@ export class Battle {
   private strike(actor:Unit,defender:Unit,artId?:string):{
     damage:number;counterDamage:number;defenderFell:boolean;attackerFell:boolean;detail:string;
   } {
-    const forecast=this.forecastAttack(actor,defender,artId);
-    if(!forecast)return {damage:0,counterDamage:0,defenderFell:false,attackerFell:false,detail:""};
-    // Resource was checked before commit; decrement after resolving every strike,
-    // so a weapon breaking on this use does not weaken that same art mid-combat.
+    // Caller has validated and paid the action before rolling any combat RNG.
+    // committingWeapon preserves pre-payment might/hit for a breaking weapon.
     let damage=0,counterDamage=0,misses=0,crits=0,countered=false;
     const castersCharged=new Set<string>();
+    if(isSpell(actor.weapon))castersCharged.add(actor.id);
     const events: CombatEvent[] = [];
     this.lastCombatEvents = [];
     let strikeIndex=0;
     const hit=(from:Unit,to:Unit,followUp=false):number=>{
       if(from.hp<=0||to.hp<=0)return 0;
       if(isSpell(from.weapon)&&!castersCharged.has(from.id)){
-        if(!consumeSpellCast(from))throw Error("Insufficient spell charges for committed attack");
+        const counterSpec=makeAttackAction(from,from.id,to.id);
+        if(!counterSpec||!payActionCosts(from,counterSpec.costs))
+          throw Error("Insufficient spell charges for committed counterattack");
         castersCharged.add(from.id);
       }
       const missed=!this.roll(this.hitChance(from,to));
@@ -927,8 +1001,6 @@ export class Battle {
         countered=true;counterDamage+=hit(defender,actor,true);
       }
     }
-    if(artId===this.basicArt.id&&!consumeArtDurability(actor,this.basicArt.durabilityCost))
-      throw Error("Combat art durability changed while committing attack");
     this.lastCombatEvents = events.map(event=>({...event}));
     let levelNote="";
     // Experience is granted once per committed encounter, after all hits.
