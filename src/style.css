@@ -1494,3 +1494,7 @@ button:disabled { cursor: not-allowed; }
 
 /* S1-0: action costs are explicit in the combat confirmation surface. */
 .forecast-action-cost {font-size:12px;color:#d9c4a2;text-align:center;margin:5px 0;min-height:16px;}
+
+/* S1-2 status details are visible without unlocking a career. */
+.unit-statuses{font-size:11px;line-height:1.4;color:#edc78e;overflow-wrap:anywhere;max-width:100%;}
+.unit-status-count{font-size:11px;color:#eac576;margin-left:3px;}

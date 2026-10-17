@@ -8,6 +8,7 @@ import {WEAPON_LIBRARY,weaponRange,canWield} from "./engine/weapons.ts";
 import {weaponRankForExp,weaponExperienceText,WEAPON_RANK_THRESHOLDS} from "./engine/proficiency.ts";
 import {WEAPON_CATEGORIES} from "./engine/equipmentTypes.ts";
 import {weaponResourceText} from "./engine/combatResources.ts";
+import {statusDescription} from "./engine/statusEffects.ts";
 import {CLASS_LIBRARY,effectiveClassStats,effectiveClassGrowths,type ClassId} from "./engine/classes.ts";
 import {classWeaponAvailable,certificationRequirements} from "./engine/classCertification.ts";
 import {MASTERY_LIBRARY,MASTERY_SLOTS,classExperienceFor,
@@ -63,6 +64,7 @@ function renderSelection(): void {
   get("unit-level").textContent = selected ? "Lv."+selected.level : "Lv.—";
   get("unit-exp").textContent = selected ? "EXP "+selected.exp+"/100" : "EXP —";
   get("unit-build").textContent = selected ? String(selected.build) : "—";
+  get("unit-statuses").textContent=selected?(statusDescription(selected)||"无异常状态"):"—";
   const combat = selected ? battle.combatStats(selected) : null;
   get("hp-text").textContent = selected ? selected.hp + " / " + selected.maxHp : "— / —";
   get("hp-fill").style.width = selected ? (selected.hp / selected.maxHp * 100) + "%" : "0%";
@@ -71,7 +73,7 @@ function renderSelection(): void {
   get("stat-range").textContent = selected
     ? selected.minRange === selected.maxRange ? String(selected.minRange)
       : selected.minRange + "–" + selected.maxRange : "—";
-  get("stat-move").textContent = selected ? String(selected.move) : "—";
+  get("stat-move").textContent = selected ? String(battle.effectiveMove(selected)) : "—";
   get("terrain-icon").textContent = terrain?.icon ?? "♠";
   get("terrain-name").textContent = terrain?.name ?? "地形信息";
   get("terrain-hint").textContent = terrain

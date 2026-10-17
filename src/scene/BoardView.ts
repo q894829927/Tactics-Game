@@ -1,4 +1,4 @@
-import { Battle, MAP_HEIGHT, MAP_WIDTH, key, type Point, type Unit, type AttackForecast, type EnemyActionPlan, type CombatEvent } from "../engine/battle.ts";
+import { Battle, MAP_HEIGHT, MAP_WIDTH, key, type Point, type Unit, type AttackForecast, type EnemyActionPlan, type CombatEvent, type SupportEffect, type SupportPreview } from "../engine/battle.ts";
 import { combatPreviewView } from "./combatPreviewView.ts";
 import {WEAPON_LIBRARY,weaponRange,canWield} from "../engine/weapons.ts";
 import {weaponRankForExp,weaponExperienceText} from "../engine/proficiency.ts";
@@ -77,7 +77,8 @@ export class BoardView {
   private suppressMiniClick = false;
   private readonly menu: HTMLDivElement;
   private readonly weaponPicker: HTMLDivElement;
-  private pickerMode: "attack"|"art"|"equip"|null=null;
+  private pickerMode:"attack"|"art"|"equip"|"status"|null=null;
+  private supportMode:SupportEffect|null=null;
   private attackArtId:string|null=null;
   private readonly minimap: HTMLElement;
   private readonly viewportMarker: HTMLDivElement;
@@ -417,6 +418,7 @@ export class BoardView {
     if (this.isAnimating || !this.battle.canCancelMove) return false;
     this.menuVisible = false;
     this.attackMode = false;
+    this.supportMode=null;
     this.pickerMode = null;
     this.forecastTargetId = null;
     if (!this.battle.cancelMove()) return false;
@@ -436,6 +438,7 @@ export class BoardView {
     this.forecastTargetId = null;
     this.attackMode = false;
     this.attackArtId=null;
+    this.supportMode=null;
     this.menuVisible = true;
     this.refresh();
     this.onInspectionChange?.();
@@ -451,6 +454,10 @@ export class BoardView {
     }
     if (this.attackMode) {
       this.attackMode = false;
+      if(this.supportMode){
+        this.supportMode=null;this.pickerMode=null;this.menuVisible=true;
+        this.refresh();return true;
+      }
       this.pickerMode = this.attackArtId?"art":"attack";
       this.menuVisible = false;
       this.refresh();
@@ -476,6 +483,7 @@ export class BoardView {
     this.forecastTargetId = null;
     this.attackMode = false;
     this.attackArtId=null;
+    this.supportMode=null;
     this.menuVisible = false;
     this.renderForecast();
     this.refresh();
@@ -487,6 +495,7 @@ export class BoardView {
       this.pickerMode = null;
       this.attackMode = false;
       this.attackArtId=null;
+      this.supportMode=null;
       this.forecastTargetId = null;
       // Commands appear only after choosing a destination or confirming stay.
       this.menuVisible = false;
@@ -658,6 +667,14 @@ export class BoardView {
   private onCellClick(x: number, y: number): void {
     if (this.battle.result !== "playing" || this.battle.phase !== "player" || this.isAnimating) return;
     const touched = this.battle.occupant(x,y);
+    if(this.supportMode){
+      const actor=this.battle.selected;
+      if(actor&&touched&&this.battle.previewSupport(actor,touched,this.supportMode)){
+        this.forecastTargetId=touched.id;this.menuVisible=false;
+        this.inspectCell(x,y);this.refresh();this.onInspectionChange?.();
+      }else this.onHint?.("目标不在施法范围内，或无法施加当前效果");
+      return;
+    }
     const intent = leftClickIntent(this.battle, x, y, this.attackMode);
     // The second click commits staying in place on desktop and mobile.
     if (intent === "confirm-stay" && !this.pickerMode && !this.forecastTargetId) {
@@ -722,6 +739,7 @@ export class BoardView {
     this.pickerMode = null;
     this.forecastTargetId = null;
     this.attackMode = false;
+    this.supportMode=null;
     this.menuVisible = false;
     this.battle.selectedId = null;
     this.inspection.clear();
@@ -797,8 +815,12 @@ export class BoardView {
     }
     const attacker = this.battle.selected;
     const defender = this.battle.units.find(u => u.id === this.forecastTargetId && u.hp > 0);
-    const forecast = attacker && defender ? this.battle.forecastAttack(attacker, defender,
-      this.attackArtId??undefined) : null;
+    if(this.supportMode&&attacker&&defender){
+      const support=this.battle.previewSupport(attacker,defender,this.supportMode);
+      if(support){this.paintSupportForecast(attacker,defender,support);return;}
+    }
+    const forecast = !this.supportMode&&attacker&&defender?
+      this.battle.forecastAttack(attacker,defender,this.attackArtId??undefined):null;
     if (!attacker || !defender || !forecast) {
       this.forecastPanel.hidden = true;
       this.forecastTargetId = null;
@@ -841,10 +863,52 @@ export class BoardView {
     this.forecastPanel.hidden = false;
   }
 
+  private paintSupportForecast(actor:Unit,target:Unit,preview:SupportPreview):void{
+    const elem=(id:string):HTMLElement=>document.getElementById(id)!;
+    const label:Record<SupportEffect,string>={heal:"治疗",shield:"护盾",burn:"灼烧",
+      slow:"缓足",weakArmor:"弱甲",weakMagic:"弱咒",mark:"标记"};
+    elem("forecast-attacker").textContent=actor.name;
+    elem("forecast-defender").textContent=target.name;
+    elem("forecast-ally-role").textContent=CLASS_LIBRARY[actor.classId].emblem;
+    elem("forecast-enemy-role").textContent=CLASS_LIBRARY[target.classId].emblem;
+    elem("forecast-ally-emblem").textContent=CLASS_LIBRARY[actor.classId].emblem;
+    elem("forecast-enemy-emblem").textContent=CLASS_LIBRARY[target.classId].emblem;
+    elem("forecast-ally-weapon").textContent=actor.weapon.name;
+    elem("forecast-enemy-weapon").textContent=target.weapon.name;
+    elem("forecast-ally-odds").textContent="本次支援行动 · 无反击";
+    elem("forecast-enemy-odds").textContent=label[preview.effect];
+    elem("forecast-damage").textContent=preview.effect==="heal"?"+"+preview.value:String(preview.value);
+    elem("forecast-counter").textContent="—";
+    const after=preview.effect==="heal"?Math.min(target.maxHp,target.hp+preview.value):target.hp;
+    elem("forecast-ally-hp").textContent=actor.hp+" → "+actor.hp;
+    elem("forecast-enemy-hp").textContent=target.hp+" → "+after;
+    for(const [id,value] of [["forecast-ally-bar",actor.hp/actor.maxHp],
+      ["forecast-ally-after",actor.hp/actor.maxHp],["forecast-enemy-bar",target.hp/target.maxHp],
+      ["forecast-enemy-after",after/target.maxHp]] as const)
+      elem(id).style.width=Math.max(0,Math.min(100,100*value))+"%";
+    elem("forecast-action-cost").textContent=label[preview.effect]+" · 次数 -"+
+      preview.cost+" · 剩余 "+preview.remaining;
+    elem("forecast-confirm").textContent="确认"+label[preview.effect];
+    this.forecastPanel.hidden=false;
+  }
+
   private confirmAttack(): void {
     if (this.isAnimating || this.battle.phase !== "player") return;
     const attacker = this.battle.selected;
     const target = this.battle.units.find(u => u.id === this.forecastTargetId && u.hp > 0);
+    if(this.supportMode){
+      if(!attacker||!target||!this.battle.previewSupport(attacker,target,this.supportMode)){
+        this.forecastTargetId=null;this.refresh();return;
+      }
+      if(!this.battle.commitSupport(attacker,target,this.supportMode)){
+        this.forecastTargetId=null;this.refresh();return;
+      }
+      this.forecastTargetId=null;this.attackMode=false;this.supportMode=null;
+      this.menuVisible=false;this.inspectCell(target.x,target.y);
+      this.onCombatCommitted?.();this.refresh();this.onInspectionChange?.();
+      this.onCombatPresentationEnded?.(); // support actions have no combat animation
+      return;
+    }
     if (!attacker || !target || !this.battle.forecastAttack(attacker, target,
       this.attackArtId??undefined)) {
       this.forecastTargetId = null;
@@ -878,6 +942,9 @@ export class BoardView {
     const commands = [
       { text: "攻击", icon: "⚔", enabled: this.battle.availableAttackWeapons(actor).length > 0, key: "attack" },
       { text: "战技·试验", icon: "✧", enabled: this.battle.availableArtWeapons(actor).length>0, key: "art" },
+      { text:"治疗",icon:"✚",enabled:this.battle.units.some(u=>this.battle.previewSupport(actor,u,"heal")),key:"heal" },
+      { text:"护盾·试验",icon:"⬡",enabled:this.battle.units.some(u=>this.battle.previewSupport(actor,u,"shield")),key:"shield" },
+      { text:"异常·试验",icon:"☄",enabled:this.battle.units.some(u=>this.battle.previewSupport(actor,u,"burn")),key:"status" },
       { text: "背包", icon: "▣", enabled: true, key: "item" },
       { text: "术法", icon: "✦", enabled: false, key: "magic" },
       { text: "交换", icon: "⇄", enabled: false, key: "trade" },
@@ -901,6 +968,14 @@ export class BoardView {
           this.refresh();
         } else if (cmd.key === "undo") {
           this.undoTentativeMove();
+        } else if(cmd.key==="heal"||cmd.key==="shield"||cmd.key==="status"){
+          this.menuVisible=false;this.forecastTargetId=null;this.attackArtId=null;
+          if(cmd.key==="status"){this.pickerMode="status";}
+          else{
+            this.supportMode=cmd.key;this.attackMode=true;
+            this.onHint?.("选择友方目标");
+          }
+          this.refresh();
         } else if (cmd.key === "attack" || cmd.key === "art" || cmd.key === "item") {
           this.menuVisible = false;
           this.forecastTargetId = null;
@@ -923,6 +998,29 @@ export class BoardView {
     if(!actor||!mode||this.isAnimating||this.battle.phase!=="player"||actor.spent){
       this.weaponPicker.hidden=true;
       return;
+    }
+    if(mode==="status"){
+      const title=document.createElement("div");title.className="weapon-picker-title";
+      title.textContent="选择黑魔法状态 · 消耗次数1";
+      this.weaponPicker.appendChild(title);
+      for(const [kind,name] of [
+        ["burn","灼烧"],["slow","缓足"],["weakArmor","弱甲"],
+        ["weakMagic","弱咒"],["mark","标记"],
+      ] as const){
+        const entry=document.createElement("button");entry.type="button";
+        entry.className="weapon-choice";entry.textContent=name;
+        entry.disabled=!this.battle.units.some(u=>this.battle.previewSupport(actor,u,kind));
+        entry.addEventListener("click",()=>{
+          this.supportMode=kind;this.pickerMode=null;this.attackMode=true;
+          this.onHint?.("选择敌人施加"+name);this.refresh();
+        });
+        this.weaponPicker.appendChild(entry);
+      }
+      const back=document.createElement("button");back.type="button";
+      back.className="weapon-back";back.textContent="返回";
+      back.addEventListener("click",()=>{this.pickerMode=null;this.menuVisible=true;this.refresh();});
+      this.weaponPicker.appendChild(back);this.weaponPicker.hidden=false;
+      this.positionWeaponPicker(actor);return;
     }
     const title=document.createElement("div");
     title.className="weapon-picker-title";
@@ -1038,6 +1136,12 @@ export class BoardView {
     name.className = "screen-label-name";
     name.textContent = unit.name;
     label.append(emblem, hp, name);
+    if(unit.statuses.length){
+      const state=document.createElement("span");state.className="unit-status-count";
+      state.textContent="✦"+unit.statuses.length;
+      state.title=unit.statuses.map(s=>s.kind).join(" / ");
+      label.appendChild(state);
+    }
     return label;
   }
 
