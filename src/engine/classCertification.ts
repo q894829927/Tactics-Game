@@ -61,7 +61,7 @@ export function classCertificationStatus(
 }
 export const CLASS_TRAINING_WEAPONS:Record<WeaponCategory,WeaponId>={
   sword:"iron-sword",lance:"iron-lance",axe:"iron-axe",bow:"iron-bow",
-  gauntlet:"training-gauntlet",dark:"fire-tome",white:"light-bolt",
+  gauntlet:"training-gauntlet",dark:"fire-tome",white:"healing-prayer",
 };
 /** A basic loaner is kept in a single replaceable slot, never duplicates items.
  * No rental replaces an owned weapon, and training gear is not transferable.

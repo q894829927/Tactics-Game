@@ -14,7 +14,7 @@ export type ActionCost =
 
 export type ActionSpec={
   readonly actionId:string;
-  readonly kind:"attack"|"combat-art";
+  readonly kind:"attack"|"combat-art"|"heal"|"status"|"shield";
   readonly actorId:string;
   readonly targetId:string;
   readonly weaponId:WeaponId;
@@ -39,7 +39,7 @@ export function makeAttackAction(actor:ActionResourceUser,actorId:string,
   targetId:string,art?:{id:string;durabilityCost:number;damageBonus:number}
 ):ActionSpec|null{
   const weaponId=activeWeaponId(actor);
-  if(!weaponId)return null;
+  if(!weaponId||actor.weapon.effect==="heal")return null;
   const costs:ActionCost[]=[];
   if(art){
     if(isSpell(actor.weapon))return null;
@@ -52,6 +52,14 @@ export function makeAttackAction(actor:ActionResourceUser,actorId:string,
   return {actionId:art?.id??"basic-attack",kind:art?"combat-art":"attack",
     actorId,targetId,weaponId,equippedIndex:actor.equippedIndex,
     damageBonus:art?.damageBonus??0,costs};
+}
+
+export function makeSupportAction(actor:ActionResourceUser,actorId:string,
+  targetId:string,kind:"heal"|"status"|"shield",charges=1):ActionSpec|null{
+  const weaponId=activeWeaponId(actor);
+  if(!weaponId||!isSpell(actor.weapon)||!Number.isSafeInteger(charges)||charges<=0)return null;
+  return {actionId:kind,kind,actorId,targetId,weaponId,equippedIndex:actor.equippedIndex,
+    damageBonus:0,costs:[{kind:"spell",spellId:weaponId,amount:charges}]};
 }
 
 /** Validates the whole payment before changing any amount.

@@ -16,7 +16,8 @@ export type Weapon={
   kind:DamageType; // compatibility with current physical/magical damage pipeline
   requiredRank:WeaponRank; // P1 will enforce proficiency
   maxDurability?:number; // physical weapons only
-  maxCharges?:number; // attacking magic only
+  maxCharges?:number; // attack or healing spell
+  effect?:"heal"; // restorative spell is forbidden as an attack
   might:number;
   weight:number;
   hit:number;

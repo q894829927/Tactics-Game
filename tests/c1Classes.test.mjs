@@ -88,7 +88,7 @@ test("C1 free class switching can traverse all seven weapon categories with a si
  assert.equal(a.weaponExp.sword,120);
  assert.equal(a.weaponExp.dark,0);
  assert.equal(a.spellCharges["fire-tome"],8);
- assert.equal(a.spellCharges["light-bolt"],5);
+ assert.equal(a.spellCharges["healing-prayer"],6);
 });
 
 test("C1 requires D weapon rank AND reputation/voucher/gold for intermediate certification",()=>{

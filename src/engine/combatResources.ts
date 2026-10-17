@@ -83,7 +83,7 @@ export function remainingSpellCharges(unit:{
 }
 export function canUseAttack(unit:Parameters<typeof remainingSpellCharges>[0]):boolean {
   const count=remainingSpellCharges(unit);
-  return count===null||count>0;
+  return unit.weapon.effect!=="heal"&&(count===null||count>0);
 }
 export function consumeSpellCast(unit:Parameters<typeof remainingSpellCharges>[0]):boolean {
   const count=remainingSpellCharges(unit);

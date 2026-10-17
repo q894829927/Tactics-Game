@@ -19,8 +19,11 @@ import {MASTERY_LIBRARY,MASTERY_SLOTS,unlockedMasteries,gainClassExperience,
   applyEquippedMasteries,type MasteryId,type ClassExperience}
   from "./mastery.ts";
 import {activeWeaponId} from "./combatResources.ts";
-import {makeAttackAction,canPayActionCosts,payActionCosts,
+import {makeAttackAction,makeSupportAction,canPayActionCosts,payActionCosts,
   type ActionSpec,type ActionCost} from "./actionSpec.ts";
+import {applyStatus,statusPower,startStatusPhase,finishStatusPhase,
+  absorbDamage,previewDamage,type StatusKind,type StatusInstance}
+  from "./statusEffects.ts";
 import {initialWeaponInstances,initialSpellCharges,makeWeaponInstance,
   resourceWeapon,remainingSpellCharges,canUseAttack,
   canUseArt,isSpell,type WeaponInstance,type SpellCharges}
@@ -53,7 +56,7 @@ export type CombatEvent = {
   fromId: string; toId: string;
   missed: boolean; critical: boolean; damage: number;
   fromHpAfter: number; toHpAfter: number;
-  defeated: boolean;
+  defeated: boolean;absorbed?:number;
 };
 
 export type ActionCommitEvent={
@@ -64,6 +67,8 @@ export type ActionCommitEvent={
 
 export type ActionPreview={spec:ActionSpec;forecast:AttackForecast};
 
+export type SupportEffect="heal"|"shield"|"burn"|"slow"|"weakArmor"|"weakMagic"|"mark";
+export type SupportPreview={effect:SupportEffect;value:number;cost:number;remaining:number;resistChance:number};
 export type AttackForecast = {
   damage:number; counterDamage:number; canCounter:boolean;
   attackerHpAfter:number; defenderHpAfter:number;
@@ -93,6 +98,7 @@ export type Unit = CharacterData & {
   trainingSlot:number|null;
   /** Legacy mirrors for older client/tests; battle calculations read weapon directly. */
   minRange:number;maxRange:number;
+  statuses:StatusInstance[];
   moved:boolean;acted:boolean;spent:boolean;
 };
 
@@ -124,7 +130,7 @@ function unit(id:CharacterId,team:Team,x:number,y:number):Unit {
     spellCharges:initialSpellCharges(inventory),
     classLicenses:[classId],classExperience:{},equippedMasteries:[],trainingSlot:null,
     minRange:equipped.minRange,maxRange:equipped.maxRange,
-    moved:false,acted:false,spent:false};
+    statuses:[],moved:false,acted:false,spent:false};
 }
 export function key(p: Point): string { return String(p.x) + "," + String(p.y); }
 export function distance(a: Point, b: Point): number {
@@ -163,6 +169,7 @@ export class Battle {
   private moveOrigin: Point | null = null;
   private enemyQueue: string[] = [];
   private randomState=0x2946e73b;
+  private phaseSerial:{ally:number;enemy:number}={ally:1,enemy:0};
   setRandomSeed(seed:number):void {this.randomState=(seed>>>0)||1;}
   private nextRandom():number {
     let x=this.randomState;
@@ -199,6 +206,7 @@ export class Battle {
       unit("e6","enemy",9,7),
     ];
     this.round = 1;
+    this.phaseSerial={ally:1,enemy:0};
     this.preparationOpen=true;
     this.preparationFunds={
       reputation:INITIAL_PREPARATION_FUNDS.reputation,
@@ -484,17 +492,19 @@ export class Battle {
     return true;
   }
 
+  effectiveMove(unit:Unit):number{return Math.max(1,unit.move-statusPower(unit,"slow"));}
   combatStats(unit:Unit):CombatStats {
     const base=deriveCombat({...unit,stats:effectiveClassStats(unit.stats,unit.classId),
         weapon:this.committingWeapon?.get(unit.id)??resourceWeapon(unit)},
       TERRAIN_INFO[this.tile(unit.x,unit.y)].defense);
-    return unit.team==="ally"
-      ? applyEquippedMasteries(base,unit.equippedMasteries)
-      : base;
+    const stats=unit.team==="ally"
+      ? applyEquippedMasteries(base,unit.equippedMasteries):base;
+    return {...stats,physicalProtection:Math.max(0,stats.physicalProtection-statusPower(unit,"weakArmor")),
+      magicalProtection:Math.max(0,stats.magicalProtection-statusPower(unit,"weakMagic"))};
   }
   hitChance(from:Unit,to:Unit):number {
     return clampChance(this.combatStats(from).hit-this.combatStats(to).avoid
-      -defensiveAvoidBonus(from.weapon.category,to.weapon.category));
+      -defensiveAvoidBonus(from.weapon.category,to.weapon.category)+statusPower(to,"mark"));
   }
   criticalChance(from:Unit,to:Unit):number {
     return clampChance(this.combatStats(from).crit-this.combatStats(to).critAvoid);
@@ -526,9 +536,9 @@ export class Battle {
     const damage=this.damage(attacker,defender)+(artId===this.basicArt.id?this.basicArt.damageBonus:0);
     const counterDamage=this.damage(defender,attacker);
     const counterInRange=this.inAttackRange(defender,attacker);
-    let hpA=attacker.hp,hpD=Math.max(0,defender.hp-damage);
+    let hpA=attacker.hp,hpD=Math.max(0,defender.hp-previewDamage(defender,damage));
     const canCounter=counterInRange&&hpD>0;
-    if(canCounter)hpA=Math.max(0,hpA-counterDamage);
+    if(canCounter)hpA=Math.max(0,hpA-previewDamage(attacker,counterDamage));
     // This preview assumes normal hits, no criticals. Report a follow-up
     // only if both units would still be alive after the preceding strikes.
     const followUp=hpA>0&&hpD>0
@@ -539,8 +549,10 @@ export class Battle {
       ? strikeDamage(this.damage(attacker,defender),attacker.weapon.category,false,true)
       : followUp==="defender"
         ? strikeDamage(counterDamage,defender.weapon.category,false,true) : 0;
-    if(followUp==="attacker")hpD=Math.max(0,hpD-followUpDamage);
-    else if(followUp==="defender")hpA=Math.max(0,hpA-followUpDamage);
+    if(followUp==="attacker")hpD=Math.max(0,hpD-Math.max(0,followUpDamage-
+      Math.max(0,statusPower(defender,"shield")-damage)));
+    else if(followUp==="defender")hpA=Math.max(0,hpA-Math.max(0,followUpDamage-
+      Math.max(0,statusPower(attacker,"shield")-counterDamage)));
     return {damage,counterDamage:canCounter?counterDamage:0,canCounter,attackerHpAfter:hpA,defenderHpAfter:hpD,
       attackerHit:this.hitChance(attacker,defender),defenderHit:this.hitChance(defender,attacker),
       attackerCrit:this.criticalChance(attacker,defender),
@@ -600,7 +612,7 @@ export class Battle {
         const occupant = this.occupant(x, y);
         if (occupant && occupant.team !== actor.team) continue;
         const cost = current.cost + TERRAIN_INFO[this.tile(x, y)].moveCost;
-        if (cost > actor.move || cost >= (best.get(key({ x, y })) ?? Infinity)) continue;
+        if (cost > this.effectiveMove(actor) || cost >= (best.get(key({ x, y })) ?? Infinity)) continue;
         best.set(key({ x, y }), cost);
         queue.push({ x, y, cost });
       }
@@ -707,6 +719,7 @@ export class Battle {
   }
 
   inAttackRange(attacker: Unit, defender: Unit): boolean {
+    if(attacker.weapon.effect==="heal")return false;
     const d = distance(attacker, defender);
     if(!canUseAttack(attacker))return false;
     const active=activeWeaponId(attacker);
@@ -847,6 +860,76 @@ export class Battle {
     this.finishEnemyTurn();
   }
 
+  /** Resolve temporary effects at team-phase boundaries, never per unit click. */
+  private startEffects(team:Team):void{
+    this.phaseSerial[team]++;
+    for(const unit of this.units.filter(u=>u.team===team&&u.hp>0)){
+      const lost=startStatusPhase(unit,this.phaseSerial[team]);
+      if(lost)this.committedLog(unit.name+" 受到灼烧 "+lost+" 点伤害");
+    }
+  }
+  private finishEffects(team:Team):void{
+    for(const unit of this.units.filter(u=>u.team===team))
+      finishStatusPhase(unit,this.phaseSerial[team]);
+  }
+  /** S1-2 support actions are battle-only, not campaign progression. */
+  private supportSpec(actor:Unit,target:Unit,effect:SupportEffect):ActionSpec|null{
+    if(actor.hp<=0||target.hp<=0||actor.spent||actor.acted||
+      this.result!=="playing"||this.phase!=="player"||actor.team!=="ally")return null;
+    const friendly=effect==="heal"||effect==="shield";
+    if((actor.team===target.team)!==friendly)return null;
+    if((actor.weapon.effect==="heal")!==friendly)return null;
+    if(!friendly&&actor.weapon.category!=="dark")return null;
+    const d=distance(actor,target);
+    if(d<actor.weapon.minRange||d>actor.weapon.maxRange)return null;
+    if(effect==="heal"&&target.hp>=target.maxHp)return null;
+    if(effect==="shield"&&statusPower(target,"shield")>=3)return null;
+    const spec=makeSupportAction(actor,actor.id,target.id,
+      effect==="heal"?"heal":effect==="shield"?"shield":"status",effect==="shield"?2:1);
+    return spec&&canPayActionCosts(actor,spec.costs)?spec:null;
+  }
+  previewSupport(actor:Unit,target:Unit,effect:SupportEffect):SupportPreview|null{
+    const spec=this.supportSpec(actor,target,effect);
+    if(!spec)return null;
+    const power=effect==="heal"?
+      Math.max(1,5+Math.floor(effectiveClassStats(actor.stats,actor.classId).magic/2)):
+      effect==="shield"?3:effect==="burn"||effect==="weakArmor"||
+      effect==="weakMagic"?2:effect==="mark"?5:1;
+    return {effect,value:effect==="heal"?Math.min(power,target.maxHp-target.hp):power,
+      cost:spec.costs[0]!.amount,remaining:remainingSpellCharges(actor)??0,resistChance:0};
+  }
+  commitSupport(actor:Unit,target:Unit,effect:SupportEffect):boolean{
+    if(this.selectedId!==actor.id||!this.units.includes(actor)||!this.units.includes(target))
+      return false;
+    const preview=this.previewSupport(actor,target,effect);
+    const spec=preview?this.supportSpec(actor,target,effect):null;
+    if(!spec||!preview||!payActionCosts(actor,spec.costs))return false;
+    const before=target.hp;
+    if(effect==="heal")target.hp=Math.min(target.maxHp,target.hp+preview.value);
+    else applyStatus(target,effect,this.phaseSerial[target.team]+1,actor.id,preview.value);
+    const restored=target.hp-before;
+    actor.acted=true;actor.spent=true;this.moveOrigin=null;this.selectedId=null;
+    this.lastCombatEvents=[];
+    this.lastActionEvents=[
+      {kind:"confirmed",actorId:actor.id,targetId:target.id,actionId:effect},
+      {kind:"resource",actorId:actor.id,targetId:target.id,actionId:effect,
+        cost:{...spec.costs[0]!}},
+    ];
+    this.committedLog(actor.name+(effect==="heal"?" 治疗 ":" 施放 "+effect+" → ")+
+      target.name+(effect==="heal"?"：恢复 "+restored+" HP":""));
+    if(restored>0)gainClassExperience(actor.classExperience,actor.classId,6);
+    this.resolve();this.emit();return true;
+  }
+  availableSupportWeapons(actor:Unit,effect:SupportEffect):number[]{
+    if(this.phase!=="player"||actor.team!=="ally"||actor.hp<=0||actor.spent||
+      actor.acted)return [];
+    return actor.inventory.flatMap((id,index)=>{
+      if(!canWield(actor.classId,id,actor.weaponExp))return [];
+      const candidate={...actor,weapon:weaponFor(id),equippedIndex:index};
+      return this.units.some(u=>this.previewSupport(candidate,u,effect))?[index]:[];
+    });
+  }
+
   beginEnemyTurn(): boolean {
     if(this.campaignEnabled&&this.campaignStage!=="battle")return false;
     if (this.phase !== "player" || this.result !== "playing") return false;
@@ -857,7 +940,9 @@ export class Battle {
       return false;
     }
     this.preparationOpen=false;
+    this.finishEffects("ally");
     this.phase = "enemy";
+    this.startEffects("enemy");
     this.selectedId = null;
     this.moveOrigin = null;
     this.alive("ally").forEach(u => { u.spent = true; });
@@ -932,8 +1017,10 @@ export class Battle {
   finishEnemyTurn(): boolean {
     if (this.phase !== "enemy" || this.enemyQueue.length !== 0) return false;
     this.enemyQueue = [];
+    this.finishEffects("enemy");
     this.phase = "player";
     if (this.result === "playing") {
+      this.startEffects("ally");
       this.round++;
       for (const unit of this.alive("ally")) {
         unit.moved = false; unit.acted = false; unit.spent = false;
@@ -980,12 +1067,13 @@ export class Battle {
         ? this.basicArt.damageBonus : 0;
       const amount=missed?0:strikeDamage(this.damage(from,to)+artBonus,
         from.weapon.category,critical,followUp);
-      to.hp=Math.max(0,to.hp-amount);
+      const impact=absorbDamage(to,amount);
       events.push({kind: strikeIndex++===0?"attack":from.id===actor.id?"follow-up":
         events.some(e=>e.fromId===from.id)?"follow-up":"counter",
-        fromId:from.id,toId:to.id,missed,critical,damage:amount,
+        fromId:from.id,toId:to.id,missed,critical,damage:impact.hpLoss,
+        absorbed:impact.absorbed,
         fromHpAfter:from.hp,toHpAfter:to.hp,defeated:to.hp===0});
-      return amount;
+      return impact.hpLoss;
     };
     damage+=hit(actor,defender);
     const canCounter=defender.hp>0&&actor.hp>0&&this.inAttackRange(defender,actor);

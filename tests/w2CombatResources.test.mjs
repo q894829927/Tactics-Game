@@ -29,8 +29,8 @@ function committed(game,a,d){
  return game.lastCombatEvents;
 }
 
-test("W2: each of 18 definitions has the correct exclusive resource kind",()=>{
- assert.equal(Object.keys(WEAPON_LIBRARY).length,18);
+test("W2/S1-2: each weapon has exactly one resource kind",()=>{
+ assert.equal(Object.keys(WEAPON_LIBRARY).length,19);
  for(const [id,w] of Object.entries(WEAPON_LIBRARY)){
    if(w.kind==="magical"){
      assert.ok(Number.isInteger(w.maxCharges)&&w.maxCharges>0,id);

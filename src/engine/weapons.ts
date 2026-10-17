@@ -24,6 +24,7 @@ export const WEAPON_LIBRARY = {
   // templates. They do not enter the existing 4v6 roster or starting bags.
   "training-gauntlet": {category:"gauntlet",requiredRank:"E",maxDurability:22,name:"练习拳套",kind:"physical",might:3,weight:2,hit:92,crit:0,dodge:0,minRange:1,maxRange:1},
   "light-bolt": {category:"white",requiredRank:"E",maxCharges:5,name:"光矢术",kind:"magical",might:3,weight:4,hit:82,crit:0,dodge:0,minRange:1,maxRange:2},
+  "healing-prayer": {category:"white",requiredRank:"E",maxCharges:6,name:"治愈术",kind:"magical",effect:"heal",might:0,weight:0,hit:100,crit:0,dodge:0,minRange:1,maxRange:2},
 } as const satisfies Record<string, Weapon>;
 
 export type WeaponId = keyof typeof WEAPON_LIBRARY;
