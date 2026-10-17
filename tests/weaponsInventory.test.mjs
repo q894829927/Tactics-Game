@@ -96,13 +96,13 @@ test("UI routes attack through weapon choice, forecasts actual weapon and expose
  const board=readFileSync(new URL("../src/scene/BoardView.ts",import.meta.url),"utf8");
  const main=readFileSync(new URL("../src/main.ts",import.meta.url),"utf8");
  const html=readFileSync(new URL("../index.html",import.meta.url),"utf8");
- assert.match(board,/this\.pickerMode = cmd\.key === "attack" \? "attack" : "equip"/);
+ assert.match(board,/this\.pickerMode = cmd\.key === "attack" \? "attack" : cmd\.key === "art"\?"art":"equip"/);
  assert.match(board,/this\.battle\.availableAttackWeapons\(actor\)/);
  assert.match(board,/this\.battle\.equipWeapon\(actor,index\)/);
  assert.match(board,/this\.attackMode=true/);
- assert.match(board,/this\.battle\.forecastAttack\(selected, target\)/);
- assert.match(board,/this\.battle\.click\(target\.x, target\.y\)/);
- assert.match(board,/this\.pickerMode = "attack"/);
+ assert.match(board,/this\.battle\.forecastAttack\(selected, target,\s*this\.attackArtId\?\?undefined\)/);
+ assert.match(board,/this\.battle\.click\(target\.x,\s*target\.y\)/);
+ assert.match(board,/this\.pickerMode = this\.attackArtId\?"art":"attack"/);
  assert.match(board,/byId\("forecast-ally-weapon"\)/);
  assert.match(main,/battle\.equipWeapon\(selected,index\)/);
  assert.match(html,/id="inventory-list"/);

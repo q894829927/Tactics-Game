@@ -39,7 +39,7 @@ test("predicted HP bars are proportional and forecast remains non-mutating", () 
   assert.match(board, /\["forecast-ally-after", view\.ally\.hpAfter \/ view\.ally\.unit\.maxHp\]/);
   assert.match(board, /byId\(id\)\.style\.width = Math\.max/);
   assert.match(board, /view\.enemy\.hpAfter \/ view\.enemy\.unit\.maxHp/);
-  assert.match(board, /this\.battle\.click\(target\.x, target\.y\)/);
+  assert.match(board, /this\.battle\.click\(target\.x,\s*target\.y\)/);
   assert.match(html, /id="forecast-cancel"/);
   assert.match(html, /id="forecast-confirm"/);
 });

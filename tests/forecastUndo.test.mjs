@@ -77,8 +77,8 @@ test("right-click undo and combat forecast retain explicit confirm/cancel", () =
   assert.match(view,/rightClickIntent\(this\.battle,x,y\) === "undo-move"/);
   assert.match(view,/this\.showConfirmedCommands\(mover\.id\)/);
   assert.match(view,/this\.forecastTargetId = target\.id/);
-  assert.match(view,/this\.battle\.forecastAttack\(selected, target\)/);
-  assert.match(view,/this\.battle\.click\(target\.x, target\.y\)/);
+  assert.match(view,/this\.battle\.forecastAttack\(selected, target,\s*this\.attackArtId\?\?undefined\)/);
+  assert.match(view,/this\.battle\.click\(target\.x,\s*target\.y\)/);
   assert.match(view,/this\.battle\.cancelMove\(\)/);
   assert.match(html,/id="forecast-confirm"/);
   assert.match(html,/id="forecast-cancel"/);

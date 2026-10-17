@@ -505,7 +505,6 @@ export class Battle {
   /** One authoritative specification builder for player, AI, preview and commit. */
   private attackSpec(attacker:Unit,defender:Unit,artId?:string):ActionSpec|null{
     if(this.result!=="playing"||attacker.hp<=0||defender.hp<=0||
-      !this.units.includes(attacker)||!this.units.includes(defender)||
       attacker.team===defender.team||attacker.spent||attacker.acted||
       !this.inAttackRange(attacker,defender)||
       (artId!==undefined&&artId!==this.basicArt.id))return null;
@@ -775,6 +774,8 @@ export class Battle {
 
   /** Atomic S1-0 attack entry. Costs are reserved before any RNG, damage or XP. */
   private commitAttackAction(actor:Unit,defender:Unit,artId?:string):ReturnType<Battle["strike"]>|null{
+    // Read-only enemy projections may use a cloned position; committing may not.
+    if(!this.units.includes(actor)||!this.units.includes(defender))return null;
     const preview=this.previewAction(actor,defender,artId);
     if(!preview)return null;
     const {spec}=preview;
