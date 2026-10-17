@@ -492,7 +492,7 @@ export class Battle {
     return true;
   }
 
-  effectiveMove(unit:Unit):number{return Math.max(1,unit.move-statusPower(unit,"slow"));}
+  effectiveMove(unit:Unit):number{return unit.move<=0?0:Math.max(1,unit.move-statusPower(unit,"slow"));}
   combatStats(unit:Unit):CombatStats {
     const base=deriveCombat({...unit,stats:effectiveClassStats(unit.stats,unit.classId),
         weapon:this.committingWeapon?.get(unit.id)??resourceWeapon(unit)},

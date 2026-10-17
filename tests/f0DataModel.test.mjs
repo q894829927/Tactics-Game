@@ -21,7 +21,7 @@ const expectedCombat={
 test("F0/W1: original 16 weapons preserved, plus gauntlet and offensive white magic",()=>{
  assert.deepEqual(WEAPON_CATEGORIES,["sword","lance","axe","bow","gauntlet","dark","white"]);
  assert.deepEqual(WEAPON_RANKS,["E","D","C","B","A","S","S+"]);
- assert.equal(Object.keys(WEAPON_LIBRARY).length,18);
+ assert.equal(Object.keys(WEAPON_LIBRARY).length,19);
  const actual=new Set(Object.values(WEAPON_LIBRARY).map(w=>w.category));
  assert.deepEqual([...actual].sort(),[...WEAPON_CATEGORIES].sort(),
    "W1 has actual offensive definitions for all seven categories");
