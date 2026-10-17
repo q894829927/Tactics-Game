@@ -11,7 +11,8 @@ export function statusPower(unit:StatusOwner,kind:StatusKind):number{
 }
 export function applyStatus(unit:StatusOwner,kind:StatusKind,expiresAfter:number,
   sourceId:string,power?:number):boolean{
-  if(unit.hp<=0||!Number.isSafeInteger(expiresAfter)||expiresAfter<1)return false;
+  if(!STATUS_KINDS.includes(kind)||unit.hp<=0||
+    !Number.isSafeInteger(expiresAfter)||expiresAfter<1)return false;
   const defaults:Record<StatusKind,number>={burn:2,slow:1,weakArmor:2,weakMagic:2,mark:5,shield:3};
   const amount=kind==="shield"?Math.min(5,power??defaults[kind]):power??defaults[kind];
   if(!Number.isSafeInteger(amount)||amount<=0)return false;

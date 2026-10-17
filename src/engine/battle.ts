@@ -874,8 +874,13 @@ export class Battle {
   }
   /** S1-2 support actions are battle-only, not campaign progression. */
   private supportSpec(actor:Unit,target:Unit,effect:SupportEffect):ActionSpec|null{
-    if(actor.hp<=0||target.hp<=0||actor.spent||actor.acted||
-      this.result!=="playing"||this.phase!=="player"||actor.team!=="ally")return null;
+    if(!["heal","shield","burn","slow","weakArmor","weakMagic","mark"].includes(effect)||
+      actor.hp<=0||target.hp<=0||actor.spent||actor.acted||
+      this.result!=="playing"||this.phase!=="player"||actor.team!=="ally"||
+      (this.campaignEnabled&&this.campaignStage!=="battle"))return null;
+    const weaponId=activeWeaponId(actor);
+    if(!weaponId||actor.inventory[actor.equippedIndex]!==weaponId||
+      !canWield(actor.classId,weaponId,actor.weaponExp))return null;
     const friendly=effect==="heal"||effect==="shield";
     if((actor.team===target.team)!==friendly)return null;
     if((actor.weapon.effect==="heal")!==friendly)return null;

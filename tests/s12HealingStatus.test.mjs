@@ -106,3 +106,32 @@ test("S1-2 dark magic status cast consumes charge once and respects target team"
  assert.equal(actor.spellCharges["fire-tome"],7);
  assert.equal(statusPower(enemy,"burn"),2);
 });
+
+test("S1-2 illegal classes and forged action effects never spend charges or turn",()=>{
+ const {game,actor,enemy}=fixtures();
+ actor.weapon=weaponFor("fire-tome"); // forged weapon without equipped inventory
+ actor.spellCharges["fire-tome"]=5;
+ game.click(actor.x,actor.y);
+ assert.equal(game.previewSupport(actor,enemy,"burn"),null);
+ assert.equal(game.commitSupport(actor,enemy,"burn"),false);
+ actor.inventory[0]="fire-tome";actor.weaponInstances[0]=null;
+ assert.equal(game.previewSupport(actor,enemy,"burn"),null,"wrong class cannot cast dark");
+ actor.classId="mage";
+ assert.equal(game.previewSupport(actor,enemy,"invented-effect"),null);
+ assert.equal(game.commitSupport(actor,enemy,"invented-effect"),false);
+ assert.equal(actor.spellCharges["fire-tome"],5);
+ assert.equal(actor.spent,false);
+ assert.deepEqual(game.lastActionEvents,[]);
+});
+test("S1-2 burn ticks at enemy phase start once and does not alter other team's status",()=>{
+ const {game,enemy,actor}=fixtures();
+ enemy.hp=10;
+ applyStatus(enemy,"burn",1,actor.id,2);
+ applyStatus(actor,"slow",2,enemy.id,1);
+ const before=actor.hp;
+ assert.equal(game.beginEnemyTurn(),true);
+ assert.equal(enemy.hp,8);
+ assert.equal(actor.hp,before);
+ assert.equal(statusPower(actor,"slow"),1);
+ assert.equal(game.phase,"enemy");
+});
