@@ -202,9 +202,8 @@ test("C4-A scouts must keep sword D along with bow E to perform their action",()
  actor.weaponExp.sword=0;
  assert.equal(battle.previewAction(actor,target,art.id),null);
  actor.weaponExp.sword=40;actor.weaponExp.bow=0;
- assert.equal(battle.previewAction(actor,target,art.id),null);
- actor.weaponExp.bow=10;
- assert.ok(battle.previewAction(actor,target,art.id));
+ assert.ok(battle.previewAction(actor,target,art.id),
+   "E is the starting bow rank (zero XP), not an earned D-rank threshold");
 });
 test("C4-A dedicated command and prognosis exist independently of seven-family arts",()=>{
  const ui=readFileSync(new URL("../src/scene/BoardView.ts",import.meta.url),"utf8");
