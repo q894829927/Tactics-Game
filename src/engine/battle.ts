@@ -565,6 +565,7 @@ export class Battle {
       attacker.team===defender.team||attacker.spent||attacker.acted||
       !this.inAttackRange(attacker,defender))return null;
     const formal=this.activeArt(attacker,artId);
+    if(artId===this.basicArt.id&&isSpell(attacker.weapon))return null;
     if(artId!==undefined&&artId!==this.basicArt.id&&!formal)return null;
     if(formal&&formal.target!=="enemy")return null;
     const bonus=formal?.id==="armor-sunder"&&
@@ -609,8 +610,12 @@ export class Battle {
       Math.max(0,statusPower(defender,"shield")-damage)));
     else if(followUp==="defender")hpA=Math.max(0,hpA-Math.max(0,followUpDamage-
       Math.max(0,statusPower(attacker,"shield")-counterDamage)));
+    const projected= formal?.effect==="evasion"?
+      {...attacker,statuses:[...attacker.statuses.filter(s=>s.kind!=="evasion"),
+        {kind:"evasion" as const,power:10,sourceId:attacker.id,
+          expiresAfter:this.phaseSerial[attacker.team]+1}]}:attacker;
     return {damage,counterDamage:canCounter?counterDamage:0,canCounter,attackerHpAfter:hpA,defenderHpAfter:hpD,
-      attackerHit:this.hitChance(attacker,defender,formal?.hitBonus??0),defenderHit:this.hitChance(defender,attacker),
+      attackerHit:this.hitChance(attacker,defender,formal?.hitBonus??0),defenderHit:this.hitChance(defender,projected),
       attackerCrit:this.criticalChance(attacker,defender),
       defenderCrit:this.criticalChance(defender,attacker),followUp,followUpDamage,
       attackerTrait:traitLabel(attacker.weapon,defender.classId,followUp==="attacker"),

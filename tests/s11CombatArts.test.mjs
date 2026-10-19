@@ -152,3 +152,21 @@ test("S1-1 UI has visible two-slot loadout and formal art command, not only W2 s
  assert.match(board,/availableFormalArtWeapons\(actor\)/);
  assert.match(board,/mode==="formal"/);
 });
+
+test("S1-1 W2 physical sample remains unavailable for magic despite formal C-rank hex",()=>{
+ const {b,a,e}=scenario("a4");
+ a.weaponExp.dark=120;a.equippedArts=["corrosion-hex"];
+ assert.equal(b.previewAction(a,e,"w2-power-strike"),null);
+ b.click(a.x,a.y);
+ assert.equal(b.useCombatArt(a,e,"w2-power-strike"),false);
+});
+test("S1-1 feint counter-hit preview uses the same evasion effect as actual combat",()=>{
+ const {b,a,e}=scenario();
+ equip(a,"training-gauntlet","gauntlet",40,"feint-punch");
+ const normal=b.forecastAttack(a,e),feint=b.forecastAttack(a,e,"feint-punch");
+ assert.ok(normal&&feint);
+ const clone={...a,statuses:[...a.statuses,{kind:"evasion",power:10,
+   expiresAfter:2,sourceId:a.id}]};
+ assert.equal(feint.defenderHit,b.hitChance(e,clone));
+ assert.ok(feint.defenderHit<=normal.defenderHit);
+});
