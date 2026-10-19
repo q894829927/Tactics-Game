@@ -16,7 +16,8 @@ export const INITIAL_PREPARATION_FUNDS:PreparationFunds={
 };
 export const PLAYER_CLASS_CHOICES=[
   "sword","lancer","axeFighter","archer","brawler","mage","acolyte",
-  "duelist","sentinel",
+  "duelist","sentinel","formationBreaker","eliteMarksman","martialArtist",
+  "arcanist","healer","roverCavalry","scout",
 ] as const satisfies readonly ClassId[];
 export type PlayerClassChoice=typeof PLAYER_CLASS_CHOICES[number];
 
@@ -40,7 +41,14 @@ export function classCertificationStatus(
   if(!(PLAYER_CLASS_CHOICES as readonly string[]).includes(id))
     return {eligible:false,reason:"该职业尚未对玩家开放",alreadyCertified};
   const target=CLASS_LIBRARY[id];
+  // "剑D或枪D" is one specialization, not two cumulative prerequisites.
+  if(id==="roverCavalry"){
+    if(weaponExp.sword<WEAPON_RANK_THRESHOLDS.D&&
+       weaponExp.lance<WEAPON_RANK_THRESHOLDS.D)
+      return {eligible:false,reason:"需要剑D或枪D熟练度",alreadyCertified};
+  }
   for(const [category,rank] of Object.entries(target.requiredWeaponRanks)){
+    if(id==="roverCavalry")break;
     if(!rank)continue;
     const current=weaponExp[category as WeaponCategory]??0;
     if(current<WEAPON_RANK_THRESHOLDS[rank as WeaponRank]){

@@ -14,6 +14,13 @@ export const MASTERY_LIBRARY={
   acolyteFaith:{name:"祈愿",description:"必杀回避 +5",effect:"critAvoid",amount:5},
   duelistTempo:{name:"迅疾",description:"攻击速度 +1",effect:"attackSpeed",amount:1},
   sentinelGuard:{name:"坚守",description:"物理防护 +2",effect:"physicalProtection",amount:2},
+  armorDrill:{name:"破甲训练",description:"对重甲目标主动伤害+1",effect:"conditional",amount:1},
+  steadyAim:{name:"稳定瞄准",description:"远程主动命中+5",effect:"conditional",amount:5},
+  slipFocus:{name:"闪转",description:"回避后下次主动首击命中+5",effect:"conditional",amount:5},
+  lastingHex:{name:"咒法强化",description:"施加弱甲/弱咒/缓足持续额外一轮（上限2）",effect:"conditional",amount:1},
+  healingHeart:{name:"仁心",description:"有效治疗+2",effect:"conditional",amount:2},
+  ridingCharge:{name:"驰击",description:"移动至少3格后主动伤害+1",effect:"conditional",amount:1},
+  forestWalker:{name:"林地熟练",description:"进入森林移动代价-1（最低1）",effect:"conditional",amount:1},
 } as const;
 export type MasteryId=keyof typeof MASTERY_LIBRARY;
 export type ClassExperience=Partial<Record<ClassId,number>>;
@@ -45,6 +52,7 @@ export function applyEquippedMasteries(base:CombatStats,ids:readonly MasteryId[]
   for(const id of ids){
     const mastery=MASTERY_LIBRARY[id];
     if(!mastery)continue;
+    if(mastery.effect==="conditional")continue;
     const property=mastery.effect;
     stats[property]+=mastery.amount;
   }
