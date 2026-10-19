@@ -1032,8 +1032,18 @@ export class Battle {
     for(const unit of this.units.filter(u=>u.team===team))
       finishStatusPhase(unit,this.phaseSerial[team]);
   }
+  /** Class-specific blessing shares the S1-2 healing pipeline, without
+   * installing a generic art or allowing unsolicited extra healing. */
+  previewCareerSupport(actor:Unit,target:Unit,id:string):SupportPreview|null {
+    return id==="life-gift"&&this.activeCareer(actor,id)?
+      this.previewSupport(actor,target,"heal",id):null;
+  }
+  commitCareerSupport(actor:Unit,target:Unit,id:string):boolean{
+    if(id!=="life-gift"||!this.activeCareer(actor,id))return false;
+    return this.commitSupport(actor,target,"heal",id);
+  }
   /** S1-2 support actions are battle-only, not campaign progression. */
-  private supportSpec(actor:Unit,target:Unit,effect:SupportEffect):ActionSpec|null{
+  private supportSpec(actor:Unit,target:Unit,effect:SupportEffect,careerId?:string):ActionSpec|null{
     if(!["heal","shield","burn","slow","weakArmor","weakMagic","mark","wardArmor"].includes(effect)||
       actor.hp<=0||target.hp<=0||actor.spent||actor.acted||
       this.result!=="playing"||this.phase!=="player"||actor.team!=="ally"||
@@ -1041,6 +1051,8 @@ export class Battle {
     const weaponId=activeWeaponId(actor);
     if(!weaponId||actor.inventory[actor.equippedIndex]!==weaponId||
       !canWield(actor.classId,weaponId,actor.weaponExp))return null;
+    if(careerId!==undefined&&(careerId!=="life-gift"||effect!=="heal"||
+      !this.activeCareer(actor,careerId)))return null;
     const friendly=effect==="heal"||effect==="shield"||effect==="wardArmor";
     if(effect==="wardArmor"&&!this.activeArt(actor,"ward-prayer"))return null;
     if((actor.team===target.team)!==friendly)return null;
@@ -1053,26 +1065,26 @@ export class Battle {
     if(effect==="wardArmor"&&statusPower(target,"wardArmor")>=2)return null;
     const spec=makeSupportAction(actor,actor.id,target.id,
       effect==="heal"?"heal":friendly?"shield":"status",
-      effect==="shield"||effect==="wardArmor"?2:1);
+      effect==="shield"||effect==="wardArmor"||careerId==="life-gift"?2:1);
     return spec&&canPayActionCosts(actor,spec.costs)?spec:null;
   }
-  previewSupport(actor:Unit,target:Unit,effect:SupportEffect):SupportPreview|null{
-    const spec=this.supportSpec(actor,target,effect);
+  previewSupport(actor:Unit,target:Unit,effect:SupportEffect,careerId?:string):SupportPreview|null{
+    const spec=this.supportSpec(actor,target,effect,careerId);
     if(!spec)return null;
     const power=effect==="heal"?
       Math.max(1,5+Math.floor(effectiveClassStats(actor.stats,actor.classId).magic/2)+
-        innateHealBonus(actor)):
+        innateHealBonus(actor)+(careerId==="life-gift"?4:0)):
       effect==="shield"?3:effect==="wardArmor"?2:
       effect==="burn"||effect==="weakArmor"||
       effect==="weakMagic"?2:effect==="mark"?5:1;
     return {effect,value:effect==="heal"?Math.min(power,target.maxHp-target.hp):power,
       cost:spec.costs[0]!.amount,remaining:remainingSpellCharges(actor)??0,resistChance:0};
   }
-  commitSupport(actor:Unit,target:Unit,effect:SupportEffect):boolean{
+  commitSupport(actor:Unit,target:Unit,effect:SupportEffect,careerId?:string):boolean{
     if(this.selectedId!==actor.id||!this.units.includes(actor)||!this.units.includes(target))
       return false;
-    const preview=this.previewSupport(actor,target,effect);
-    const spec=preview?this.supportSpec(actor,target,effect):null;
+    const preview=this.previewSupport(actor,target,effect,careerId);
+    const spec=preview?this.supportSpec(actor,target,effect,careerId):null;
     if(!spec||!preview||!payActionCosts(actor,spec.costs))return false;
     const before=target.hp;
     if(effect==="heal")target.hp=Math.min(target.maxHp,target.hp+preview.value);
@@ -1086,12 +1098,15 @@ export class Battle {
     this.lastCombatEvents=[];
     this.lastActionEvents=[
       {kind:"confirmed",actorId:actor.id,targetId:target.id,
-        actionId:effect==="wardArmor"?"ward-prayer":effect},
+        actionId:careerId==="life-gift"?"life-gift":
+          effect==="wardArmor"?"ward-prayer":effect},
       {kind:"resource",actorId:actor.id,targetId:target.id,
-        actionId:effect==="wardArmor"?"ward-prayer":effect,
+        actionId:careerId==="life-gift"?"life-gift":
+          effect==="wardArmor"?"ward-prayer":effect,
         cost:{...spec.costs[0]!}},
     ];
-    this.committedLog(actor.name+(effect==="heal"?" 治疗 ":" 施放 "+effect+" → ")+
+    this.committedLog(actor.name+(careerId==="life-gift"?" 施放生命赐福 → ":
+      effect==="heal"?" 治疗 ":" 施放 "+effect+" → ")+
       target.name+(effect==="heal"?"：恢复 "+restored+" HP":""));
     if(restored>0){
       gainClassExperience(actor.classExperience,actor.classId,6);
