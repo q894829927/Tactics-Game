@@ -90,7 +90,8 @@ try {
     assert.match(await page.locator("#class-preview-mastery").innerText(),/剑术专注/);
     assert.equal((await page.locator("#class-mastery-slots").innerText()).trim(),"0 / 2");
     assert.match(await page.locator("#class-mastery-equipment").innerText(),/尚未精通/);
-    assert.equal(await page.locator("#class-options button").count(),9,name+" available class list");
+    assert.equal(await page.locator("#class-options button").count(),16,name+" C4 available class list");
+    assert.match(await page.locator("#class-preview-trait").innerText(),/固有/);
     assert.equal(await page.locator("#class-requirements-title").innerText(),"职业要求");
     assert.match(await page.locator("#class-requirement-list").innerText(),/剑术/);
     assert.match(await page.locator("#class-requirement-list").innerText(),/当前 C/);

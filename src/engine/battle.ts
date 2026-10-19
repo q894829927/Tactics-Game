@@ -826,8 +826,9 @@ export class Battle {
     const base=attacker.weapon.kind==="magical"
       ? from.magic+might-to.magicalProtection
       : from.strength+might-to.physicalProtection;
-    return strikeDamage(Math.max(0,base+innateDamageBonus(attacker,defender,false)-
-       innateReduction(attacker,defender)),attacker.weapon.category);
+    const nominal=strikeDamage(Math.max(0,base+
+      innateDamageBonus(attacker,defender,false)),attacker.weapon.category);
+    return Math.max(0,nominal-innateReduction(attacker,defender));
   }
 
   click(x: number, y: number): void {
@@ -1048,6 +1049,7 @@ export class Battle {
     }
     this.preparationOpen=false;
     this.finishEffects("ally");
+    for(const unit of this.units.filter(u=>u.team==="ally"))unit.focusReady=false;
     this.phase = "enemy";
     this.startEffects("enemy");
     this.selectedId = null;
@@ -1100,6 +1102,7 @@ export class Battle {
     enemy.x = plan.destination.x;
     enemy.y = plan.destination.y;
     const moved = start.x !== enemy.x || start.y !== enemy.y;
+    enemy.moved=moved;
     const prefix = enemy.name + (moved
       ? " 移动至 (" + enemy.x + ", " + enemy.y + ") 后" : " ");
     const target = this.units.find(u => u.id === plan.targetId && u.hp > 0);
@@ -1127,13 +1130,14 @@ export class Battle {
     if (this.phase !== "enemy" || this.enemyQueue.length !== 0) return false;
     this.enemyQueue = [];
     this.finishEffects("enemy");
+    for(const unit of this.units.filter(u=>u.team==="enemy"))unit.focusReady=false;
     this.phase = "player";
     if (this.result === "playing") {
       this.startEffects("ally");
       this.round++;
       for (const unit of this.alive("ally")) {
         unit.moved = false; unit.acted = false; unit.spent = false;
-        unit.movedTiles=0;unit.focusReady=false;unit.duelTargetId=null;
+        unit.movedTiles=0;unit.duelTargetId=null;
       }
       for (const unit of this.alive("enemy")) {
         unit.moved = false; unit.acted = false; unit.spent = false;

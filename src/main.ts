@@ -573,7 +573,9 @@ function renderClassPreparation():void {
   // Grid is row-major: every consecutive pair is one physical row.
   // Keep the same layout in growth view; movement has no growth rate.
   const statRows:readonly (readonly [string,number|null,number|null])[]=statsMode?[
-    ["HP",actor.maxHp,actor.maxHp],["移动力",actor.move,actor.move],
+    ["HP",actor.maxHp,actor.maxHp],
+    ["移动力",battle.effectiveMove(actor),
+      battle.effectiveMove({...actor,classId:preparationClassId})],
     ["力量",currentStats.strength,afterStats.strength],["防守",currentStats.defense,afterStats.defense],
     ["魔力",currentStats.magic,afterStats.magic],["魔防",currentStats.resistance,afterStats.resistance],
     ["速度",currentStats.speed,afterStats.speed],["幸运",currentStats.luck,afterStats.luck],
@@ -616,7 +618,10 @@ function renderClassPreparation():void {
     const kind=category as keyof typeof actor.weaponExp;
     const xp=actor.weaponExp[kind];
     const current=weaponRankForExp(xp);
-    const passed=xp>=WEAPON_RANK_THRESHOLDS[required as keyof typeof WEAPON_RANK_THRESHOLDS];
+    const passed=preparationClassId==="roverCavalry"
+      ?actor.weaponExp.sword>=WEAPON_RANK_THRESHOLDS.D||
+        actor.weaponExp.lance>=WEAPON_RANK_THRESHOLDS.D
+      :xp>=WEAPON_RANK_THRESHOLDS[required as keyof typeof WEAPON_RANK_THRESHOLDS];
     const chip=document.createElement("div");
     chip.className="class-requirement-chip "+(passed?"met":"unmet");
     const emblem=document.createElement("span");
@@ -625,7 +630,7 @@ function renderClassPreparation():void {
     emblem.setAttribute("aria-hidden","true");
     const title=document.createElement("span");
     title.className="class-requirement-text";
-    title.textContent=({sword:"剑术",lance:"枪术",axe:"斧术",bow:"弓术",
+    title.textContent=(preparationClassId==="roverCavalry"?"任选 · ":"")+({sword:"剑术",lance:"枪术",axe:"斧术",bow:"弓术",
       gauntlet:"拳术",dark:"黑魔法",white:"白魔法"} as Record<string,string>)[category]??category;
     const rank=document.createElement("strong");
     rank.textContent=required;

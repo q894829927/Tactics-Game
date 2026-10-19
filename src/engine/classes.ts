@@ -14,9 +14,10 @@ export type ClassDefinition={
   masteryRewardIds:readonly string[];
   masteryThreshold:number;
 };
-/** F0: only the existing class behaviors are active; zero modifiers mean
- * identical current stats. New gauntlet/white classes are dormant metadata.
- * Their certification, proficiency and abilities belong to C1/P1/S1.
+/** C4: sixteen playable basic/intermediate classes. Enemy-only raider,
+ * commander and movement fixtures rider/flier remain excluded from menus.
+ * Solid innate effects are implemented in innateAbilities, independently
+ * of inheritable mastery slots and weapon traits.
  */
 export const CLASS_LIBRARY={
   sword:{name:"剑士",emblem:"剑",portrait:"⚔",tier:"basic",

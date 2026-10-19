@@ -92,6 +92,7 @@ export function applyAlly(unit:Unit,p:AllyProgress):void {
   unit.maxRange=unit.weapon.maxRange;
   unit.moved=false;unit.acted=false;unit.spent=false;
   unit.statuses=[]; // temporary S1-2 effects never cross sorties
+  unit.movedTiles=0;unit.focusReady=false;unit.duelTargetId=null;
 }
 export function settlementFrom(
   result:Exclude<GameResult,"playing">,sortie:number,before:AllyProgress[],
