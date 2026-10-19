@@ -1,10 +1,10 @@
 /** S1-2 temporary battle effects; never written to persistent campaign saves. */
-export const STATUS_KINDS=["burn","slow","weakArmor","weakMagic","mark","shield"] as const;
+export const STATUS_KINDS=["burn","slow","weakArmor","weakMagic","mark","shield","evasion","wardArmor"] as const;
 export type StatusKind=typeof STATUS_KINDS[number];
 export type StatusInstance={kind:StatusKind;power:number;expiresAfter:number;sourceId:string};
 export type StatusOwner={statuses:StatusInstance[];hp:number;maxHp:number};
 export const STATUS_LABELS:Record<StatusKind,string>={
-  burn:"灼烧",slow:"缓足",weakArmor:"弱甲",weakMagic:"弱咒",mark:"标记",shield:"护盾",
+  burn:"灼烧",slow:"缓足",weakArmor:"弱甲",weakMagic:"弱咒",mark:"标记",shield:"护盾",evasion:"虚步",wardArmor:"护壁",
 };
 export function statusPower(unit:StatusOwner,kind:StatusKind):number{
   return unit.statuses.find(s=>s.kind===kind)?.power??0;
@@ -13,7 +13,7 @@ export function applyStatus(unit:StatusOwner,kind:StatusKind,expiresAfter:number
   sourceId:string,power?:number):boolean{
   if(!STATUS_KINDS.includes(kind)||unit.hp<=0||
     !Number.isSafeInteger(expiresAfter)||expiresAfter<1)return false;
-  const defaults:Record<StatusKind,number>={burn:2,slow:1,weakArmor:2,weakMagic:2,mark:5,shield:3};
+  const defaults:Record<StatusKind,number>={burn:2,slow:1,weakArmor:2,weakMagic:2,mark:5,shield:3,evasion:10,wardArmor:2};
   const amount=kind==="shield"?Math.min(5,power??defaults[kind]):power??defaults[kind];
   if(!Number.isSafeInteger(amount)||amount<=0)return false;
   const old=unit.statuses.find(s=>s.kind===kind);

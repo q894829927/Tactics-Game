@@ -15,6 +15,8 @@ import {ALLY_IDS,captureAlly,applyAlly,parseCampaign,settlementFrom,
 import {refillSpells} from "./combatResources.ts";
 import {calculateSortieReward,creditSortieReward} from "./sortieRewards.ts";
 import {awardWeaponExperience} from "./proficiency.ts";
+import {COMBAT_ARTS,unlockedCombatArts,ART_SLOTS,isCombatArtId,
+ type CombatArtId,type CombatArt} from "./combatArts.ts";
 import {MASTERY_LIBRARY,MASTERY_SLOTS,unlockedMasteries,gainClassExperience,
   applyEquippedMasteries,type MasteryId,type ClassExperience}
   from "./mastery.ts";
@@ -67,7 +69,7 @@ export type ActionCommitEvent={
 
 export type ActionPreview={spec:ActionSpec;forecast:AttackForecast};
 
-export type SupportEffect="heal"|"shield"|"burn"|"slow"|"weakArmor"|"weakMagic"|"mark";
+export type SupportEffect="heal"|"shield"|"burn"|"slow"|"weakArmor"|"weakMagic"|"mark"|"wardArmor";
 export type SupportPreview={effect:SupportEffect;value:number;cost:number;remaining:number;resistChance:number};
 export type AttackForecast = {
   damage:number; counterDamage:number; canCounter:boolean;
@@ -94,6 +96,7 @@ export type Unit = CharacterData & {
   classExperience:ClassExperience;
   /** At most two unlocked cross-class passives selected during preparation. */
   equippedMasteries:MasteryId[];
+  equippedArts:CombatArtId[];
   /** One replaceable loaned basic weapon for classes outside owned inventory. */
   trainingSlot:number|null;
   /** Legacy mirrors for older client/tests; battle calculations read weapon directly. */
@@ -128,7 +131,9 @@ function unit(id:CharacterId,team:Team,x:number,y:number):Unit {
     weapon:equipped,inventory,equippedIndex:0,
     weaponInstances:initialWeaponInstances(id,inventory),
     spellCharges:initialSpellCharges(inventory),
-    classLicenses:[classId],classExperience:{},equippedMasteries:[],trainingSlot:null,
+    classLicenses:[classId],classExperience:{},equippedMasteries:[],
+    equippedArts:team==="ally"?unlockedCombatArts(character.weaponExp).slice(0,ART_SLOTS):[],
+    trainingSlot:null,
     minRange:equipped.minRange,maxRange:equipped.maxRange,
     statuses:[],moved:false,acted:false,spent:false};
 }
@@ -244,7 +249,7 @@ export class Battle {
       allies:units.map(x=>({...x,stats:{...x.stats},growths:{...x.growths},
         weaponExp:{...x.weaponExp},inventory:[...x.inventory],
         classLicenses:[...x.classLicenses],classExperience:{...x.classExperience},
-        equippedMasteries:[...x.equippedMasteries],
+        equippedMasteries:[...x.equippedMasteries],equippedArts:[...x.equippedArts],
         spellCharges:{...x.spellCharges},
         weaponInstances:x.weaponInstances.map(w=>w?{...w}:null)})),
       pendingSettlement:this.pendingSettlement
@@ -380,6 +385,16 @@ export class Battle {
     this.emit();
     return true;
   }
+  /** Equipping an unlocked art is restricted to preparation; no skill swapping mid-combat. */
+  toggleCombatArt(unitId:string,id:CombatArtId):boolean{
+    const actor=this.units.find(u=>u.id===unitId&&u.team==="ally");
+    if(!actor||!this.canPrepareClass(actor)||!isCombatArtId(id)||
+      !unlockedCombatArts(actor.weaponExp).includes(id))return false;
+    const position=actor.equippedArts.indexOf(id);
+    if(position>=0)actor.equippedArts.splice(position,1);
+    else{if(actor.equippedArts.length>=ART_SLOTS)return false;actor.equippedArts.push(id);}
+    this.emit();return true;
+  }
   /** No fixed promotion tree. First basic certification is free; earned
    * intermediate credentials are consumed once and licenses persist.
    */
@@ -499,12 +514,14 @@ export class Battle {
       TERRAIN_INFO[this.tile(unit.x,unit.y)].defense);
     const stats=unit.team==="ally"
       ? applyEquippedMasteries(base,unit.equippedMasteries):base;
-    return {...stats,physicalProtection:Math.max(0,stats.physicalProtection-statusPower(unit,"weakArmor")),
-      magicalProtection:Math.max(0,stats.magicalProtection-statusPower(unit,"weakMagic"))};
+    return {...stats,physicalProtection:Math.max(0,stats.physicalProtection+
+        statusPower(unit,"wardArmor")-statusPower(unit,"weakArmor")),
+      magicalProtection:Math.max(0,stats.magicalProtection-statusPower(unit,"weakMagic")),
+      avoid:stats.avoid+statusPower(unit,"evasion")};
   }
-  hitChance(from:Unit,to:Unit):number {
+  hitChance(from:Unit,to:Unit,bonus=0):number {
     return clampChance(this.combatStats(from).hit-this.combatStats(to).avoid
-      -defensiveAvoidBonus(from.weapon.category,to.weapon.category)+statusPower(to,"mark"));
+      -defensiveAvoidBonus(from.weapon.category,to.weapon.category)+statusPower(to,"mark")+bonus);
   }
   criticalChance(from:Unit,to:Unit):number {
     return clampChance(this.combatStats(from).crit-this.combatStats(to).critAvoid);

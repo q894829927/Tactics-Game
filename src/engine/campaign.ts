@@ -12,6 +12,7 @@ import {PLAYER_CLASS_CHOICES,type PreparationFunds} from "./classCertification.t
 import type {WeaponExperience} from "./proficiency.ts";
 import type {WeaponInstance,SpellCharges} from "./combatResources.ts";
 import {emptySortieReward,RESOURCE_CAPS,type SortieReward} from "./sortieRewards.ts";
+import {ART_SLOTS,unlockedCombatArts,validArtEquipment,type CombatArtId} from "./combatArts.ts";
 import {MASTERY_LIBRARY,MASTERY_SLOTS,unlockedMasteries,
   type MasteryId,type ClassExperience} from "./mastery.ts";
 
@@ -22,6 +23,7 @@ export type AllyId=typeof ALLY_IDS[number];
 export type AllyProgress={
   id:AllyId;classId:ClassId;classLicenses:ClassId[];
   classExperience:ClassExperience;equippedMasteries:MasteryId[];
+  equippedArts:CombatArtId[];
   stats:BasicStats;growths:GrowthRates;maxHp:number;level:number;exp:number;
   weaponExp:WeaponExperience;inventory:WeaponId[];
   weaponInstances:Array<WeaponInstance|null>;spellCharges:SpellCharges;
@@ -55,7 +57,7 @@ export function captureAlly(unit:Unit):AllyProgress {
     id:unit.id as AllyId,classId:unit.classId,
     classLicenses:[...unit.classLicenses],
     classExperience:{...unit.classExperience},
-    equippedMasteries:[...unit.equippedMasteries],
+    equippedMasteries:[...unit.equippedMasteries],equippedArts:[...unit.equippedArts],
     stats:copyStats(unit.stats),growths:copyGrowths(unit.growths),
     maxHp:unit.maxHp,level:unit.level,exp:unit.exp,
     weaponExp:{...unit.weaponExp},inventory:[...unit.inventory],
@@ -71,6 +73,7 @@ export function applyAlly(unit:Unit,p:AllyProgress):void {
   unit.classLicenses=[...p.classLicenses];
   unit.classExperience={...p.classExperience};
   unit.equippedMasteries=[...p.equippedMasteries];
+  unit.equippedArts=[...p.equippedArts];
   unit.stats=copyStats(p.stats);
   unit.growths=copyGrowths(p.growths);
   unit.maxHp=p.maxHp;
@@ -137,6 +140,8 @@ function validAlly(v:unknown):v is AllyProgress {
     !(v.equippedMasteries===undefined||
       validMasteryEquipment(v.equippedMasteries,
         (v.classExperience??{}) as ClassExperience))||
+    !(v.equippedArts===undefined||
+      validArtEquipment(v.equippedArts,v.weaponExp as WeaponExperience))||
     !Array.isArray(v.classLicenses)||v.classLicenses.length>PLAYER_CLASS_CHOICES.length||
     !v.classLicenses.includes(v.classId)||new Set(v.classLicenses).size!==v.classLicenses.length||
     !v.classLicenses.every((id:unknown)=>typeof id==="string"&&
@@ -214,6 +219,7 @@ export function parseCampaign(raw:unknown):CampaignSave|null{
   const allies=(raw.allies as AllyProgress[]).map(ally=>({
     ...ally,classExperience:{...(ally.classExperience??{})},
     equippedMasteries:[...(ally.equippedMasteries??[])],
+    equippedArts:[...(ally.equippedArts??unlockedCombatArts(ally.weaponExp).slice(0,ART_SLOTS))],
   }));
   const pending=raw.pendingSettlement as SortieSettlement|null;
   const normalized=pending?{

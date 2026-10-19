@@ -42,10 +42,12 @@ export function makeAttackAction(actor:ActionResourceUser,actorId:string,
   if(!weaponId||actor.weapon.effect==="heal")return null;
   const costs:ActionCost[]=[];
   if(art){
-    if(isSpell(actor.weapon))return null;
-    const instance=activeInstance(actor);
-    if(!instance)return null;
-    costs.push({kind:"durability",instanceId:instance.instanceId,amount:art.durabilityCost});
+    if(isSpell(actor.weapon))costs.push({kind:"spell",spellId:weaponId,amount:art.durabilityCost});
+    else{
+      const instance=activeInstance(actor);
+      if(!instance)return null;
+      costs.push({kind:"durability",instanceId:instance.instanceId,amount:art.durabilityCost});
+    }
   }else if(isSpell(actor.weapon)){
     costs.push({kind:"spell",spellId:weaponId,amount:1});
   }
