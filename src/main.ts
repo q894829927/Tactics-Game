@@ -1,5 +1,6 @@
 import { Battle } from "./engine/battle.ts";
 import {COMBAT_ARTS,unlockedCombatArts,ART_SLOTS} from "./engine/combatArts.ts";
+import {INNATE_DESCRIPTIONS} from "./engine/innateAbilities.ts";
 import {CAMPAIGN_STORAGE_KEY,readCampaignJson,ALLY_IDS,type AllyId} from "./engine/campaign.ts";
 import { TERRAIN_INFO, movementCostLabel } from "./engine/terrain.ts";
 import { BoardView } from "./scene/BoardView.ts";
@@ -445,9 +446,16 @@ const CLASS_DESCRIPTIONS:Partial<Record<ClassId,string>>={
   archer:"擅长远程攻击的射手，对飞行目标具有武器威力特效。",
   brawler:"使用轻巧拳套的近战战士，面对其他武器攻击时更容易闪避。",
   mage:"运用黑魔法攻击敌人，以魔力对抗目标的魔防。",
-  acolyte:"掌握攻击型白魔法的施法者，治疗与辅助法术尚未开放。",
+  acolyte:"使用白魔法治疗与辅助友军，以支援方式影响战局。",
   duelist:"熟练运用剑术的进阶职业，拥有更高的速度补正。",
-  sentinel:"重视防御的进阶枪术职业，拥有更高的防守补正。",
+  sentinel:"原地建立防线，减少近战物理攻击伤害，易受魔法突破。",
+  formationBreaker:"破阵战士：针对高防守和重甲目标，擅长斧系破阵。",
+  eliteMarksman:"精锐射手：保持阵地完成精准远射，失去机动灵活性。",
+  martialArtist:"斗技家：以闪避反应积累下一次主动出拳优势。",
+  arcanist:"秘术师：善用异常状态与黑魔法强化伤害。",
+  healer:"祈疗师：专精有效治疗，不依赖伤害刷资源。",
+  roverCavalry:"游骑兵：需要骑乘许可，行军迅速但不利森林丘陵。",
+  scout:"斥候：剑弓双系兼修，善用森林隐蔽与低成本穿越。",
 };
 const WEAPON_TRAIT_LABELS={
   sword:"剑系追击伤害 ×1.2",lance:"对骑乘目标武器威力 ×2",
@@ -628,7 +636,9 @@ function renderClassPreparation():void {
     requirementsRoot.appendChild(chip);
   }
   get("class-preview-trait").textContent=
-    WEAPON_TRAIT_LABELS[cls.weaponCategories[0]]??"暂无可用的武器系规则";
+    (WEAPON_TRAIT_LABELS[cls.weaponCategories[0]]??"暂无可用的武器系规则")+
+    "；固有：" +cls.innateAbilityIds.map(id=>
+      INNATE_DESCRIPTIONS[id as keyof typeof INNATE_DESCRIPTIONS]??id).join(" / ");
   const progress=classExperienceFor(actor.classExperience,preparationClassId);
   const reward=cls.masteryRewardIds[0];
   const ability=reward&&Object.hasOwn(MASTERY_LIBRARY,reward)

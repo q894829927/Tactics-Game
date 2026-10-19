@@ -15,7 +15,7 @@ function finish(b){
   assert.equal(b.beginEnemyTurn(),false);
   assert.equal(b.campaignStage,"settlement");
 }
-test("C3 all nine selectable classes have unique real rewards and correct thresholds",()=>{
+test("C4 all sixteen selectable classes have unique real rewards and correct thresholds",()=>{
   const ids=new Set();
   for(const id of PLAYER_CLASS_CHOICES){
     const cls=CLASS_LIBRARY[id];
@@ -27,7 +27,7 @@ test("C3 all nine selectable classes have unique real rewards and correct thresh
     ids.add(ability);
     assert.ok(MASTERY_LIBRARY[ability].amount>0);
   }
-  assert.equal(ids.size,9);
+  assert.equal(ids.size,16);
   assert.equal(MASTERY_SLOTS,2);
 });
 
@@ -124,7 +124,7 @@ test("C3 passives match their descriptions and alter only the declared field",()
   for(const [id,skill] of Object.entries(MASTERY_LIBRARY)){
     const before={...base};
     const out=applyEquippedMasteries(base,[id]);
-    assert.equal(out[skill.effect],base[skill.effect]+skill.amount);
+    if(skill.effect!=="conditional")assert.equal(out[skill.effect],base[skill.effect]+skill.amount);
     for(const key of Object.keys(base))
       if(key!==skill.effect)assert.equal(out[key],before[key]);
     assert.deepEqual(base,before);

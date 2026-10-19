@@ -988,7 +988,8 @@ export class Battle {
     const spec=this.supportSpec(actor,target,effect);
     if(!spec)return null;
     const power=effect==="heal"?
-      Math.max(1,5+Math.floor(effectiveClassStats(actor.stats,actor.classId).magic/2)):
+      Math.max(1,5+Math.floor(effectiveClassStats(actor.stats,actor.classId).magic/2)+
+        innateHealBonus(actor)):
       effect==="shield"?3:effect==="wardArmor"?2:
       effect==="burn"||effect==="weakArmor"||
       effect==="weakMagic"?2:effect==="mark"?5:1;
@@ -1003,7 +1004,11 @@ export class Battle {
     if(!spec||!preview||!payActionCosts(actor,spec.costs))return false;
     const before=target.hp;
     if(effect==="heal")target.hp=Math.min(target.maxHp,target.hp+preview.value);
-    else applyStatus(target,effect,this.phaseSerial[target.team]+1,actor.id,preview.value);
+    else{
+      const prolong=actor.equippedMasteries.includes("lastingHex")&&
+        (effect==="slow"||effect==="weakArmor"||effect==="weakMagic")?1:0;
+      applyStatus(target,effect,this.phaseSerial[target.team]+1+prolong,actor.id,preview.value);
+    }
     const restored=target.hp-before;
     actor.acted=true;actor.spent=true;this.moveOrigin=null;this.selectedId=null;
     this.lastCombatEvents=[];
@@ -1090,6 +1095,8 @@ export class Battle {
     const enemy = this.units.find(u => u.id === plan.unitId && u.hp > 0);
     if (!enemy || !this.movementPath(enemy, plan.destination)) return false;
     const start = {x: enemy.x, y: enemy.y};
+    enemy.movedTiles=Math.max(0,
+      (this.movementPath(enemy,plan.destination)?.length??1)-1);
     enemy.x = plan.destination.x;
     enemy.y = plan.destination.y;
     const moved = start.x !== enemy.x || start.y !== enemy.y;
@@ -1126,9 +1133,11 @@ export class Battle {
       this.round++;
       for (const unit of this.alive("ally")) {
         unit.moved = false; unit.acted = false; unit.spent = false;
+        unit.movedTiles=0;unit.focusReady=false;unit.duelTargetId=null;
       }
       for (const unit of this.alive("enemy")) {
         unit.moved = false; unit.acted = false; unit.spent = false;
+        unit.movedTiles=0;unit.focusReady=false;unit.duelTargetId=null;
       }
     }
     this.emit();
@@ -1186,8 +1195,10 @@ export class Battle {
           from.duelTargetId=to.id;
       }
       if(first&&!missed&&to.hp>0&&formal&&
-        (formal.effect==="slow"||formal.effect==="weakArmor"))
-        applyStatus(to,formal.effect,this.phaseSerial[to.team]+1,actor.id);
+        (formal.effect==="slow"||formal.effect==="weakArmor")){
+        const extra=from.equippedMasteries.includes("lastingHex")?1:0;
+        applyStatus(to,formal.effect,this.phaseSerial[to.team]+1+extra,actor.id);
+      }
       events.push({kind: strikeIndex++===0?"attack":from.id===actor.id?"follow-up":
         events.some(e=>e.fromId===from.id)?"follow-up":"counter",
         fromId:from.id,toId:to.id,missed,critical,damage:impact.hpLoss,

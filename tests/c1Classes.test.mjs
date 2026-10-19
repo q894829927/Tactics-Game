@@ -12,10 +12,10 @@ import {createCharacter} from "../src/engine/characters.ts";
 const units=()=>{const b=new Battle();return {b,a:b.units.find(x=>x.id==="a1"),
  mage:b.units.find(x=>x.id==="a4"),enemy:b.units.find(x=>x.id==="e1")};};
 
-test("C1 exposes seven free basic choices plus two qualified intermediate choices",()=>{
+test("C4 exposes seven free basic choices plus nine qualified intermediate choices",()=>{
  const {b,a}=units();
  assert.deepEqual(b.classChoices,[...PLAYER_CLASS_CHOICES]);
- assert.equal(b.classChoices.length,9);
+ assert.equal(b.classChoices.length,16);
  assert.ok(!b.classChoices.includes("rider"));
  assert.ok(!b.classChoices.includes("flier"));
  assert.ok(!b.classChoices.includes("commander"));
