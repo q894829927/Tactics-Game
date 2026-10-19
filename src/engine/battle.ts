@@ -18,6 +18,8 @@ import {awardWeaponExperience} from "./proficiency.ts";
 import {innateHitBonus,inheritedHitBonus,innateDamageBonus,innateHealBonus,
   innateAvoid,innatePhysicalProtection,innateReduction,terrainStepCost}
   from "./innateAbilities.ts";
+import {CAREER_ARTS,careerArtForClass,isCareerArtId,
+  type CareerArt,type CareerArtId} from "./careerArts.ts";
 import {COMBAT_ARTS,unlockedCombatArts,ART_SLOTS,isCombatArtId,
  type CombatArtId,type CombatArt} from "./combatArts.ts";
 import {MASTERY_LIBRARY,MASTERY_SLOTS,unlockedMasteries,gainClassExperience,
@@ -26,7 +28,7 @@ import {MASTERY_LIBRARY,MASTERY_SLOTS,unlockedMasteries,gainClassExperience,
 import {activeWeaponId} from "./combatResources.ts";
 import {makeAttackAction,makeSupportAction,canPayActionCosts,payActionCosts,
   type ActionSpec,type ActionCost} from "./actionSpec.ts";
-import {applyStatus,statusPower,startStatusPhase,finishStatusPhase,
+import {applyStatus,removeStatus,statusPower,startStatusPhase,finishStatusPhase,
   absorbDamage,previewDamage,type StatusKind,type StatusInstance}
   from "./statusEffects.ts";
 import {initialWeaponInstances,initialSpellCharges,makeWeaponInstance,
@@ -82,6 +84,10 @@ export type AttackForecast = {
   /** Damage of only the additional attack, computed independently for sword. */
   followUpDamage:number;
   attackerTrait:string;defenderTrait:string;
+  /** On normal-hit kill only, this optional one-step retreat is already legal. */
+  retreatTo?:Point|null;
+  /** Visible on-hit effect of a job-specific art (not a guaranteed hit). */
+  careerEffect?:string;
 };
 
 export type Unit = CharacterData & {
@@ -538,7 +544,9 @@ export class Battle {
   hitChance(from:Unit,to:Unit,bonus=0):number {
     return clampChance(this.combatStats(from).hit-this.combatStats(to).avoid
       -defensiveAvoidBonus(from.weapon.category,to.weapon.category)+statusPower(to,"mark")+
-      (to.classId==="duelist"&&to.duelTargetId===from.id?-8:0)+bonus);
+      (to.classId==="duelist"&&to.duelTargetId===from.id?-8:0)+
+      (statusPower(from,"meleeWeaken")&&from.weapon.kind==="physical"&&
+       distance(from,to)===1?-5:0)+bonus);
   }
   criticalChance(from:Unit,to:Unit):number {
     return clampChance(this.combatStats(from).crit-this.combatStats(to).critAvoid);
@@ -576,19 +584,68 @@ export class Battle {
       return legal?[index]:[];
     });
   }
+  /** Job-exclusive moves are authorized by the CURRENT certified class and
+   * CURRENT wieldable equipped weapon, never by persistent art slots. */
+  private activeCareer(actor:Unit,id?:string):CareerArt|null{
+    if(!id||!isCareerArtId(id)||actor.team!=="ally")return null;
+    const art:CareerArt=CAREER_ARTS[id];
+    const weaponId=actor.inventory[actor.equippedIndex];
+    if(actor.classId!==art.classId||
+       !actor.classLicenses.includes(art.classId)||
+       !weaponId||weaponFor(weaponId).name!==actor.weapon.name||
+       !canWield(actor.classId,weaponId,actor.weaponExp)||
+       actor.weapon.category!==art.category||
+       (art.stationary&&actor.moved)||
+       (art.minMoveTiles!==undefined&&actor.movedTiles<art.minMoveTiles))return null;
+    return art;
+  }
+  currentCareerArt(actor:Unit):CareerArt|null{
+    const art=careerArtForClass(actor.classId);
+    return art?this.activeCareer(actor,art.id):null;
+  }
+  /** Legal candidate weapons are recomputed after class, movement and target changes. */
+  availableCareerWeapons(actor:Unit):number[]{
+    if(this.phase!=="player"||this.result!=="playing"||actor.team!=="ally"||
+       actor.spent||actor.acted||actor.hp<=0)return [];
+    const def=careerArtForClass(actor.classId);
+    if(!def)return [];
+    return actor.inventory.flatMap((weaponId,index)=>{
+      if(!canWield(actor.classId,weaponId,actor.weaponExp))return [];
+      const future={...actor,equippedIndex:index,weapon:weaponFor(weaponId)};
+      const art=this.activeCareer(future,def.id);
+      if(!art)return [];
+      const allowed=art.target==="ally"?
+        this.units.some(unit=>this.previewCareerSupport(future,unit,art.id)!==null):
+        this.units.some(unit=>unit.team==="enemy"&&
+          this.forecastAttack(future,unit,art.id)!==null);
+      return allowed?[index]:[];
+    });
+  }
+  /** Retreat is deterministic, one orthogonal cell AWAY from defeated target,
+   * passable and unoccupied. Never jumps a cliff or an enemy.
+   */
+  private retreatPosition(actor:Unit,target:Unit):Point|null{
+    if(distance(actor,target)!==1)return null;
+    const cell={x:actor.x+(actor.x-target.x),y:actor.y+(actor.y-target.y)};
+    if(!inBounds(cell.x,cell.y)||this.occupant(cell.x,cell.y)||
+       !Number.isFinite(TERRAIN_INFO[this.tile(cell.x,cell.y)].moveCost))return null;
+    return cell;
+  }
   /** One authoritative specification builder for player, AI, preview and commit. */
   private attackSpec(attacker:Unit,defender:Unit,artId?:string):ActionSpec|null{
     if(this.result!=="playing"||attacker.hp<=0||defender.hp<=0||
       attacker.team===defender.team||attacker.spent||attacker.acted||
       !this.inAttackRange(attacker,defender))return null;
     const formal=this.activeArt(attacker,artId);
+    const career=this.activeCareer(attacker,artId);
     if(artId===this.basicArt.id&&isSpell(attacker.weapon))return null;
-    if(artId!==undefined&&artId!==this.basicArt.id&&!formal)return null;
-    if(formal&&formal.target!=="enemy")return null;
+    if(artId!==undefined&&artId!==this.basicArt.id&&!formal&&!career)return null;
+    if(formal&&formal.target!=="enemy"||career&&career.target!=="enemy")return null;
     const bonus=formal?.id==="armor-sunder"&&
       (CLASS_LIBRARY[defender.classId].unitTags as readonly string[]).includes("Armored")?2:0;
     const art=artId===this.basicArt.id?this.basicArt:formal?
-      {id:formal.id,durabilityCost:formal.cost,damageBonus:formal.damageBonus+bonus}:undefined;
+      {id:formal.id,durabilityCost:formal.cost,damageBonus:formal.damageBonus+bonus}:
+      career?{id:career.id,durabilityCost:career.cost,damageBonus:career.damageBonus}:undefined;
     const spec=makeAttackAction(attacker,attacker.id,defender.id,art);
     return spec&&canPayActionCosts(attacker,spec.costs)?spec:null;
   }
@@ -604,12 +661,14 @@ export class Battle {
   forecastAttack(attacker:Unit,defender:Unit,artId?:string):AttackForecast|null {
     if(!this.attackSpec(attacker,defender,artId))return null;
     const formal=this.activeArt(attacker,artId);
+    const career=this.activeCareer(attacker,artId);
     const extra=formal?.id==="armor-sunder"&&
       (CLASS_LIBRARY[defender.classId].unitTags as readonly string[]).includes("Armored")?2:0;
     const damage=Math.max(0,this.damage(attacker,defender)+
       innateDamageBonus(attacker,defender,true)-
       innateDamageBonus(attacker,defender,false)+
-      (artId===this.basicArt.id?this.basicArt.damageBonus:formal?formal.damageBonus+extra:0));
+      (artId===this.basicArt.id?this.basicArt.damageBonus:formal?formal.damageBonus+extra:
+        career?career.damageBonus:0));
     const counterDamage=this.damage(defender,attacker);
     const counterInRange=this.inAttackRange(defender,attacker);
     let hpA=attacker.hp,hpD=Math.max(0,defender.hp-previewDamage(defender,damage));
@@ -618,7 +677,7 @@ export class Battle {
     // This preview assumes normal hits, no criticals. Report a follow-up
     // only if both units would still be alive after the preceding strikes.
     const followUp=hpA>0&&hpD>0
-      ? (formal?.noFollowUp?null:determineFollowUp(this.combatStats(attacker).attackSpeed,
+      ? (formal?.noFollowUp||career?.noFollowUp?null:determineFollowUp(this.combatStats(attacker).attackSpeed,
         this.combatStats(defender).attackSpeed,canCounter))
       : null;
     const followUpDamage=followUp==="attacker"
@@ -633,8 +692,11 @@ export class Battle {
       {...attacker,statuses:[...attacker.statuses.filter(s=>s.kind!=="evasion"),
         {kind:"evasion" as const,power:10,sourceId:attacker.id,
           expiresAfter:this.phaseSerial[attacker.team]+1}]}:attacker;
+    const retreatTo=career?.retreatOnKill&&hpD===0&&hpA>0?
+      this.retreatPosition(attacker,defender):null;
     return {damage,counterDamage:canCounter?counterDamage:0,canCounter,attackerHpAfter:hpA,defenderHpAfter:hpD,
-      attackerHit:this.hitChance(attacker,defender,(formal?.hitBonus??0)+
+      ...(career?{careerEffect:career.description,retreatTo}:{}),
+      attackerHit:this.hitChance(attacker,defender,(formal?.hitBonus??0)+(career?.hitBonus??0)+
         innateHitBonus(attacker,defender,true,artId===undefined)+
         inheritedHitBonus(attacker,defender,true)),
       defenderHit:this.hitChance(defender,projected),
@@ -907,8 +969,17 @@ export class Battle {
     if(!result)return false;
     this.preparationOpen=false;
     const moved=this.completedMovement(actor);
+    if(isCareerArtId(artId)&&CAREER_ARTS[artId].retreatOnKill&&
+       result.defenderFell&&actor.hp>0){
+      const retreat=this.retreatPosition(actor,defender);
+      if(retreat){
+        actor.x=retreat.x;actor.y=retreat.y;
+        this.committedLog(actor.name+" 击败目标后回退至("+retreat.x+","+retreat.y+")");
+      }
+    }
     const action=artId===this.basicArt.id?"使用试验战技攻击":
-      isCombatArtId(artId)?"使用"+COMBAT_ARTS[artId].name+"攻击":"攻击";
+      isCombatArtId(artId)?"使用"+COMBAT_ARTS[artId].name+"攻击":
+      isCareerArtId(artId)?"使用"+CAREER_ARTS[artId].name+"攻击":"攻击";
     this.committedLog(actor.name+(moved?" "+moved:"")+action+" "+defender.name+
       "：造成 "+result.damage+" 点伤害"+
       (result.counterDamage>0?"；"+defender.name+"反击造成 "+result.counterDamage+" 点伤害":"")+
@@ -1162,6 +1233,7 @@ export class Battle {
     // committingWeapon preserves pre-payment might/hit for a breaking weapon.
     let damage=0,counterDamage=0,misses=0,crits=0,countered=false;
     const formal=this.activeArt(actor,artId);
+    const career=this.activeCareer(actor,artId);
     const castersCharged=new Set<string>();
     if(isSpell(actor.weapon))castersCharged.add(actor.id);
     const events: CombatEvent[] = [];
@@ -1176,9 +1248,14 @@ export class Battle {
         castersCharged.add(from.id);
       }
       const first=from===actor&&strikeIndex===0;
-      const bonus=first?(formal?.hitBonus??0)+innateHitBonus(from,to,true,!artId)+
+      const bonus=first?(formal?.hitBonus??0)+(career?.hitBonus??0)+
+        innateHitBonus(from,to,true,!artId)+
         inheritedHitBonus(from,to,true):0;
       const missed=!this.roll(this.hitChance(from,to,bonus));
+      if(!missed&&from.weapon.kind==="physical"&&distance(from,to)===1&&
+         statusPower(from,"meleeWeaken")>0)removeStatus(from,"meleeWeaken");
+      if(missed&&from.weapon.kind==="physical"&&distance(from,to)===1&&
+         statusPower(from,"meleeWeaken")>0)removeStatus(from,"meleeWeaken");
       if(missed&&(to.classId==="martialArtist"||
          to.equippedMasteries.includes("slipFocus")))to.focusReady=true;
       if(missed) misses++;
@@ -1187,7 +1264,7 @@ export class Battle {
       const armor=formal?.id==="armor-sunder"&&
         (CLASS_LIBRARY[to.classId].unitTags as readonly string[]).includes("Armored")?2:0;
       const artBonus=first?((artId===this.basicArt.id?this.basicArt.damageBonus:
-        formal?formal.damageBonus+armor:0)+
+        formal?formal.damageBonus+armor:career?career.damageBonus:0)+
         innateDamageBonus(from,to,true)-innateDamageBonus(from,to,false)):0;
       const amount=missed?0:strikeDamage(Math.max(0,this.damage(from,to)+artBonus),
         from.weapon.category,critical,followUp);
@@ -1197,6 +1274,12 @@ export class Battle {
         if(from.classId==="duelist"&&from.weapon.kind==="physical"&&
           Math.abs(from.x-to.x)+Math.abs(from.y-to.y)===1)
           from.duelTargetId=to.id;
+      }
+      if(first&&!missed&&to.hp>0&&career?.effect){
+        const delay=from.equippedMasteries.includes("lastingHex")&&
+          (career.effect==="slow"||career.effect==="weakArmor"||
+           career.effect==="weakMagic")?1:0;
+        applyStatus(to,career.effect,this.phaseSerial[to.team]+1+delay,from.id);
       }
       if(first&&!missed&&to.hp>0&&formal&&
         (formal.effect==="slow"||formal.effect==="weakArmor")){
@@ -1220,7 +1303,7 @@ export class Battle {
     // Actual survival may differ from the normal-hit forecast (e.g. a miss).
     // Compute the legal follow-up from the committed state, not preview text.
     if(actor.hp>0&&defender.hp>0){
-      const followUp=formal?.noFollowUp?null:
+      const followUp=formal?.noFollowUp||career?.noFollowUp?null:
         determineFollowUp(this.combatStats(actor).attackSpeed,
         this.combatStats(defender).attackSpeed,canCounter);
       if(followUp==="attacker")damage+=hit(actor,defender,true);
