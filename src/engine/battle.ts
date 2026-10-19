@@ -529,14 +529,46 @@ export class Battle {
   /** W2 narrow art proof-of-contract. Full arts and menus arrive in S1. */
   readonly basicArt={id:"w2-power-strike",durabilityCost:3,damageBonus:2} as const;
 
+  /** Combat art permissions are checked in the engine, never trusted from UI. */
+  private activeArt(actor:Unit,id?:string):CombatArt|null {
+    if(!id||!isCombatArtId(id)||actor.team!=="ally")return null;
+    const art:CombatArt=COMBAT_ARTS[id];
+    if(!actor.equippedArts.includes(id)||
+      !unlockedCombatArts(actor.weaponExp).includes(id)||
+      actor.weapon.category!==art.category||art.stationary&&actor.moved)return null;
+    return art;
+  }
+  formalArtForWeapon(actor:Unit):CombatArt|null {
+    const id=actor.equippedArts.find(id=>COMBAT_ARTS[id].category===actor.weapon.category);
+    return id?this.activeArt(actor,id):null;
+  }
+  availableFormalArtWeapons(actor:Unit):number[]{
+    if(this.phase!=="player"||actor.team!=="ally"||actor.hp<=0||
+      actor.spent||actor.acted||this.result!=="playing")return [];
+    return actor.inventory.flatMap((id,index)=>{
+      if(!canWield(actor.classId,id,actor.weaponExp))return [];
+      const candidate={...actor,weapon:weaponFor(id),equippedIndex:index};
+      const art=this.formalArtForWeapon(candidate);
+      if(!art)return [];
+      const legal=art.target==="ally"?
+        this.units.some(u=>this.previewSupport(candidate,u,"wardArmor")):
+        this.units.some(u=>u.team!==actor.team&&this.forecastAttack(candidate,u,art.id));
+      return legal?[index]:[];
+    });
+  }
   /** One authoritative specification builder for player, AI, preview and commit. */
   private attackSpec(attacker:Unit,defender:Unit,artId?:string):ActionSpec|null{
     if(this.result!=="playing"||attacker.hp<=0||defender.hp<=0||
       attacker.team===defender.team||attacker.spent||attacker.acted||
-      !this.inAttackRange(attacker,defender)||
-      (artId!==undefined&&artId!==this.basicArt.id))return null;
-    const spec=makeAttackAction(attacker,attacker.id,defender.id,
-      artId===this.basicArt.id?this.basicArt:undefined);
+      !this.inAttackRange(attacker,defender))return null;
+    const formal=this.activeArt(attacker,artId);
+    if(artId!==undefined&&artId!==this.basicArt.id&&!formal)return null;
+    if(formal&&formal.target!=="enemy")return null;
+    const bonus=formal?.id==="armor-sunder"&&
+      CLASS_LIBRARY[defender.classId].unitTags.includes("Armored")?2:0;
+    const art=artId===this.basicArt.id?this.basicArt:formal?
+      {id:formal.id,durabilityCost:formal.cost,damageBonus:formal.damageBonus+bonus}:undefined;
+    const spec=makeAttackAction(attacker,attacker.id,defender.id,art);
     return spec&&canPayActionCosts(attacker,spec.costs)?spec:null;
   }
 
@@ -550,7 +582,11 @@ export class Battle {
   /** Pure forecast: normal hits land, no criticals. Actual combat uses seeded RNG. */
   forecastAttack(attacker:Unit,defender:Unit,artId?:string):AttackForecast|null {
     if(!this.attackSpec(attacker,defender,artId))return null;
-    const damage=this.damage(attacker,defender)+(artId===this.basicArt.id?this.basicArt.damageBonus:0);
+    const formal=this.activeArt(attacker,artId);
+    const extra=formal?.id==="armor-sunder"&&
+      CLASS_LIBRARY[defender.classId].unitTags.includes("Armored")?2:0;
+    const damage=Math.max(0,this.damage(attacker,defender)+
+      (artId===this.basicArt.id?this.basicArt.damageBonus:formal?formal.damageBonus+extra:0));
     const counterDamage=this.damage(defender,attacker);
     const counterInRange=this.inAttackRange(defender,attacker);
     let hpA=attacker.hp,hpD=Math.max(0,defender.hp-previewDamage(defender,damage));
@@ -559,8 +595,8 @@ export class Battle {
     // This preview assumes normal hits, no criticals. Report a follow-up
     // only if both units would still be alive after the preceding strikes.
     const followUp=hpA>0&&hpD>0
-      ? determineFollowUp(this.combatStats(attacker).attackSpeed,
-        this.combatStats(defender).attackSpeed,canCounter)
+      ? (formal?.noFollowUp?null:determineFollowUp(this.combatStats(attacker).attackSpeed,
+        this.combatStats(defender).attackSpeed,canCounter))
       : null;
     const followUpDamage=followUp==="attacker"
       ? strikeDamage(this.damage(attacker,defender),attacker.weapon.category,false,true)
@@ -571,7 +607,7 @@ export class Battle {
     else if(followUp==="defender")hpA=Math.max(0,hpA-Math.max(0,followUpDamage-
       Math.max(0,statusPower(attacker,"shield")-counterDamage)));
     return {damage,counterDamage:canCounter?counterDamage:0,canCounter,attackerHpAfter:hpA,defenderHpAfter:hpD,
-      attackerHit:this.hitChance(attacker,defender),defenderHit:this.hitChance(defender,attacker),
+      attackerHit:this.hitChance(attacker,defender,formal?.hitBonus??0),defenderHit:this.hitChance(defender,attacker),
       attackerCrit:this.criticalChance(attacker,defender),
       defenderCrit:this.criticalChance(defender,attacker),followUp,followUpDamage,
       attackerTrait:traitLabel(attacker.weapon,defender.classId,followUp==="attacker"),
@@ -836,7 +872,8 @@ export class Battle {
     if(!result)return false;
     this.preparationOpen=false;
     const moved=this.completedMovement(actor);
-    const action=artId===this.basicArt.id?"使用试验战技攻击":"攻击";
+    const action=artId===this.basicArt.id?"使用试验战技攻击":
+      isCombatArtId(artId)?"使用"+COMBAT_ARTS[artId].name+"攻击":"攻击";
     this.committedLog(actor.name+(moved?" "+moved:"")+action+" "+defender.name+
       "：造成 "+result.damage+" 点伤害"+
       (result.counterDamage>0?"；"+defender.name+"反击造成 "+result.counterDamage+" 点伤害":"")+
@@ -891,14 +928,15 @@ export class Battle {
   }
   /** S1-2 support actions are battle-only, not campaign progression. */
   private supportSpec(actor:Unit,target:Unit,effect:SupportEffect):ActionSpec|null{
-    if(!["heal","shield","burn","slow","weakArmor","weakMagic","mark"].includes(effect)||
+    if(!["heal","shield","burn","slow","weakArmor","weakMagic","mark","wardArmor"].includes(effect)||
       actor.hp<=0||target.hp<=0||actor.spent||actor.acted||
       this.result!=="playing"||this.phase!=="player"||actor.team!=="ally"||
       (this.campaignEnabled&&this.campaignStage!=="battle"))return null;
     const weaponId=activeWeaponId(actor);
     if(!weaponId||actor.inventory[actor.equippedIndex]!==weaponId||
       !canWield(actor.classId,weaponId,actor.weaponExp))return null;
-    const friendly=effect==="heal"||effect==="shield";
+    const friendly=effect==="heal"||effect==="shield"||effect==="wardArmor";
+    if(effect==="wardArmor"&&!this.activeArt(actor,"ward-prayer"))return null;
     if((actor.team===target.team)!==friendly)return null;
     if((actor.weapon.effect==="heal")!==friendly)return null;
     if(!friendly&&actor.weapon.category!=="dark")return null;
@@ -906,8 +944,10 @@ export class Battle {
     if(d<actor.weapon.minRange||d>actor.weapon.maxRange)return null;
     if(effect==="heal"&&target.hp>=target.maxHp)return null;
     if(effect==="shield"&&statusPower(target,"shield")>=3)return null;
+    if(effect==="wardArmor"&&statusPower(target,"wardArmor")>=2)return null;
     const spec=makeSupportAction(actor,actor.id,target.id,
-      effect==="heal"?"heal":effect==="shield"?"shield":"status",effect==="shield"?2:1);
+      effect==="heal"?"heal":friendly?"shield":"status",
+      effect==="shield"||effect==="wardArmor"?2:1);
     return spec&&canPayActionCosts(actor,spec.costs)?spec:null;
   }
   previewSupport(actor:Unit,target:Unit,effect:SupportEffect):SupportPreview|null{
@@ -915,7 +955,8 @@ export class Battle {
     if(!spec)return null;
     const power=effect==="heal"?
       Math.max(1,5+Math.floor(effectiveClassStats(actor.stats,actor.classId).magic/2)):
-      effect==="shield"?3:effect==="burn"||effect==="weakArmor"||
+      effect==="shield"?3:effect==="wardArmor"?2:
+      effect==="burn"||effect==="weakArmor"||
       effect==="weakMagic"?2:effect==="mark"?5:1;
     return {effect,value:effect==="heal"?Math.min(power,target.maxHp-target.hp):power,
       cost:spec.costs[0]!.amount,remaining:remainingSpellCharges(actor)??0,resistChance:0};
@@ -933,13 +974,18 @@ export class Battle {
     actor.acted=true;actor.spent=true;this.moveOrigin=null;this.selectedId=null;
     this.lastCombatEvents=[];
     this.lastActionEvents=[
-      {kind:"confirmed",actorId:actor.id,targetId:target.id,actionId:effect},
-      {kind:"resource",actorId:actor.id,targetId:target.id,actionId:effect,
+      {kind:"confirmed",actorId:actor.id,targetId:target.id,
+        actionId:effect==="wardArmor"?"ward-prayer":effect},
+      {kind:"resource",actorId:actor.id,targetId:target.id,
+        actionId:effect==="wardArmor"?"ward-prayer":effect,
         cost:{...spec.costs[0]!}},
     ];
     this.committedLog(actor.name+(effect==="heal"?" 治疗 ":" 施放 "+effect+" → ")+
       target.name+(effect==="heal"?"：恢复 "+restored+" HP":""));
-    if(restored>0)gainClassExperience(actor.classExperience,actor.classId,6);
+    if(restored>0){
+      gainClassExperience(actor.classExperience,actor.classId,6);
+      awardWeaponExperience(actor.weaponExp,actor.classId,"white",4);
+    }
     this.resolve();this.emit();return true;
   }
   availableSupportWeapons(actor:Unit,effect:SupportEffect):number[]{
@@ -1068,6 +1114,7 @@ export class Battle {
     // Caller has validated and paid the action before rolling any combat RNG.
     // committingWeapon preserves pre-payment might/hit for a breaking weapon.
     let damage=0,counterDamage=0,misses=0,crits=0,countered=false;
+    const formal=this.activeArt(actor,artId);
     const castersCharged=new Set<string>();
     if(isSpell(actor.weapon))castersCharged.add(actor.id);
     const events: CombatEvent[] = [];
@@ -1081,15 +1128,21 @@ export class Battle {
           throw Error("Insufficient spell charges for committed counterattack");
         castersCharged.add(from.id);
       }
-      const missed=!this.roll(this.hitChance(from,to));
+      const first=from===actor&&strikeIndex===0;
+      const missed=!this.roll(this.hitChance(from,to,first?(formal?.hitBonus??0):0));
       if(missed) misses++;
       const critical=!missed && this.roll(this.criticalChance(from,to));
       if(critical) crits++;
-      const artBonus=artId===this.basicArt.id&&from===actor&&strikeIndex===0
-        ? this.basicArt.damageBonus : 0;
-      const amount=missed?0:strikeDamage(this.damage(from,to)+artBonus,
+      const armor=formal?.id==="armor-sunder"&&
+        CLASS_LIBRARY[to.classId].unitTags.includes("Armored")?2:0;
+      const artBonus=first?(artId===this.basicArt.id?this.basicArt.damageBonus:
+        formal?formal.damageBonus+armor:0):0;
+      const amount=missed?0:strikeDamage(Math.max(0,this.damage(from,to)+artBonus),
         from.weapon.category,critical,followUp);
       const impact=absorbDamage(to,amount);
+      if(first&&!missed&&to.hp>0&&formal&&
+        (formal.effect==="slow"||formal.effect==="weakArmor"))
+        applyStatus(to,formal.effect,this.phaseSerial[to.team]+1,actor.id);
       events.push({kind: strikeIndex++===0?"attack":from.id===actor.id?"follow-up":
         events.some(e=>e.fromId===from.id)?"follow-up":"counter",
         fromId:from.id,toId:to.id,missed,critical,damage:impact.hpLoss,
@@ -1098,6 +1151,8 @@ export class Battle {
       return impact.hpLoss;
     };
     damage+=hit(actor,defender);
+    if(formal?.effect==="evasion"&&actor.hp>0)
+      applyStatus(actor,"evasion",this.phaseSerial[actor.team]+1,actor.id,10);
     const canCounter=defender.hp>0&&actor.hp>0&&this.inAttackRange(defender,actor);
     if(canCounter){
       countered=true;counterDamage+=hit(defender,actor);
@@ -1105,7 +1160,8 @@ export class Battle {
     // Actual survival may differ from the normal-hit forecast (e.g. a miss).
     // Compute the legal follow-up from the committed state, not preview text.
     if(actor.hp>0&&defender.hp>0){
-      const followUp=determineFollowUp(this.combatStats(actor).attackSpeed,
+      const followUp=formal?.noFollowUp?null:
+        determineFollowUp(this.combatStats(actor).attackSpeed,
         this.combatStats(defender).attackSpeed,canCounter);
       if(followUp==="attacker")damage+=hit(actor,defender,true);
       else if(followUp==="defender"){
@@ -1118,7 +1174,7 @@ export class Battle {
     // Counterattacks train even on misses; follow-ups do not grant extra XP.
     const gainedNotes:string[]=[];
     for(const [unit,base] of [
-      [actor,artId===this.basicArt.id?6:4],
+      [actor,artId?6:4],
       [defender,2],
     ] as const){
       if(!events.some(event=>event.fromId===unit.id))continue;
