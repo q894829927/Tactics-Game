@@ -533,7 +533,10 @@ export class Battle {
   private activeArt(actor:Unit,id?:string):CombatArt|null {
     if(!id||!isCombatArtId(id)||actor.team!=="ally")return null;
     const art:CombatArt=COMBAT_ARTS[id];
-    if(!actor.equippedArts.includes(id)||
+    const weaponId=actor.inventory[actor.equippedIndex];
+    if(!weaponId||weaponFor(weaponId).name!==actor.weapon.name||
+      !canWield(actor.classId,weaponId,actor.weaponExp)||
+      !actor.equippedArts.includes(id)||
       !unlockedCombatArts(actor.weaponExp).includes(id)||
       actor.weapon.category!==art.category||art.stationary&&actor.moved)return null;
     return art;

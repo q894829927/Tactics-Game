@@ -62,7 +62,7 @@ export const CLASS_LIBRARY={
     innateAbilityIds:[],masteryRewardIds:["duelistTempo"],masteryThreshold:120},
   sentinel:{name:"壁垒卫士",emblem:"盾",portrait:"♜",tier:"intermediate",
     weaponCategories:["lance"],requiredWeaponRanks:{lance:"D"},
-    statModifiers:{defense:3},growthModifiers:{defense:10},movementMode:"ground",unitTags:[],
+    statModifiers:{defense:3},growthModifiers:{defense:10},movementMode:"ground",unitTags:["Armored"],
     innateAbilityIds:[],masteryRewardIds:["sentinelGuard"],masteryThreshold:120},
   // W1 target-tag fixtures, not selectable characters. C1 adds certification
   // and future movement/pathfinding rules; W1 uses their combat tags only.

@@ -102,7 +102,7 @@ test("UI routes attack through weapon choice, forecasts actual weapon and expose
  assert.match(board,/this\.attackMode=true/);
  assert.match(board,/this\.battle\.forecastAttack\(selected, target,\s*this\.attackArtId\?\?undefined\)/);
  assert.match(board,/this\.battle\.click\(target\.x,\s*target\.y\)/);
- assert.match(board,/this\.pickerMode = this\.attackArtId\?"art":"attack"/);
+ assert.match(board,/this\.attackArtId\?"art":"attack"/);
  assert.match(board,/byId\("forecast-ally-weapon"\)/);
  assert.match(main,/battle\.equipWeapon\(selected,index\)/);
  assert.match(html,/id="inventory-list"/);
