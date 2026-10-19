@@ -1,4 +1,5 @@
 import { Battle } from "./engine/battle.ts";
+import {COMBAT_ARTS,unlockedCombatArts,ART_SLOTS} from "./engine/combatArts.ts";
 import {CAMPAIGN_STORAGE_KEY,readCampaignJson,ALLY_IDS,type AllyId} from "./engine/campaign.ts";
 import { TERRAIN_INFO, movementCostLabel } from "./engine/terrain.ts";
 import { BoardView } from "./scene/BoardView.ts";
@@ -659,6 +660,26 @@ function renderClassPreparation():void {
       if(battle.toggleMastery(actor.id,id))renderClassPreparation();
     });
     loadout.appendChild(toggle);
+  }
+
+  const artRoot=get("class-art-equipment");artRoot.replaceChildren();
+  get("class-art-slots").textContent=actor.equippedArts.length+" / "+ART_SLOTS;
+  const knownArts=unlockedCombatArts(actor.weaponExp);
+  if(!knownArts.length){
+    const empty=document.createElement("p");empty.className="class-mastery-empty";
+    empty.textContent="武器熟练度达到D（黑魔法C）后自动学会战技。";
+    artRoot.appendChild(empty);
+  }
+  for(const id of knownArts){
+    const art=COMBAT_ARTS[id],active=actor.equippedArts.includes(id);
+    const toggle=document.createElement("button");
+    toggle.type="button";toggle.className="class-mastery-toggle"+(active?" active":"");
+    toggle.setAttribute("aria-pressed",String(active));
+    toggle.disabled=!active&&actor.equippedArts.length>=ART_SLOTS;
+    toggle.textContent=(active?"✓ 已装备 · ":"可装备 · ")+art.name+
+      " ["+art.category+" "+art.rank+"] · "+art.description;
+    toggle.addEventListener("click",()=>{if(battle.toggleCombatArt(actor.id,id))renderClassPreparation();});
+    artRoot.appendChild(toggle);
   }
 
   const exam=get("class-exam-panel"),examContent=get("class-exam-content");

@@ -565,7 +565,7 @@ export class Battle {
     if(artId!==undefined&&artId!==this.basicArt.id&&!formal)return null;
     if(formal&&formal.target!=="enemy")return null;
     const bonus=formal?.id==="armor-sunder"&&
-      CLASS_LIBRARY[defender.classId].unitTags.includes("Armored")?2:0;
+      (CLASS_LIBRARY[defender.classId].unitTags as readonly string[]).includes("Armored")?2:0;
     const art=artId===this.basicArt.id?this.basicArt:formal?
       {id:formal.id,durabilityCost:formal.cost,damageBonus:formal.damageBonus+bonus}:undefined;
     const spec=makeAttackAction(attacker,attacker.id,defender.id,art);
@@ -584,7 +584,7 @@ export class Battle {
     if(!this.attackSpec(attacker,defender,artId))return null;
     const formal=this.activeArt(attacker,artId);
     const extra=formal?.id==="armor-sunder"&&
-      CLASS_LIBRARY[defender.classId].unitTags.includes("Armored")?2:0;
+      (CLASS_LIBRARY[defender.classId].unitTags as readonly string[]).includes("Armored")?2:0;
     const damage=Math.max(0,this.damage(attacker,defender)+
       (artId===this.basicArt.id?this.basicArt.damageBonus:formal?formal.damageBonus+extra:0));
     const counterDamage=this.damage(defender,attacker);
@@ -1134,7 +1134,7 @@ export class Battle {
       const critical=!missed && this.roll(this.criticalChance(from,to));
       if(critical) crits++;
       const armor=formal?.id==="armor-sunder"&&
-        CLASS_LIBRARY[to.classId].unitTags.includes("Armored")?2:0;
+        (CLASS_LIBRARY[to.classId].unitTags as readonly string[]).includes("Armored")?2:0;
       const artBonus=first?(artId===this.basicArt.id?this.basicArt.damageBonus:
         formal?formal.damageBonus+armor:0):0;
       const amount=missed?0:strikeDamage(Math.max(0,this.damage(from,to)+artBonus),

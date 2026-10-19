@@ -3,6 +3,7 @@ import { combatPreviewView } from "./combatPreviewView.ts";
 import {WEAPON_LIBRARY,weaponRange,canWield} from "../engine/weapons.ts";
 import {weaponRankForExp,weaponExperienceText} from "../engine/proficiency.ts";
 import {weaponResourceText} from "../engine/combatResources.ts";
+import {COMBAT_ARTS} from "../engine/combatArts.ts";
 import {CLASS_LIBRARY} from "../engine/classes.ts";
 import { TERRAIN_INFO, movementCostLabel } from "../engine/terrain.ts";
 import { leftClickIntent, rightClickIntent } from "./interactionPolicy.ts";
@@ -77,7 +78,7 @@ export class BoardView {
   private suppressMiniClick = false;
   private readonly menu: HTMLDivElement;
   private readonly weaponPicker: HTMLDivElement;
-  private pickerMode:"attack"|"art"|"equip"|"status"|null=null;
+  private pickerMode:"attack"|"art"|"formal"|"equip"|"status"|null=null;
   private supportMode:SupportEffect|null=null;
   private attackArtId:string|null=null;
   private readonly minimap: HTMLElement;
@@ -458,7 +459,8 @@ export class BoardView {
         this.supportMode=null;this.pickerMode=null;this.menuVisible=true;
         this.refresh();return true;
       }
-      this.pickerMode = this.attackArtId?"art":"attack";
+      this.pickerMode = this.attackArtId&&this.attackArtId!==this.battle.basicArt.id?"formal":
+        this.attackArtId?"art":"attack";
       this.menuVisible = false;
       this.refresh();
       return true;
@@ -856,17 +858,22 @@ export class BoardView {
     }
     const cost=document.getElementById("forecast-action-cost")!;
     const isArt=!!this.attackArtId&&!this.enemyForecast;
-    cost.textContent=isArt?"试验战技 · 耐久 -"+this.battle.basicArt.durabilityCost+
+    const art=this.attackArtId&&Object.hasOwn(COMBAT_ARTS,this.attackArtId)?
+      COMBAT_ARTS[this.attackArtId as keyof typeof COMBAT_ARTS]:null;
+    cost.textContent=art?art.name+" · "+art.description+" · "+
+      (attacker.weapon.kind==="magical"?"次数 -":"耐久 -")+art.cost:
+      isArt?"试验战技 · 耐久 -"+this.battle.basicArt.durabilityCost+
       " · 本次伤害 +"+this.battle.basicArt.damageBonus:
       (attacker.weapon.kind==="magical"?"法术交战 · 次数 -1":"普通攻击 · 耐久不消耗");
-    document.getElementById("forecast-confirm")!.textContent=isArt?"确认试验战技":"攻击";
+    document.getElementById("forecast-confirm")!.textContent=art?"确认"+art.name:
+      isArt?"确认试验战技":"攻击";
     this.forecastPanel.hidden = false;
   }
 
   private paintSupportForecast(actor:Unit,target:Unit,preview:SupportPreview):void{
     const elem=(id:string):HTMLElement=>document.getElementById(id)!;
     const label:Record<SupportEffect,string>={heal:"治疗",shield:"护盾",burn:"灼烧",
-      slow:"缓足",weakArmor:"弱甲",weakMagic:"弱咒",mark:"标记"};
+      slow:"缓足",weakArmor:"弱甲",weakMagic:"弱咒",mark:"标记",wardArmor:"护壁"};
     elem("forecast-attacker").textContent=actor.name;
     elem("forecast-defender").textContent=target.name;
     elem("forecast-ally-role").textContent=CLASS_LIBRARY[actor.classId].emblem;
@@ -941,6 +948,7 @@ export class BoardView {
     }
     const commands = [
       { text: "攻击", icon: "⚔", enabled: this.battle.availableAttackWeapons(actor).length > 0, key: "attack" },
+      { text: "战技", icon: "✦", enabled:this.battle.availableFormalArtWeapons(actor).length>0,key:"formal" },
       { text: "战技·试验", icon: "✧", enabled: this.battle.availableArtWeapons(actor).length>0, key: "art" },
       { text:"治疗",icon:"✚",enabled:this.battle.units.some(u=>this.battle.previewSupport(actor,u,"heal")),key:"heal" },
       { text:"护盾·试验",icon:"⬡",enabled:this.battle.units.some(u=>this.battle.previewSupport(actor,u,"shield")),key:"shield" },
@@ -976,6 +984,10 @@ export class BoardView {
             this.onHint?.("选择友方目标");
           }
           this.refresh();
+        } else if(cmd.key==="formal"){
+          this.menuVisible=false;this.forecastTargetId=null;
+          this.attackMode=false;this.attackArtId=null;this.supportMode=null;
+          this.pickerMode="formal";this.refresh();
         } else if (cmd.key === "attack" || cmd.key === "art" || cmd.key === "item") {
           this.menuVisible = false;
           this.forecastTargetId = null;
@@ -1025,10 +1037,11 @@ export class BoardView {
     const title=document.createElement("div");
     title.className="weapon-picker-title";
     title.textContent=mode==="attack"?"选择攻击武器":
-      mode==="art"?"选择试验战技武器 · 耗耐久3":"装备背包";
+      mode==="art"?"选择试验战技武器 · 耗耐久3":
+      mode==="formal"?"选择已装备的正式战技武器":"装备背包";
     this.weaponPicker.appendChild(title);
-    const attackable=new Set(mode==="art"
-      ?this.battle.availableArtWeapons(actor):this.battle.availableAttackWeapons(actor));
+    const attackable=new Set(mode==="formal"?this.battle.availableFormalArtWeapons(actor):
+      mode==="art"?this.battle.availableArtWeapons(actor):this.battle.availableAttackWeapons(actor));
     actor.inventory.forEach((id,index)=>{
       const item=WEAPON_LIBRARY[id];
       const qualified=canWield(actor.classId,id,actor.weaponExp);
@@ -1053,7 +1066,17 @@ export class BoardView {
         if(this.isAnimating||this.battle.phase!=="player"||this.battle.selected?.id!==actor.id)return;
         if(!this.battle.equipWeapon(actor,index))return;
         this.pickerMode=null;
-        if(mode==="attack"||mode==="art"){
+        if(mode==="formal"){
+          const skill=this.battle.formalArtForWeapon(actor);
+          if(!skill){this.refresh();return;}
+          if(skill.target==="ally"){
+            this.supportMode="wardArmor";this.attackMode=true;
+            this.onHint?.("选择友军施放"+skill.name);
+          }else{
+            this.attackArtId=skill.id;this.attackMode=true;
+            this.onHint?.("选择敌人使用"+skill.name+" · "+skill.description);
+          }
+        }else if(mode==="attack"||mode==="art"){
           this.attackArtId=mode==="art"?this.battle.basicArt.id:null;
           this.attackMode=true;
           this.onHint?.(mode==="art"?"选择目标 · 试验战技消耗3耐久":"选择红色攻击目标");
