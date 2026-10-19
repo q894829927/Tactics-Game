@@ -969,7 +969,7 @@ export class Battle {
     if(!result)return false;
     this.preparationOpen=false;
     const moved=this.completedMovement(actor);
-    if(isCareerArtId(artId)&&CAREER_ARTS[artId].retreatOnKill&&
+    if(isCareerArtId(artId)&&("retreatOnKill" in CAREER_ARTS[artId])&&
        result.defenderFell&&actor.hp>0){
       const retreat=this.retreatPosition(actor,defender);
       if(retreat){
