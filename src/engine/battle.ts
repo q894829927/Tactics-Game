@@ -165,6 +165,7 @@ export class Battle {
   readonly campaignEnabled:boolean;
   campaignStage:"preparation"|"battle"|"settlement"="battle";
   sortiesCompleted=0;
+  ridingPermit=false;
   pendingSettlement:SortieSettlement|null=null;
   private sortieStart:CampaignSave|null=null;
   /** C1 supports credential checks. The E1 reward/economy loop is future work. */
@@ -211,6 +212,7 @@ export class Battle {
       unit("e6","enemy",9,7),
     ];
     this.round = 1;
+    this.ridingPermit=false;
     this.phaseSerial={ally:1,enemy:0};
     this.preparationOpen=true;
     this.preparationFunds={
@@ -244,6 +246,7 @@ export class Battle {
       ? this.sortieStart.allies
       : this.aliveAndDefeatedAllies().map(captureAlly);
     return {schema:1,sortiesCompleted:this.sortiesCompleted,
+      ridingPermit:this.ridingPermit,
       funds:{gold:this.preparationFunds.gold,reputation:this.preparationFunds.reputation,
         vouchers:{...this.preparationFunds.vouchers}},
       allies:units.map(x=>({...x,stats:{...x.stats},growths:{...x.growths},
@@ -340,6 +343,7 @@ export class Battle {
     if(!this.campaignEnabled)throw Error("Campaign is not enabled");
     this.sortieStart=null;
     this.sortiesCompleted=0;
+    this.ridingPermit=false;
     this.pendingSettlement=null;
     this.campaignStage="battle";
     this.restart();
@@ -361,7 +365,7 @@ export class Battle {
   /** Reclassing is only available in the initial preparation window. */
   classStatus(unit:Unit,target:ClassId):CertificationStatus {
     return classCertificationStatus(target,unit.weaponExp,
-      unit.classLicenses,this.preparationFunds);
+      unit.classLicenses,this.preparationFunds,this.ridingPermit);
   }
   canPrepareClass(unit:Unit):boolean {
     return this.preparationOpen&&
@@ -1228,6 +1232,7 @@ export class Battle {
         const credited=creditSortieReward(this.preparationFunds,earned);
         this.preparationFunds=credited.funds;
         this.sortiesCompleted++;
+        if(this.result==="victory")this.ridingPermit=true;
         this.pendingSettlement=settlementFrom(this.result,this.sortiesCompleted,
           this.sortieStart?.allies??this.aliveAndDefeatedAllies().map(captureAlly),
           this.units,credited.awarded);

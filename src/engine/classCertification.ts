@@ -36,11 +36,14 @@ export function certificationRequirements(id:ClassId):{
 export type CertificationStatus={eligible:boolean;reason:string;alreadyCertified:boolean};
 export function classCertificationStatus(
   id:ClassId,weaponExp:WeaponExperience,licenses:readonly ClassId[],funds:PreparationFunds,
+  ridingPermit=false,
 ):CertificationStatus {
   const alreadyCertified=licenses.includes(id);
   if(!(PLAYER_CLASS_CHOICES as readonly string[]).includes(id))
     return {eligible:false,reason:"该职业尚未对玩家开放",alreadyCertified};
   const target=CLASS_LIBRARY[id];
+  if(id==="roverCavalry"&&!ridingPermit)
+    return {eligible:false,reason:"需要骑乘许可（首次胜利后永久获得）",alreadyCertified};
   // "剑D或枪D" is one specialization, not two cumulative prerequisites.
   if(id==="roverCavalry"){
     if(weaponExp.sword<WEAPON_RANK_THRESHOLDS.D&&

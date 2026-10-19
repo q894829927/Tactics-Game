@@ -45,6 +45,7 @@ export type SortieSettlement={
 export type CampaignSave={
   schema:typeof CAMPAIGN_SCHEMA;
   sortiesCompleted:number;
+  ridingPermit?:boolean; // optional only for legacy C2 saves
   funds:PreparationFunds;
   allies:AllyProgress[];
   pendingSettlement:SortieSettlement|null;
@@ -202,7 +203,9 @@ function validSettlement(v:unknown):v is SortieSettlement {
 /** Read-only validator. Invalid, old, truncated and corrupt saves are rejected. */
 export function parseCampaign(raw:unknown):CampaignSave|null{
   if(!obj(raw)||raw.schema!==CAMPAIGN_SCHEMA||
-    !integer(raw.sortiesCompleted,0,1000000)||!obj(raw.funds)||
+    !integer(raw.sortiesCompleted,0,1000000)||
+    !(raw.ridingPermit===undefined||typeof raw.ridingPermit==="boolean")||
+    !obj(raw.funds)||
     !integer(raw.funds.reputation,0,100000000)||
     !integer(raw.funds.gold,0,100000000)||
     !obj(raw.funds.vouchers)||
@@ -229,7 +232,8 @@ export function parseCampaign(raw:unknown):CampaignSave|null{
       ...unit,classExpGained:unit.classExpGained??0,
     })),
   }:null;
-  return {...raw,allies,pendingSettlement:normalized} as CampaignSave;
+  return {...raw,ridingPermit:raw.ridingPermit??raw.sortiesCompleted>=1,
+    allies,pendingSettlement:normalized} as CampaignSave;
 }
 /** Returns a deep, validated copy, never a reference to a browser-owned object. */
 export function readCampaignJson(text:string|null):CampaignSave|null {
