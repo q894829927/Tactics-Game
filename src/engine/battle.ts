@@ -14,7 +14,7 @@ import {ALLY_IDS,captureAlly,applyAlly,parseCampaign,settlementFrom,
   type AllyProgress,type CampaignSave,type SortieSettlement} from "./campaign.ts";
 import {refillSpells} from "./combatResources.ts";
 import {calculateSortieReward,creditSortieReward} from "./sortieRewards.ts";
-import {awardWeaponExperience} from "./proficiency.ts";
+import {awardWeaponExperience,meetsWeaponRank} from "./proficiency.ts";
 import {innateHitBonus,inheritedHitBonus,innateDamageBonus,innateHealBonus,
   innateAvoid,innatePhysicalProtection,innateReduction,terrainStepCost}
   from "./innateAbilities.ts";
@@ -592,6 +592,9 @@ export class Battle {
     const weaponId=actor.inventory[actor.equippedIndex];
     if(actor.classId!==art.classId||
        !actor.classLicenses.includes(art.classId)||
+       !meetsWeaponRank(actor.weaponExp[art.category],
+         art.classId==="scout"?"E":"D")||
+       (art.classId==="scout"&&!meetsWeaponRank(actor.weaponExp.sword,"D"))||
        !weaponId||weaponFor(weaponId).name!==actor.weapon.name||
        !canWield(actor.classId,weaponId,actor.weaponExp)||
        actor.weapon.category!==art.category||
@@ -688,6 +691,10 @@ export class Battle {
       Math.max(0,statusPower(defender,"shield")-damage)));
     else if(followUp==="defender")hpA=Math.max(0,hpA-Math.max(0,followUpDamage-
       Math.max(0,statusPower(attacker,"shield")-counterDamage)));
+    const projectedDefender=career?.effect==="meleeWeaken"?
+      {...defender,statuses:[...defender.statuses.filter(s=>s.kind!=="meleeWeaken"),
+        {kind:"meleeWeaken" as const,power:5,sourceId:attacker.id,
+         expiresAfter:this.phaseSerial[defender.team]+1}]}:defender;
     const projected= formal?.effect==="evasion"?
       {...attacker,statuses:[...attacker.statuses.filter(s=>s.kind!=="evasion"),
         {kind:"evasion" as const,power:10,sourceId:attacker.id,
@@ -699,7 +706,7 @@ export class Battle {
       attackerHit:this.hitChance(attacker,defender,(formal?.hitBonus??0)+(career?.hitBonus??0)+
         innateHitBonus(attacker,defender,true,artId===undefined)+
         inheritedHitBonus(attacker,defender,true)),
-      defenderHit:this.hitChance(defender,projected),
+      defenderHit:this.hitChance(projectedDefender,projected),
       attackerCrit:this.criticalChance(attacker,defender),
       defenderCrit:this.criticalChance(defender,attacker),followUp,followUpDamage,
       attackerTrait:traitLabel(attacker.weapon,defender.classId,followUp==="attacker"),

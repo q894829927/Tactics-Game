@@ -190,6 +190,22 @@ test("C4-A swallow retreat happens only on defeat and valid unoccupied step",()=
  third.battle.useCombatArt(third.actor,third.target,third.art.id);
  assert.equal(third.actor.x,initial.x,"no kill means no retreat");
 });
+test("C4-A short-punch forecast predicts reduced next-melee counter accuracy",()=>{
+ const {battle,actor,target,art}=setup("martialArtist");
+ const before=battle.forecastAttack(actor,target);
+ const after=battle.forecastAttack(actor,target,art.id);
+ assert.ok(before.canCounter);
+ assert.equal(after.defenderHit,Math.max(0,before.defenderHit-5));
+});
+test("C4-A scouts must keep sword D along with bow E to perform their action",()=>{
+ const {battle,actor,target,art}=setup("scout");
+ actor.weaponExp.sword=0;
+ assert.equal(battle.previewAction(actor,target,art.id),null);
+ actor.weaponExp.sword=40;actor.weaponExp.bow=0;
+ assert.equal(battle.previewAction(actor,target,art.id),null);
+ actor.weaponExp.bow=10;
+ assert.ok(battle.previewAction(actor,target,art.id));
+});
 test("C4-A dedicated command and prognosis exist independently of seven-family arts",()=>{
  const ui=readFileSync(new URL("../src/scene/BoardView.ts",import.meta.url),"utf8");
  assert.match(ui,/text: "职业技"/);
