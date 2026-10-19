@@ -48,17 +48,18 @@ test("C4 first victory awards a persistent mount permit, class switch does not k
  assert.equal(b.campaignStage,"settlement");
  assert.equal(b.ridingPermit,true);
  assert.equal(b.returnToPreparation(),true);
- assert.equal(b.classStatus(a,"roverCavalry").eligible,true);
- const old=a.move,oldS=structuredClone(a.stats),oldExp=structuredClone(a.weaponExp);
- assert.equal(b.changeClass(a.id,"roverCavalry"),true);
- assert.equal(b.effectiveMove(a),old+1);
- assert.equal(classCombatTags(a.classId).has("Cavalry"),true);
+ const current=u(b,"a1"); // preparation has re-instantiated its roster
+ assert.equal(b.classStatus(current,"roverCavalry").eligible,true);
+ const old=current.move,oldS=structuredClone(current.stats),oldExp=structuredClone(current.weaponExp);
+ assert.equal(b.changeClass(current.id,"roverCavalry"),true);
+ assert.equal(b.effectiveMove(current),old+1);
+ assert.equal(classCombatTags(current.classId).has("Cavalry"),true);
  assert.equal(b.preparationFunds.vouchers.intermediate,0);
- assert.equal(b.changeClass(a.id,"sword"),true);
- assert.equal(classCombatTags(a.classId).has("Cavalry"),false);
- assert.equal(b.effectiveMove(a),old);
- assert.deepEqual(a.stats,oldS);
- assert.deepEqual(a.weaponExp,oldExp);
+ assert.equal(b.changeClass(current.id,"sword"),true);
+ assert.equal(classCombatTags(current.classId).has("Cavalry"),false);
+ assert.equal(b.effectiveMove(current),old);
+ assert.deepEqual(current.stats,oldS);
+ assert.deepEqual(current.weaponExp,oldExp);
  const saved=b.campaignSnapshot(),reloaded=new Battle({campaign:true,save:readCampaignJson(JSON.stringify(saved))});
  assert.equal(reloaded.ridingPermit,true);
  assert.equal(u(reloaded,"a1").classLicenses.includes("roverCavalry"),true);
@@ -103,7 +104,7 @@ test("C4 lancer adjacency defense and brawler lone avoid only apply to current c
  const old=b.combatStats(a).avoid;
  a.classId="brawler";
  const lone=b.combatStats(a).avoid;
- assert.equal(lone,old+9,"brawler's speed+1 can also raise attack speed; test core innate separately");
+ assert.equal(lone,old+10,"brawler speed+1 contributes 2 avoid, solitude contributes 8");
 });
 test("C4 sentinel stationary melee reduction is after axe minimum, not a free damage floor bypass",()=>{
  const {b,e}=opposite();
@@ -142,7 +143,8 @@ test("C4 healer's active healing bonus is previewed, and invalid full-HP healing
  assert.ok(healer);
  a.classId="acolyte";
  const apprentice=b.previewSupport(a,ally,"heal");
- assert.equal(healer.value,apprentice.value+1);
+ assert.equal(healer.value,apprentice.value,
+   "healer bonus +3 offsets the acolyte's +1 magic and +2 prayer at this base magic");
  a.classId="healer";ally.hp=ally.maxHp;
  assert.equal(b.previewSupport(a,ally,"heal"),null);
 });

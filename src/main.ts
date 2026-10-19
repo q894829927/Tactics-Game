@@ -630,8 +630,9 @@ function renderClassPreparation():void {
     emblem.setAttribute("aria-hidden","true");
     const title=document.createElement("span");
     title.className="class-requirement-text";
-    title.textContent=(preparationClassId==="roverCavalry"?"任选 · ":"")+({sword:"剑术",lance:"枪术",axe:"斧术",bow:"弓术",
-      gauntlet:"拳术",dark:"黑魔法",white:"白魔法"} as Record<string,string>)[category]??category;
+    title.textContent=(preparationClassId==="roverCavalry"?"任选 · ":"")+
+      (({sword:"剑术",lance:"枪术",axe:"斧术",bow:"弓术",gauntlet:"拳术",
+         dark:"黑魔法",white:"白魔法"} as Record<string,string>)[category]??category);
     const rank=document.createElement("strong");
     rank.textContent=required;
     const progress=document.createElement("small");
