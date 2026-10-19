@@ -4,6 +4,7 @@ import {WEAPON_LIBRARY,weaponRange,canWield} from "../engine/weapons.ts";
 import {weaponRankForExp,weaponExperienceText} from "../engine/proficiency.ts";
 import {weaponResourceText} from "../engine/combatResources.ts";
 import {COMBAT_ARTS} from "../engine/combatArts.ts";
+import {CAREER_ARTS,isCareerArtId} from "../engine/careerArts.ts";
 import {CLASS_LIBRARY} from "../engine/classes.ts";
 import { TERRAIN_INFO, movementCostLabel } from "../engine/terrain.ts";
 import { leftClickIntent, rightClickIntent } from "./interactionPolicy.ts";
@@ -78,8 +79,9 @@ export class BoardView {
   private suppressMiniClick = false;
   private readonly menu: HTMLDivElement;
   private readonly weaponPicker: HTMLDivElement;
-  private pickerMode:"attack"|"art"|"formal"|"equip"|"status"|null=null;
+  private pickerMode:"attack"|"art"|"formal"|"career"|"equip"|"status"|null=null;
   private supportMode:SupportEffect|null=null;
+  private careerSupportId:string|null=null;
   private attackArtId:string|null=null;
   private readonly minimap: HTMLElement;
   private readonly viewportMarker: HTMLDivElement;
@@ -419,7 +421,7 @@ export class BoardView {
     if (this.isAnimating || !this.battle.canCancelMove) return false;
     this.menuVisible = false;
     this.attackMode = false;
-    this.supportMode=null;
+    this.supportMode=null;this.careerSupportId=null;
     this.pickerMode = null;
     this.forecastTargetId = null;
     if (!this.battle.cancelMove()) return false;
@@ -439,7 +441,7 @@ export class BoardView {
     this.forecastTargetId = null;
     this.attackMode = false;
     this.attackArtId=null;
-    this.supportMode=null;
+    this.supportMode=null;this.careerSupportId=null;
     this.menuVisible = true;
     this.refresh();
     this.onInspectionChange?.();
@@ -456,10 +458,12 @@ export class BoardView {
     if (this.attackMode) {
       this.attackMode = false;
       if(this.supportMode){
-        this.supportMode=null;this.pickerMode=null;this.menuVisible=true;
+        this.supportMode=null;this.careerSupportId=null;
+        this.pickerMode=null;this.menuVisible=true;
         this.refresh();return true;
       }
-      this.pickerMode = this.attackArtId&&this.attackArtId!==this.battle.basicArt.id?"formal":
+      this.pickerMode = isCareerArtId(this.attackArtId)?"career":
+        this.attackArtId&&this.attackArtId!==this.battle.basicArt.id?"formal":
         this.attackArtId?"art":"attack";
       this.menuVisible = false;
       this.refresh();
@@ -671,7 +675,10 @@ export class BoardView {
     const touched = this.battle.occupant(x,y);
     if(this.supportMode){
       const actor=this.battle.selected;
-      if(actor&&touched&&this.battle.previewSupport(actor,touched,this.supportMode)){
+      const available=actor&&touched&&(this.careerSupportId?
+        this.battle.previewCareerSupport(actor,touched,this.careerSupportId):
+        this.battle.previewSupport(actor,touched,this.supportMode));
+      if(available){
         this.forecastTargetId=touched.id;this.menuVisible=false;
         this.inspectCell(x,y);this.refresh();this.onInspectionChange?.();
       }else this.onHint?.("目标不在施法范围内，或无法施加当前效果");
@@ -707,6 +714,7 @@ export class BoardView {
     this.menuVisible = false;
     this.attackMode = false;
     this.pickerMode = null;
+    this.careerSupportId=null;
     if (intent === "select-ally" || intent === "move") {
       const mover = intent === "move" ? this.battle.selected : undefined;
       const path = mover ? this.battle.movementPath(mover, {x, y}) : null;
@@ -741,7 +749,7 @@ export class BoardView {
     this.pickerMode = null;
     this.forecastTargetId = null;
     this.attackMode = false;
-    this.supportMode=null;
+    this.supportMode=null;this.careerSupportId=null;
     this.menuVisible = false;
     this.battle.selectedId = null;
     this.inspection.clear();
@@ -818,7 +826,9 @@ export class BoardView {
     const attacker = this.battle.selected;
     const defender = this.battle.units.find(u => u.id === this.forecastTargetId && u.hp > 0);
     if(this.supportMode&&attacker&&defender){
-      const support=this.battle.previewSupport(attacker,defender,this.supportMode);
+      const support=this.careerSupportId?
+        this.battle.previewCareerSupport(attacker,defender,this.careerSupportId):
+        this.battle.previewSupport(attacker,defender,this.supportMode);
       if(support){this.paintSupportForecast(attacker,defender,support);return;}
     }
     const forecast = !this.supportMode&&attacker&&defender?
@@ -860,12 +870,17 @@ export class BoardView {
     const isArt=!!this.attackArtId&&!this.enemyForecast;
     const art=this.attackArtId&&Object.hasOwn(COMBAT_ARTS,this.attackArtId)?
       COMBAT_ARTS[this.attackArtId as keyof typeof COMBAT_ARTS]:null;
-    cost.textContent=art?art.name+" · "+art.description+" · "+
+    const career=isCareerArtId(this.attackArtId)?CAREER_ARTS[this.attackArtId]:null;
+    cost.textContent=career?career.name+" · "+career.description+" · "+
+      (attacker.weapon.kind==="magical"?"次数 -":"耐久 -")+career.cost+
+      (forecast.retreatTo?" · 击败后预计回退到("+forecast.retreatTo.x+","+forecast.retreatTo.y+")":""):
+      art?art.name+" · "+art.description+" · "+
       (attacker.weapon.kind==="magical"?"次数 -":"耐久 -")+art.cost:
       isArt?"试验战技 · 耐久 -"+this.battle.basicArt.durabilityCost+
       " · 本次伤害 +"+this.battle.basicArt.damageBonus:
       (attacker.weapon.kind==="magical"?"法术交战 · 次数 -1":"普通攻击 · 耐久不消耗");
-    document.getElementById("forecast-confirm")!.textContent=art?"确认"+art.name:
+    document.getElementById("forecast-confirm")!.textContent=career?"确认"+career.name:
+      art?"确认"+art.name:
       isArt?"确认试验战技":"攻击";
     this.forecastPanel.hidden = false;
   }
@@ -893,9 +908,10 @@ export class BoardView {
       ["forecast-ally-after",actor.hp/actor.maxHp],["forecast-enemy-bar",target.hp/target.maxHp],
       ["forecast-enemy-after",after/target.maxHp]] as const)
       elem(id).style.width=Math.max(0,Math.min(100,100*value))+"%";
-    elem("forecast-action-cost").textContent=label[preview.effect]+" · 次数 -"+
+    const title=this.careerSupportId==="life-gift"?"生命赐福":label[preview.effect];
+    elem("forecast-action-cost").textContent=title+" · 次数 -"+
       preview.cost+" · 剩余 "+preview.remaining;
-    elem("forecast-confirm").textContent="确认"+label[preview.effect];
+    elem("forecast-confirm").textContent="确认"+title;
     this.forecastPanel.hidden=false;
   }
 
@@ -904,14 +920,21 @@ export class BoardView {
     const attacker = this.battle.selected;
     const target = this.battle.units.find(u => u.id === this.forecastTargetId && u.hp > 0);
     if(this.supportMode){
-      if(!attacker||!target||!this.battle.previewSupport(attacker,target,this.supportMode)){
+      const preview=attacker&&target&&(this.careerSupportId?
+        this.battle.previewCareerSupport(attacker,target,this.careerSupportId):
+        this.battle.previewSupport(attacker,target,this.supportMode));
+      if(!preview){
         this.forecastTargetId=null;this.refresh();return;
       }
-      if(!this.battle.commitSupport(attacker,target,this.supportMode)){
+      const committed=this.careerSupportId?
+        this.battle.commitCareerSupport(attacker!,target!,this.careerSupportId):
+        this.battle.commitSupport(attacker!,target!,this.supportMode);
+      if(!committed){
         this.forecastTargetId=null;this.refresh();return;
       }
       this.forecastTargetId=null;this.attackMode=false;this.supportMode=null;
-      this.menuVisible=false;this.inspectCell(target.x,target.y);
+      this.careerSupportId=null;
+      this.menuVisible=false;this.inspectCell(target!.x,target!.y);
       this.onCombatCommitted?.();this.refresh();this.onInspectionChange?.();
       this.onCombatPresentationEnded?.(); // support actions have no combat animation
       return;
@@ -949,6 +972,7 @@ export class BoardView {
     const commands = [
       { text: "攻击", icon: "⚔", enabled: this.battle.availableAttackWeapons(actor).length > 0, key: "attack" },
       { text: "战技", icon: "✦", enabled:this.battle.availableFormalArtWeapons(actor).length>0,key:"formal" },
+      { text: "职业技", icon: "◆", enabled:this.battle.availableCareerWeapons(actor).length>0,key:"career" },
       { text: "战技·试验", icon: "✧", enabled: this.battle.availableArtWeapons(actor).length>0, key: "art" },
       { text:"治疗",icon:"✚",enabled:this.battle.units.some(u=>this.battle.previewSupport(actor,u,"heal")),key:"heal" },
       { text:"护盾·试验",icon:"⬡",enabled:this.battle.units.some(u=>this.battle.previewSupport(actor,u,"shield")),key:"shield" },
@@ -984,6 +1008,10 @@ export class BoardView {
             this.onHint?.("选择友方目标");
           }
           this.refresh();
+        } else if(cmd.key==="career"){
+          this.menuVisible=false;this.forecastTargetId=null;
+          this.attackMode=false;this.attackArtId=null;this.supportMode=null;
+          this.careerSupportId=null;this.pickerMode="career";this.refresh();
         } else if(cmd.key==="formal"){
           this.menuVisible=false;this.forecastTargetId=null;
           this.attackMode=false;this.attackArtId=null;this.supportMode=null;
@@ -1038,9 +1066,11 @@ export class BoardView {
     title.className="weapon-picker-title";
     title.textContent=mode==="attack"?"选择攻击武器":
       mode==="art"?"选择试验战技武器 · 耗耐久3":
-      mode==="formal"?"选择已装备的正式战技武器":"装备背包";
+      mode==="formal"?"选择已装备的正式战技武器":
+      mode==="career"?"选择当前职业专属招式武器":"装备背包";
     this.weaponPicker.appendChild(title);
-    const attackable=new Set(mode==="formal"?this.battle.availableFormalArtWeapons(actor):
+    const attackable=new Set(mode==="career"?this.battle.availableCareerWeapons(actor):
+      mode==="formal"?this.battle.availableFormalArtWeapons(actor):
       mode==="art"?this.battle.availableArtWeapons(actor):this.battle.availableAttackWeapons(actor));
     actor.inventory.forEach((id,index)=>{
       const item=WEAPON_LIBRARY[id];
@@ -1066,7 +1096,18 @@ export class BoardView {
         if(this.isAnimating||this.battle.phase!=="player"||this.battle.selected?.id!==actor.id)return;
         if(!this.battle.equipWeapon(actor,index))return;
         this.pickerMode=null;
-        if(mode==="formal"){
+        if(mode==="career"){
+          const skill=this.battle.currentCareerArt(actor);
+          if(!skill){this.refresh();return;}
+          if(skill.target==="ally"){
+            this.careerSupportId=skill.id;this.supportMode="heal";
+            this.attackMode=true;
+            this.onHint?.("请选择受伤友军使用"+skill.name);
+          }else{
+            this.attackArtId=skill.id;this.attackMode=true;
+            this.onHint?.("选择敌人使用"+skill.name+" · "+skill.description);
+          }
+        }else if(mode==="formal"){
           const skill=this.battle.formalArtForWeapon(actor);
           if(!skill){this.refresh();return;}
           if(skill.target==="ally"){
@@ -1088,7 +1129,10 @@ export class BoardView {
     });
     const back=document.createElement("button");
     back.type="button";back.className="weapon-back";back.textContent="返回";
-    back.addEventListener("click",()=>{this.pickerMode=null;this.attackArtId=null;this.menuVisible=true;this.refresh();});
+    back.addEventListener("click",()=>{
+      this.pickerMode=null;this.attackArtId=null;this.careerSupportId=null;
+      this.menuVisible=true;this.refresh();
+    });
     this.weaponPicker.appendChild(back);
     this.weaponPicker.hidden=false;
     this.positionWeaponPicker(actor);
