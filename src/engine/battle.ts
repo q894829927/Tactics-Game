@@ -15,6 +15,9 @@ import {ALLY_IDS,captureAlly,applyAlly,parseCampaign,settlementFrom,
 import {refillSpells} from "./combatResources.ts";
 import {calculateSortieReward,creditSortieReward} from "./sortieRewards.ts";
 import {awardWeaponExperience} from "./proficiency.ts";
+import {innateHitBonus,inheritedHitBonus,innateDamageBonus,innateHealBonus,
+  innateAvoid,innatePhysicalProtection,innateReduction,terrainStepCost}
+  from "./innateAbilities.ts";
 import {COMBAT_ARTS,unlockedCombatArts,ART_SLOTS,isCombatArtId,
  type CombatArtId,type CombatArt} from "./combatArts.ts";
 import {MASTERY_LIBRARY,MASTERY_SLOTS,unlockedMasteries,gainClassExperience,
@@ -102,6 +105,7 @@ export type Unit = CharacterData & {
   /** Legacy mirrors for older client/tests; battle calculations read weapon directly. */
   minRange:number;maxRange:number;
   statuses:StatusInstance[];
+  movedTiles:number;focusReady:boolean;duelTargetId:string|null;
   moved:boolean;acted:boolean;spent:boolean;
 };
 
@@ -135,7 +139,8 @@ function unit(id:CharacterId,team:Team,x:number,y:number):Unit {
     equippedArts:team==="ally"?unlockedCombatArts(character.weaponExp).slice(0,ART_SLOTS):[],
     trainingSlot:null,
     minRange:equipped.minRange,maxRange:equipped.maxRange,
-    statuses:[],moved:false,acted:false,spent:false};
+    statuses:[],movedTiles:0,focusReady:false,duelTargetId:null,
+    moved:false,acted:false,spent:false};
 }
 export function key(p: Point): string { return String(p.x) + "," + String(p.y); }
 export function distance(a: Point, b: Point): number {
@@ -280,6 +285,7 @@ export class Battle {
     this.preparationFunds={gold:checked.funds.gold,
       reputation:checked.funds.reputation,vouchers:{...checked.funds.vouchers}};
     this.sortiesCompleted=checked.sortiesCompleted;
+    this.ridingPermit=checked.ridingPermit??false;
     this.pendingSettlement=resumeSettlement?checked.pendingSettlement:null;
     this.campaignStage=resumeSettlement&&checked.pendingSettlement?"settlement":"preparation";
     this.preparationOpen=this.campaignStage==="preparation";
@@ -307,6 +313,7 @@ export class Battle {
       unit.hp=unit.maxHp;
       refillSpells(unit.spellCharges,unit.inventory);
       unit.moved=false;unit.acted=false;unit.spent=false;
+      unit.movedTiles=0;unit.focusReady=false;unit.duelTargetId=null;
     }
     this.preparationOpen=false;
     this.campaignStage="battle";
@@ -329,6 +336,7 @@ export class Battle {
       unit("e5","enemy",9,5),unit("e6","enemy",9,7),
     ];
     this.round=1;this.phase="player";this.result="playing";
+    this.phaseSerial={ally:1,enemy:0};
     this.enemyQueue=[];this.moveOrigin=null;this.selectedId=null;
     this.log=[];this.lastCombatEvents=[];
     this.setRandomSeed(0x2946e73b);
@@ -506,12 +514,14 @@ export class Battle {
     actor.x = this.moveOrigin.x;
     actor.y = this.moveOrigin.y;
     actor.moved = false;
+    actor.movedTiles=0;
     this.moveOrigin = null;
     this.emit();
     return true;
   }
 
-  effectiveMove(unit:Unit):number{return unit.move<=0?0:Math.max(1,unit.move-statusPower(unit,"slow"));}
+  effectiveMove(unit:Unit):number{return unit.move<=0?0:Math.max(1,unit.move+
+    (unit.classId==="roverCavalry"?1:0)-statusPower(unit,"slow"));}
   combatStats(unit:Unit):CombatStats {
     const base=deriveCombat({...unit,stats:effectiveClassStats(unit.stats,unit.classId),
         weapon:this.committingWeapon?.get(unit.id)??resourceWeapon(unit)},
@@ -519,13 +529,16 @@ export class Battle {
     const stats=unit.team==="ally"
       ? applyEquippedMasteries(base,unit.equippedMasteries):base;
     return {...stats,physicalProtection:Math.max(0,stats.physicalProtection+
-        statusPower(unit,"wardArmor")-statusPower(unit,"weakArmor")),
+        statusPower(unit,"wardArmor")+innatePhysicalProtection(unit,this.units)-
+        statusPower(unit,"weakArmor")),
       magicalProtection:Math.max(0,stats.magicalProtection-statusPower(unit,"weakMagic")),
-      avoid:stats.avoid+statusPower(unit,"evasion")};
+      avoid:stats.avoid+statusPower(unit,"evasion")+
+        innateAvoid(unit,this.units,this.tile(unit.x,unit.y))};
   }
   hitChance(from:Unit,to:Unit,bonus=0):number {
     return clampChance(this.combatStats(from).hit-this.combatStats(to).avoid
-      -defensiveAvoidBonus(from.weapon.category,to.weapon.category)+statusPower(to,"mark")+bonus);
+      -defensiveAvoidBonus(from.weapon.category,to.weapon.category)+statusPower(to,"mark")+
+      (to.classId==="duelist"&&to.duelTargetId===from.id?-8:0)+bonus);
   }
   criticalChance(from:Unit,to:Unit):number {
     return clampChance(this.combatStats(from).crit-this.combatStats(to).critAvoid);
@@ -594,6 +607,8 @@ export class Battle {
     const extra=formal?.id==="armor-sunder"&&
       (CLASS_LIBRARY[defender.classId].unitTags as readonly string[]).includes("Armored")?2:0;
     const damage=Math.max(0,this.damage(attacker,defender)+
+      innateDamageBonus(attacker,defender,true)-
+      innateDamageBonus(attacker,defender,false)+
       (artId===this.basicArt.id?this.basicArt.damageBonus:formal?formal.damageBonus+extra:0));
     const counterDamage=this.damage(defender,attacker);
     const counterInRange=this.inAttackRange(defender,attacker);
@@ -619,7 +634,10 @@ export class Battle {
         {kind:"evasion" as const,power:10,sourceId:attacker.id,
           expiresAfter:this.phaseSerial[attacker.team]+1}]}:attacker;
     return {damage,counterDamage:canCounter?counterDamage:0,canCounter,attackerHpAfter:hpA,defenderHpAfter:hpD,
-      attackerHit:this.hitChance(attacker,defender,formal?.hitBonus??0),defenderHit:this.hitChance(defender,projected),
+      attackerHit:this.hitChance(attacker,defender,(formal?.hitBonus??0)+
+        innateHitBonus(attacker,defender,true,artId===undefined)+
+        inheritedHitBonus(attacker,defender,true)),
+      defenderHit:this.hitChance(defender,projected),
       attackerCrit:this.criticalChance(attacker,defender),
       defenderCrit:this.criticalChance(defender,attacker),followUp,followUpDamage,
       attackerTrait:traitLabel(attacker.weapon,defender.classId,followUp==="attacker"),
@@ -676,7 +694,8 @@ export class Battle {
         if (!inBounds(x, y)) continue;
         const occupant = this.occupant(x, y);
         if (occupant && occupant.team !== actor.team) continue;
-        const cost = current.cost + TERRAIN_INFO[this.tile(x, y)].moveCost;
+        const cost = current.cost + terrainStepCost(actor,this.tile(x,y),
+          TERRAIN_INFO[this.tile(x, y)].moveCost);
         if (cost > this.effectiveMove(actor) || cost >= (best.get(key({ x, y })) ?? Infinity)) continue;
         best.set(key({ x, y }), cost);
         queue.push({ x, y, cost });
@@ -769,7 +788,8 @@ export class Battle {
     let current = path[0]!;
     while (current.x !== actor.x || current.y !== actor.y) {
       const cost = costs.get(key(current))!;
-      const entering = TERRAIN_INFO[this.tile(current.x, current.y)].moveCost;
+      const entering = terrainStepCost(actor,this.tile(current.x,current.y),
+        TERRAIN_INFO[this.tile(current.x, current.y)].moveCost);
       const previous = [
         {x: current.x - 1, y: current.y},
         {x: current.x, y: current.y - 1},
@@ -806,7 +826,8 @@ export class Battle {
     const base=attacker.weapon.kind==="magical"
       ? from.magic+might-to.magicalProtection
       : from.strength+might-to.physicalProtection;
-    return strikeDamage(base,attacker.weapon.category);
+    return strikeDamage(Math.max(0,base+innateDamageBonus(attacker,defender,false)-
+       innateReduction(attacker,defender)),attacker.weapon.category);
   }
 
   click(x: number, y: number): void {
@@ -832,6 +853,7 @@ export class Battle {
     if (!this.reachable(actor).has(key({ x, y }))) return;
     this.preparationOpen=false;
     this.moveOrigin = {x: actor.x, y: actor.y};
+    actor.movedTiles=Math.max(0,(this.movementPath(actor,{x,y})?.length??1)-1);
     actor.x = x;
     actor.y = y;
     actor.moved = true;
@@ -1141,17 +1163,28 @@ export class Battle {
         castersCharged.add(from.id);
       }
       const first=from===actor&&strikeIndex===0;
-      const missed=!this.roll(this.hitChance(from,to,first?(formal?.hitBonus??0):0));
+      const bonus=first?(formal?.hitBonus??0)+innateHitBonus(from,to,true,!artId)+
+        inheritedHitBonus(from,to,true):0;
+      const missed=!this.roll(this.hitChance(from,to,bonus));
+      if(missed&&(to.classId==="martialArtist"||
+         to.equippedMasteries.includes("slipFocus")))to.focusReady=true;
       if(missed) misses++;
       const critical=!missed && this.roll(this.criticalChance(from,to));
       if(critical) crits++;
       const armor=formal?.id==="armor-sunder"&&
         (CLASS_LIBRARY[to.classId].unitTags as readonly string[]).includes("Armored")?2:0;
-      const artBonus=first?(artId===this.basicArt.id?this.basicArt.damageBonus:
-        formal?formal.damageBonus+armor:0):0;
+      const artBonus=first?((artId===this.basicArt.id?this.basicArt.damageBonus:
+        formal?formal.damageBonus+armor:0)+
+        innateDamageBonus(from,to,true)-innateDamageBonus(from,to,false)):0;
       const amount=missed?0:strikeDamage(Math.max(0,this.damage(from,to)+artBonus),
         from.weapon.category,critical,followUp);
       const impact=absorbDamage(to,amount);
+      if(first){
+        from.focusReady=false;
+        if(from.classId==="duelist"&&from.weapon.kind==="physical"&&
+          Math.abs(from.x-to.x)+Math.abs(from.y-to.y)===1)
+          from.duelTargetId=to.id;
+      }
       if(first&&!missed&&to.hp>0&&formal&&
         (formal.effect==="slow"||formal.effect==="weakArmor"))
         applyStatus(to,formal.effect,this.phaseSerial[to.team]+1,actor.id);
