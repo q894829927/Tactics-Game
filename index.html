@@ -6,8 +6,8 @@
   <meta name="description" content="Wildfield Tactics：原创奇幻战棋，可缩放的战场地图与回合制战斗。"/>
   <meta name="theme-color" content="#071522"/>
   <title>Wildfield Tactics · 赤旗要塞</title>
-  <script type="module" crossorigin src="/games/tactics/assets/index-BCHtlCc3.js"></script>
-  <link rel="stylesheet" crossorigin href="/games/tactics/assets/index-CMkIrEPp.css">
+  <script type="module" crossorigin src="/games/tactics/assets/index-DmOvO_gF.js"></script>
+  <link rel="stylesheet" crossorigin href="/games/tactics/assets/index-CmWA7OC6.css">
 </head>
 <body>
   <div id="app" class="battle-shell">
@@ -15,6 +15,17 @@
       <section class="battlefield" aria-label="战棋地图">
         <div id="game" class="map-viewport" tabindex="0" aria-label="战场：点选友军，再点目的地移动，动画结束自动显示指令；再次点击选中友军可原地行动。桌面右键撤回移动，手机使用返回，拖动平移、双指缩放"></div>
         <button id="settings-button" class="corner-settings" type="button" aria-label="打开设置" aria-haspopup="dialog" aria-expanded="false">⚙</button>
+        <section id="lab-toolbar" class="lab-toolbar" aria-label="测试场景控制" hidden>
+          <strong>综合试炼场 <span>测试专用</span></strong>
+          <label for="lab-preset">场景预设</label>
+          <select id="lab-preset" aria-label="选择测试预设"></select>
+          <p id="lab-description"></p>
+          <p id="lab-status" aria-live="polite"></p>
+          <div class="lab-toolbar-actions">
+            <button id="lab-reset" type="button">↻ 重置预设</button>
+            <a id="lab-exit" href="?">返回战役</a>
+          </div>
+        </section>
         <div id="viewport-hint" class="sr-only" aria-live="polite"></div>
         <div class="minimap" aria-label="战场小地图" title="点击定位，拖动地图">
           <div id="minimap-grid" class="minimap-grid" role="group" aria-label="点击小地图定位视角"></div>
@@ -173,6 +184,7 @@
           <div id="campaign-level-list" class="campaign-level-list" role="group" aria-label="可选择的关卡"></div>
           <p id="campaign-level-description" class="campaign-level-description"></p>
           <p id="campaign-reward-preview" class="campaign-reward-preview" aria-live="polite"></p>
+          <a id="campaign-lab-entry" class="campaign-lab-entry" href="?lab=1">⚒ 进入综合试炼场 <small>四套测试预设 · 不影响战役存档</small></a>
         </section>
         <div class="campaign-preparation-body">
           <section class="campaign-roster-pane" aria-labelledby="campaign-roster-title">
