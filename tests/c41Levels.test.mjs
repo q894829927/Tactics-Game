@@ -5,14 +5,18 @@ import {Battle} from "../src/engine/battle.ts";
 import {LEVELS,LEVEL_IDS,DEFAULT_LEVEL_ID} from "../src/engine/levels.ts";
 import {parseCampaign,readCampaignJson} from "../src/engine/campaign.ts";
 const camp=()=>new Battle({campaign:true});
-function win(b){b.units.find(u=>u.id==="e6").hp=0;
+function win(b){
+ const objective=b.currentLevel.victory;
+ if(objective.kind==="defeat-unit")b.units.find(u=>u.id===objective.unitId).hp=0;
+ else{const ally=b.units.find(u=>u.id==="a1");ally.x=objective.x;ally.y=objective.y;ally.spent=true;}
+
  assert.equal(b.beginEnemyTurn(),false);assert.equal(b.campaignStage,"settlement");}
 test("C4-1A legacy 4v6 map and spawns are identical",()=>{
  const b=camp();assert.equal(b.selectedLevelId,DEFAULT_LEVEL_ID);
  assert.deepEqual(b.terrain,LEVELS[DEFAULT_LEVEL_ID].terrain);
  assert.deepEqual(b.units.map(u=>[u.id,u.x,u.y]),
    LEVELS[DEFAULT_LEVEL_ID].spawns.map(u=>[u.id,u.x,u.y]));
- assert.deepEqual(LEVEL_IDS,["chapter-1-1","chapter-1-2"]);
+ assert.deepEqual(LEVEL_IDS,["chapter-1-1","chapter-1-2","chapter-1-3","chapter-1-4"]);
 });
 test("C4-1A second stage locked until victory; cannot switch in combat",()=>{
  const b=camp();assert.equal(b.selectLevel("chapter-1-2"),false);

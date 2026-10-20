@@ -36,7 +36,7 @@ import {initialWeaponInstances,initialSpellCharges,makeWeaponInstance,
   canUseArt,isSpell,type WeaponInstance,type SpellCharges}
   from "./combatResources.ts";
 export type { Terrain } from "./terrain.ts";
-import {LEVELS,LEVEL_IDS,DEFAULT_LEVEL_ID,levelUnlocked,type LevelId} from "./levels.ts";
+import {LEVELS,LEVEL_IDS,DEFAULT_LEVEL_ID,levelUnlocked,objectiveComplete,type LevelId} from "./levels.ts";
 
 export const MAP_WIDTH = 10;
 export const MAP_HEIGHT = 8;
@@ -114,6 +114,7 @@ export type Unit = CharacterData & {
   statuses:StatusInstance[];
   movedTiles:number;focusReady:boolean;duelTargetId:string|null;
   moved:boolean;acted:boolean;spent:boolean;
+  holdPosition:boolean; // enemy-only level AI, not persisted
 };
 
 function unit(id:CharacterId,team:Team,x:number,y:number):Unit {
@@ -136,7 +137,7 @@ function unit(id:CharacterId,team:Team,x:number,y:number):Unit {
     trainingSlot:null,
     minRange:equipped.minRange,maxRange:equipped.maxRange,
     statuses:[],movedTiles:0,focusReady:false,duelTargetId:null,
-    moved:false,acted:false,spent:false};
+    moved:false,acted:false,spent:false,holdPosition:false};
 }
 export function key(p: Point): string { return String(p.x) + "," + String(p.y); }
 export function distance(a: Point, b: Point): number {
@@ -159,7 +160,16 @@ export class Battle {
   private setupLevel(id:LevelId):void{
     this.selectedLevelId=id;
     this.terrain=LEVELS[id].terrain;
-    this.units=LEVELS[id].spawns.map(p=>unit(p.id,p.team,p.x,p.y));
+    this.units=LEVELS[id].spawns.map(p=>{
+      const spawned=unit(p.id,p.team,p.x,p.y);
+      if("classId" in p&&p.classId!==undefined){
+        if(!canWield(p.classId,spawned.inventory[spawned.equippedIndex]!,spawned.weaponExp))
+          throw Error("Invalid encounter class in "+id);
+        spawned.classId=p.classId;spawned.role=p.classId;
+      }
+      spawned.holdPosition="holdPosition" in p&&p.holdPosition===true;
+      return spawned;
+    });
   }
   selectLevel(id:LevelId):boolean{
     if(!this.campaignEnabled||this.campaignStage!=="preparation"||
@@ -1017,6 +1027,7 @@ export class Battle {
     actor.acted = true;
     this.moveOrigin = null;
     this.selectedId = null;
+    this.resolve();
     this.emit();
   }
 
@@ -1170,7 +1181,7 @@ export class Battle {
     if (!foes.length) return null;
     const nearest = this.nearest(enemy, foes);
     let destination = {x: enemy.x, y: enemy.y};
-    if (!this.inAttackRange(enemy, nearest)) {
+    if (!enemy.holdPosition&&!this.inAttackRange(enemy, nearest)) {
       let best = this.approachScore(enemy, nearest);
       for (const position of this.reachable(enemy).keys()) {
         const [x, y] = position.split(",").map(Number);
@@ -1380,7 +1391,7 @@ export class Battle {
   private resolve(): void {
     if (!this.alive("ally").length) {
       this.result = "defeat";
-    } else if (!this.units.some(u => u.id === this.currentLevel.victory.unitId && u.hp > 0)) {
+    } else if (objectiveComplete(this.currentLevel.victory,this.units)) {
       this.result = "victory";
     }
     if (this.result !== "playing") {
