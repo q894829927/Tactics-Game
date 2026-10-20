@@ -291,6 +291,9 @@ export class BoardView {
           ? "mini-" + (terrain === "." ? "plain" : terrain === "#" ? "wall" : terrain)
           : "mini-zone-" + zoneAt(col, row));
         btn.title = inside ? String.fromCharCode(65 + col - 3) + (row - 1) + " · " + TERRAIN_INFO[terrain!].name : "场景装饰区";
+        const mission=battle.currentLevel.victory;
+        if(inside&&mission.kind==="reach-tile"&&mission.x===col-3&&mission.y===row-2)
+          btn.classList.add("mini-extraction");
         btn.setAttribute("aria-label", "镜头定位：" + btn.title);
         btn.addEventListener("click", () => this.centerOnWorld((col + .5) * TILE, (row + .5) * TILE));
         mini.appendChild(btn);
@@ -536,6 +539,9 @@ export class BoardView {
       btn.className="mini-"+(t==="."?"plain":t==="#"?"wall":t);
       btn.title=String.fromCharCode(65+col-3)+(row-1)+" · "+TERRAIN_INFO[t].name;
       btn.setAttribute("aria-label","镜头定位："+btn.title);
+      const mission=this.battle.currentLevel.victory;
+      btn.classList.toggle("mini-extraction",
+        mission.kind==="reach-tile"&&mission.x===col-3&&mission.y===row-2);
     }
   }
   refresh(): void {
@@ -639,6 +645,8 @@ export class BoardView {
         const moveOverlay=this.moveHighlights[index]!;
         const attackOverlay=this.attackHighlights[index]!;
         const terrain=this.battle.tile(x,y);
+        const mission=this.battle.currentLevel.victory;
+        const extraction=mission.kind==="reach-tile"&&mission.x===x&&mission.y===y;
         const occupant=this.battle.occupant(x,y);
         const coord=key({x,y});
         const canMove=move.has(coord);
@@ -650,6 +658,7 @@ export class BoardView {
         const inspectedHere=this.inspectionCell?.x===x && this.inspectionCell.y===y;
         cell.className="battle-cell"
           +(terrain==="#"?" is-blocked":"")
+          +(extraction?" is-extraction":"")
           +(occupant?.id===this.battle.selectedId?" is-selected":"")
           +(inspectedHere?" is-inspected":"");
         cell.title=TERRAIN_INFO[terrain].name+" · "+

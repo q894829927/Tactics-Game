@@ -1514,3 +1514,10 @@ button:disabled { cursor: not-allowed; }
 .campaign-level-option:disabled{opacity:.48}
 .campaign-level-description{font-size:11px;color:#c4cbd1;line-height:1.5;margin:7px 0 0}
 @media(max-width:560px){.campaign-level-selector{padding:10px}.campaign-level-list{grid-template-columns:1fr}}
+
+/* C4-1B: extraction marker, also visible at coarse mobile zoom. */
+.battle-cell.is-extraction{outline:2px solid #f8d486;outline-offset:-5px;position:relative}
+.battle-cell.is-extraction::after{content:"撤";position:absolute;right:4px;bottom:4px;
+  font-size:11px;font-weight:800;color:#fff3c4;background:#405b45df;
+  border:1px solid #ebd697;border-radius:5px;padding:1px 3px;pointer-events:none}
+.mini-cell.mini-extraction{box-shadow:inset 0 0 0 3px #f8d486}

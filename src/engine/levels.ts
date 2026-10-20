@@ -119,7 +119,7 @@ for(const level of Object.values(LEVELS)){
    const seen=new Set(queue.map(([x,y])=>x+","+y));
    while(queue.length){
      const [x,y]=queue.shift()!;
-     for(const [nx,ny] of [[x+1,y],[x-1,y],[x,y+1],[x,y-1]]){
+     for(const [nx,ny] of [[x+1,y],[x-1,y],[x,y+1],[x,y-1]] as [number,number][]){
        if(nx<0||nx>=LEVEL_WIDTH||ny<0||ny>=LEVEL_HEIGHT||
           level.terrain[ny]?.[nx]==="#"||seen.has(nx+","+ny))continue;
        seen.add(nx+","+ny);queue.push([nx,ny]);

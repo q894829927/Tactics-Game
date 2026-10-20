@@ -169,7 +169,7 @@ function refresh(): void {
   const result = get("result-banner");
   result.hidden = battle.result === "playing";
   result.textContent = battle.result === "victory"
-    ? "胜利！"+battle.currentLevel.name+" · 统领被击败。" : battle.result === "defeat"
+    ? "胜利！"+battle.currentLevel.name+" · "+battle.currentLevel.objectiveLabel+"。" : battle.result === "defeat"
     ? "挑战失败：全体友军倒下。" : "";
   const logs = get("log-list");
   logs.replaceChildren();
@@ -260,7 +260,8 @@ function renderCampaign():void{
       });
       levelRoot.appendChild(option);
     }
-    get("campaign-level-description").textContent=battle.currentLevel.description;
+    get("campaign-level-description").textContent=battle.currentLevel.description+
+      "　胜利目标："+battle.currentLevel.objectiveLabel;
     const categoryNames={
       sword:"剑",lance:"枪",axe:"斧",bow:"弓",gauntlet:"拳套",
       dark:"黑魔法",white:"白魔法",
@@ -442,7 +443,10 @@ button("campaign-change-class").addEventListener("click",()=>{
   preparationUnitId=campaignSelectedId;openClassPreparation();
 });
 button("campaign-start-sortie").addEventListener("click",()=>{
-  if(battle.beginSortie())showPhase("第 1 回合 · 我方行动","PLAYER PHASE");
+  if(battle.beginSortie()){
+    showPhase("第 1 回合 · 我方行动","PLAYER PHASE");
+    get("viewport-hint").textContent="本关目标："+battle.currentLevel.objectiveLabel;
+  }
 });
 button("campaign-return-preparation").addEventListener("click",()=>{
   if(battle.returnToPreparation()){
