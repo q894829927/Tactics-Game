@@ -71,9 +71,16 @@ test("C4-1B fortress guards have distinct classes; other enemy kill not victory"
  assert.equal(b.units.find(u=>u.id==="e3").classId,"eliteMarksman");
  b.units.find(u=>u.id==="e3").hp=0;
  assert.equal(b.beginEnemyTurn(),true);assert.equal(b.result,"playing");
- b.units.find(u=>u.id==="e6").hp=0;
- assert.equal(b.beginEnemyTurn(),false);
- assert.deepEqual(b.completedLevelIds,LEVEL_IDS);
+ // The second scenario starts in a legal player phase; beginning a second
+ // enemy phase while already in an enemy phase is intentionally rejected.
+ const confirmed=camp();confirmed.beginSortie();clear(confirmed);
+ stage(confirmed,"chapter-1-2");clear(confirmed);
+ stage(confirmed,"chapter-1-3");clear(confirmed);
+ stage(confirmed,"chapter-1-4");
+ confirmed.units.find(u=>u.id==="e6").hp=0;
+ assert.equal(confirmed.beginEnemyTurn(),false);
+ assert.equal(confirmed.result,"victory");
+ assert.deepEqual(confirmed.completedLevelIds,LEVEL_IDS);
 });
 test("C4-1B C4-1A second-stage victories stay valid and unlock new stage 3",()=>{
  const src=camp(),s=src.campaignSnapshot();
