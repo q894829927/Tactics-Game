@@ -1,0 +1,27 @@
+name: C4-1D Campaign Balance
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  balance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm install --no-audit --no-fund
+      - name: Run seeded real-action scenarios
+        run: node scripts/c41d-balance.mjs
+      - name: Upload empirical metrics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: c41d-balance-evidence
+          path: balance-artifacts/*
+          if-no-files-found: warn
+          retention-days: 30
