@@ -24,3 +24,7 @@
 
 Node.js 24：npm run verify；node scripts/c41d-balance.mjs。
 CI 与独立实战报告应同时通过，ECS 版本另核对 SHA。
+
+## 可审计报告路径
+
+工作流成功后，还会将 JSON 和 Markdown 写入独立分支 c4-1d-evidence 下的 reports/<主分支SHA>/metrics.json 和 report.md。可在 GitHub 直接阅读对应版本的实验结果，避免只有 ZIP 附件难以核查；该分支不会作为游戏部署源。
