@@ -37,6 +37,8 @@ import {initialWeaponInstances,initialSpellCharges,makeWeaponInstance,
   from "./combatResources.ts";
 export type { Terrain } from "./terrain.ts";
 import {LEVELS,LEVEL_IDS,DEFAULT_LEVEL_ID,levelUnlocked,objectiveComplete,type LevelId} from "./levels.ts";
+import {LAB_LEVEL,LAB_TERRAIN,LAB_PRESETS,DEFAULT_LAB_PRESET,type LabPresetId} from "./testLab.ts";
+import {WEAPON_CATEGORIES} from "./equipmentTypes.ts";
 
 export const MAP_WIDTH = 10;
 export const MAP_HEIGHT = 8;
@@ -153,7 +155,7 @@ export class Battle {
   selectedLevelId:LevelId=DEFAULT_LEVEL_ID;
   completedLevelIds:LevelId[]=[];
   replayVoucherProgress:LevelId[]=[];
-  get currentLevel(){return LEVELS[this.selectedLevelId];}
+  get currentLevel(){return this.labMode?LAB_LEVEL:LEVELS[this.selectedLevelId];}
   get availableLevels(){return LEVEL_IDS.map(id=>({
     ...LEVELS[id],unlocked:levelUnlocked(id,this.completedLevelIds),
     completed:this.completedLevelIds.includes(id),
@@ -171,6 +173,42 @@ export class Battle {
       spawned.holdPosition="holdPosition" in p&&p.holdPosition===true;
       return spawned;
     });
+  }
+  /** All sandbox fixture changes are in-memory and reset the entire battle. */
+  private setupLab():void{
+    this.setupLevel(DEFAULT_LEVEL_ID);
+    this.terrain=LAB_TERRAIN;
+    const preset=LAB_PRESETS[this.labPreset];
+    for(const row of [...preset.allies,...preset.enemies]){
+      const actor=this.units.find(u=>u.id===row.id);
+      if(!actor)throw Error("Unknown lab unit: "+row.id);
+      actor.x=row.x;actor.y=row.y;
+      actor.classId=row.classId;actor.role=row.classId;
+      actor.weaponExp=Object.fromEntries(WEAPON_CATEGORIES.map(c=>[c,120])) as typeof actor.weaponExp;
+      actor.inventory=[...row.weapons];
+      if(actor.inventory.some(id=>!canWield(actor.classId,id,actor.weaponExp)))
+        throw Error("Illegal lab equipment: "+row.id);
+      actor.weaponInstances=initialWeaponInstances(actor.characterId,actor.inventory);
+      actor.spellCharges=initialSpellCharges(actor.inventory);
+      actor.classLicenses=[row.classId];
+      actor.classExperience={};
+      actor.equippedMasteries=[];
+      actor.equippedIndex=0;
+      actor.weapon=weaponFor(actor.inventory[0]!);
+      actor.minRange=actor.weapon.minRange;actor.maxRange=actor.weapon.maxRange;
+      actor.equippedArts=actor.team==="ally"
+        ?unlockedCombatArts(actor.weaponExp).filter(id=>
+          actor.inventory.some(weaponId=>weaponFor(weaponId).category===COMBAT_ARTS[id].category)).slice(0,ART_SLOTS)
+        :[];
+      actor.holdPosition=("holdPosition" in row)&&row.holdPosition===true;
+      actor.hp=Math.max(1,actor.maxHp-(("wounded" in row)?(row.wounded??0):0));
+      actor.statuses=[];
+      if("status" in row&&row.status)applyStatus(actor,row.status,2,actor.id);
+    }
+  }
+  selectLabPreset(id:LabPresetId):boolean{
+    if(!this.labMode||!Object.hasOwn(LAB_PRESETS,id))return false;
+    this.labPreset=id;this.restart();return true;
   }
   selectLevel(id:LevelId):boolean{
     if(!this.campaignEnabled||this.campaignStage!=="preparation"||
@@ -203,6 +241,8 @@ export class Battle {
   onChange: (() => void) | null = null;
   preparationOpen=true;
   readonly campaignEnabled:boolean;
+  readonly labMode:boolean;
+  labPreset:LabPresetId=DEFAULT_LAB_PRESET;
   campaignStage:"preparation"|"battle"|"settlement"="battle";
   sortiesCompleted=0;
   ridingPermit=false;
@@ -227,8 +267,11 @@ export class Battle {
     return chance>=100?true:chance<=0?false:this.nextRandom()*100<chance;
   }
 
-  constructor(options?:{campaign?:boolean;save?:CampaignSave|null}){
-    this.campaignEnabled=!!options?.campaign;
+  constructor(options?:{campaign?:boolean;save?:CampaignSave|null;lab?:boolean;labPreset?:LabPresetId}){
+    this.labMode=options?.lab===true;
+    if(this.labMode&&options?.labPreset&&Object.hasOwn(LAB_PRESETS,options.labPreset))
+      this.labPreset=options.labPreset;
+    this.campaignEnabled=!!options?.campaign&&!this.labMode;
     this.restart();
     if(this.campaignEnabled&&options?.save)this.loadCampaign(options.save);
   }
@@ -240,8 +283,10 @@ export class Battle {
       ? this.campaignStage==="settlement"?this.campaignSnapshot():
         this.sortieStart??(this.campaignStage==="preparation"?this.campaignSnapshot():null)
       : null;
-    this.setupLevel(saved?.selectedLevelId??this.selectedLevelId);    this.round = 1;
-    this.ridingPermit=false;
+    if(this.labMode)this.setupLab();
+    else this.setupLevel(saved?.selectedLevelId??this.selectedLevelId);
+    this.round = 1;
+    this.ridingPermit=this.labMode;
     this.phaseSerial={ally:1,enemy:0};
     this.preparationOpen=true;
     this.preparationFunds={
@@ -405,7 +450,7 @@ export class Battle {
       unit.classLicenses,this.preparationFunds,this.ridingPermit);
   }
   canPrepareClass(unit:Unit):boolean {
-    return this.preparationOpen&&
+    return !this.labMode&&this.preparationOpen&&
       (!this.campaignEnabled||this.campaignStage==="preparation")&&
       this.round===1&&this.phase==="player"&&
       this.result==="playing"&&this.units.includes(unit)&&

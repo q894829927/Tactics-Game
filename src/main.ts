@@ -1,5 +1,6 @@
 import { Battle } from "./engine/battle.ts";
 import {LEVELS,type LevelId} from "./engine/levels.ts";
+import {LAB_PRESETS,LAB_PRESET_IDS,type LabPresetId} from "./engine/testLab.ts";
 import {planSortieReward,DISTINCT_REPLAYS_PER_VOUCHER}
   from "./engine/sortieRewards.ts";
 import {COMBAT_ARTS,unlockedCombatArts,ART_SLOTS} from "./engine/combatArts.ts";
@@ -27,9 +28,10 @@ const get = (id: string): HTMLElement => {
 };
 const button = (id: string): HTMLButtonElement => get(id) as HTMLButtonElement;
 get("game-version").textContent = GAME_VERSION;
-const storedText=(()=>{try{return localStorage.getItem(CAMPAIGN_STORAGE_KEY);}catch{return null;}})();
+const isLab=new URLSearchParams(window.location.search).get("lab")==="1";
+const storedText=isLab?null:(()=>{try{return localStorage.getItem(CAMPAIGN_STORAGE_KEY);}catch{return null;}})();
 const loadedCampaign=readCampaignJson(storedText);
-const battle=new Battle({campaign:true,save:loadedCampaign});
+const battle=new Battle({campaign:!isLab,lab:isLab,save:loadedCampaign});
 let campaignSelectedId:AllyId="a1";
 let campaignAttributeMode:"stats"|"growth"="stats";
 let saveStatus=storedText&&!loadedCampaign
@@ -155,8 +157,8 @@ function renderSelection(): void {
   mobileEndTurn.disabled=button("settings-end-turn").disabled;
   const canPrepare=battle.preparationOpen&&battle.phase==="player"&&
     battle.result==="playing"&&!endingTurn&&!board.isAnimating;
-  button("class-preparation-button").disabled=!canPrepare;
-  button("settings-preparation").disabled=!canPrepare;
+  button("class-preparation-button").disabled=!canPrepare||isLab;
+  button("settings-preparation").disabled=!canPrepare||isLab;
   mobileCommands.textContent = battle.selected?.team==="ally" && !battle.selected.moved &&
     !battle.selected.spent ? "◎ 原地行动" : "⚔ 指令";
   mobileCommands.disabled=!(battle.selected?.team==="ally" && !battle.selected.spent &&
@@ -222,6 +224,7 @@ get("minimap-grid").addEventListener("dblclick", () => board.resetCamera());
 
 
 function saveCampaignProgress():void{
+  if(isLab)return;
   try{
     localStorage.setItem(CAMPAIGN_STORAGE_KEY,JSON.stringify(battle.campaignSnapshot()));
     saveStatus="队伍进度已保存在本机。";
@@ -781,7 +784,7 @@ function renderClassPreparation():void {
     preparationClassId===actor.classId;
 }
 function openClassPreparation():void {
-  if(!battle.preparationOpen||battle.phase!=="player"||
+  if(isLab||!battle.preparationOpen||battle.phase!=="player"||
       battle.result!=="playing"||endingTurn||board.isAnimating)return;
   setSettings(false);setMobileInfo(false);board.hideCommandMenu();
   const selected=battle.selected;
@@ -900,7 +903,7 @@ function maybeAutoEndTurn(): void {
 
 button("settings-end-turn").addEventListener("click", startEnemyTurn);
 button("restart-button").addEventListener("click", () => {
-  if (!window.confirm("放弃当前战斗返回整备？未结算的战斗成长不会保留。")) return;
+  if(!isLab&&!window.confirm("放弃当前战斗返回整备？未结算的战斗成长不会保留。")) return;
   // Invalidate an in-flight enemy turn and any active interpolation first.
   turnRunId++;
   board.cancelAnimation();
@@ -913,6 +916,35 @@ button("restart-button").addEventListener("click", () => {
   renderCampaign();
 });
 
+const labToolbar=get("lab-toolbar");
+labToolbar.hidden=!isLab;
+if(isLab){
+  const picker=get("lab-preset") as HTMLSelectElement;
+  picker.replaceChildren();
+  for(const id of LAB_PRESET_IDS){
+    const option=document.createElement("option");
+    option.value=id;option.textContent=LAB_PRESETS[id].name;picker.appendChild(option);
+  }
+  const detail=()=>{const fixture=LAB_PRESETS[battle.labPreset];
+    get("lab-description").textContent=fixture.description;
+    get("lab-status").textContent="测试点："+fixture.coverage+
+      " · 第 "+battle.round+" 回合 · "+(battle.result==="playing"?"进行中":
+      battle.result==="victory"?"已完成":"失败")+" · 不保存战役数据";
+  };
+  const reset=(preset?:LabPresetId)=>{
+    turnRunId++;board.cancelAnimation();endingTurn=false;
+    if(preset)battle.selectLabPreset(preset);else battle.restart();
+    board.hideCommandMenu();board.clearInspection();board.resetCamera();
+    setMobileInfo(false);setSettings(false);
+    picker.value=battle.labPreset;
+    refresh();detail();
+  };
+  picker.value=battle.labPreset;
+  picker.addEventListener("change",()=>reset(picker.value as LabPresetId));
+  button("lab-reset").addEventListener("click",()=>reset());
+  battle.onChange=()=>{refresh();detail();queueMicrotask(maybeAutoEndTurn);};
+  detail();
+}
 window.addEventListener("keydown", event => {
   if (event.key === "Escape") {
     if (!overlay.hidden) setSettings(false);
