@@ -28,6 +28,8 @@ jobs:
         run: |
           npm run preview -- --host 127.0.0.1 --port 4173 > /tmp/tactics-preview.log 2>&1 &
           node tests/browserMapAcceptance.mjs
+      - name: Verify test lab and storage isolation across viewports
+        run: node tests/browserLabAcceptance.mjs
       - name: Upload map screenshot evidence
         if: always()
         uses: actions/upload-artifact@v4

@@ -34,10 +34,10 @@ type Fixture={name:string;description:string;coverage:string;
  allies:readonly LabSpawn[];enemies:readonly LabSpawn[]};
 export const LAB_PRESETS={
  mixed:{
-  name:"综合战斗",description:"剑、枪、弓、治疗对抗重甲、骑兵、射手与统领。",
+  name:"综合战斗",description:"斧、枪、弓、治疗对抗重甲、骑兵、射手与统领。",
   coverage:"普攻/反击/追击、武器切换、长短射程、治疗、地形和敌军回合",
   allies:[
-   {id:"a1",x:1,y:5,classId:"sword",weapons:["iron-sword","steel-sword","slim-sword"]},
+   {id:"a1",x:1,y:5,classId:"axeFighter",weapons:["iron-axe","hand-axe","steel-axe"]},
    {id:"a2",x:1,y:6,classId:"lancer",weapons:["iron-lance","javelin","steel-lance"],wounded:7},
    {id:"a3",x:2,y:7,classId:"archer",weapons:["iron-bow","long-bow","steel-bow"]},
    {id:"a4",x:0,y:7,classId:"acolyte",weapons:["healing-prayer","light-bolt"]},
