@@ -1,4 +1,5 @@
 import { Battle } from "./engine/battle.ts";
+import {LEVELS,type LevelId} from "./engine/levels.ts";
 import {COMBAT_ARTS,unlockedCombatArts,ART_SLOTS} from "./engine/combatArts.ts";
 import {INNATE_DESCRIPTIONS} from "./engine/innateAbilities.ts";
 import {CAMPAIGN_STORAGE_KEY,readCampaignJson,ALLY_IDS,type AllyId} from "./engine/campaign.ts";
@@ -168,7 +169,7 @@ function refresh(): void {
   const result = get("result-banner");
   result.hidden = battle.result === "playing";
   result.textContent = battle.result === "victory"
-    ? "胜利！赤旗统领被击败。" : battle.result === "defeat"
+    ? "胜利！"+battle.currentLevel.name+" · 统领被击败。" : battle.result === "defeat"
     ? "挑战失败：全体友军倒下。" : "";
   const logs = get("log-list");
   logs.replaceChildren();
@@ -237,6 +238,29 @@ function renderCampaign():void{
     get("campaign-reputation").textContent=String(battle.preparationFunds.reputation);
     get("campaign-intermediate-vouchers").textContent=
       String(battle.preparationFunds.vouchers.intermediate);
+    const levelRoot=get("campaign-level-list");levelRoot.replaceChildren();
+    get("campaign-level-progress").textContent=battle.completedLevelIds.length+
+      " / "+battle.availableLevels.length+" 已完成";
+    for(const level of battle.availableLevels){
+      const option=document.createElement("button");option.type="button";
+      option.className="campaign-level-option"+
+        (level.id===battle.selectedLevelId?" selected":"");
+      option.disabled=!level.unlocked;
+      option.setAttribute("aria-pressed",String(level.id===battle.selectedLevelId));
+      const title=document.createElement("strong");
+      title.textContent=(level.completed?"✓ ":level.unlocked?"◇ ":"🔒 ")+level.name;
+      const desc=document.createElement("span");
+      desc.textContent=level.prototype?"临时框架验证关 · 后续重做":
+        level.completed?"已通关 · 可重玩":level.unlocked?"可出击":"完成前置关卡后解锁";
+      option.append(title,desc);
+      option.addEventListener("click",()=>{
+        const id=level.id as LevelId;
+        if(!battle.selectLevel(id))return;
+        board.clearInspection();board.resetCamera();renderCampaign();
+      });
+      levelRoot.appendChild(option);
+    }
+    get("campaign-level-description").textContent=battle.currentLevel.description;
     const categoryNames={
       sword:"剑",lance:"枪",axe:"斧",bow:"弓",gauntlet:"拳套",
       dark:"黑魔法",white:"白魔法",
@@ -388,6 +412,7 @@ function renderCampaign():void{
     if(outcome){
       get("campaign-settlement-result").textContent=
         (outcome.result==="victory"?"战斗胜利":"战斗失败")+
+        " · "+LEVELS[outcome.levelId??battle.selectedLevelId].name+
         " · 第 "+outcome.sortie+" 次出击";
       get("campaign-reward-gold").textContent="+"+outcome.reward.gold;
       get("campaign-reward-reputation").textContent="+"+outcome.reward.reputation;

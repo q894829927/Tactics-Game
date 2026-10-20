@@ -15,7 +15,7 @@ export class GroundPainter {
   private grassLayer = document.createElement("canvas");
   private waterTexture: HTMLImageElement | null = null;
   constructor(private readonly canvas: HTMLCanvasElement, private readonly mini: HTMLCanvasElement,
-    private readonly terrain: readonly string[]) {
+    private terrain: readonly string[]) {
     canvas.width = WORLD_WIDTH * 2; canvas.height = WORLD_HEIGHT * 2;
     mini.width = 512; mini.height = 384;
     this.grassLayer.width = canvas.width; this.grassLayer.height = canvas.height;
@@ -41,6 +41,9 @@ export class GroundPainter {
     void loadMapAsset(MAP_ASSET_FILES.water).then(url => { water.src = url; });
   }
 
+  setTerrain(terrain:readonly string[]):void{
+    this.terrain=terrain;this.grassMask=this.createGrassMask();this.paint();
+  }
   private paint(): void {
     const ctx = this.canvas.getContext("2d");
     if (!ctx) return;

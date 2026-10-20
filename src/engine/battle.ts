@@ -36,6 +36,7 @@ import {initialWeaponInstances,initialSpellCharges,makeWeaponInstance,
   canUseArt,isSpell,type WeaponInstance,type SpellCharges}
   from "./combatResources.ts";
 export type { Terrain } from "./terrain.ts";
+import {LEVELS,LEVEL_IDS,DEFAULT_LEVEL_ID,levelUnlocked,type LevelId} from "./levels.ts";
 
 export const MAP_WIDTH = 10;
 export const MAP_HEIGHT = 8;
@@ -115,17 +116,6 @@ export type Unit = CharacterData & {
   moved:boolean;acted:boolean;spent:boolean;
 };
 
-const LAYOUT = [
-  "GGG...GGGG",
-  ".F..H.GFGG",
-  "G..##..GGG",
-  "F.....H.GG",
-  "GGF.GGG...",
-  "G..H.GF...",
-  "G....GG...",
-  "....GGG...",
-] as const;
-
 function unit(id:CharacterId,team:Team,x:number,y:number):Unit {
   const definition=CHARACTER_LIBRARY[id];
   const classId=definition.startingClassId;
@@ -158,7 +148,35 @@ export function inBounds(x: number, y: number): boolean {
 }
 
 export class Battle {
-  readonly terrain: readonly string[] = LAYOUT;
+  terrain:readonly string[]=LEVELS[DEFAULT_LEVEL_ID].terrain;
+  selectedLevelId:LevelId=DEFAULT_LEVEL_ID;
+  completedLevelIds:LevelId[]=[];
+  get currentLevel(){return LEVELS[this.selectedLevelId];}
+  get availableLevels(){return LEVEL_IDS.map(id=>({
+    ...LEVELS[id],unlocked:levelUnlocked(id,this.completedLevelIds),
+    completed:this.completedLevelIds.includes(id),
+  }));}
+  private setupLevel(id:LevelId):void{
+    this.selectedLevelId=id;
+    this.terrain=LEVELS[id].terrain;
+    this.units=LEVELS[id].spawns.map(p=>unit(p.id,p.team,p.x,p.y));
+  }
+  selectLevel(id:LevelId):boolean{
+    if(!this.campaignEnabled||this.campaignStage!=="preparation"||
+      this.result!=="playing"||!Object.hasOwn(LEVELS,id)||
+      !levelUnlocked(id,this.completedLevelIds))return false;
+    if(id===this.selectedLevelId)return true;
+    const progress=this.campaignSnapshot();
+    this.setupLevel(id);
+    for(const p of progress.allies){
+      const ally=this.units.find(u=>u.id===p.id&&u.team==="ally");
+      if(!ally)throw Error("Missing ally in stage "+id);
+      applyAlly(ally,p);
+    }
+    this.moveOrigin=null;this.selectedId=null;this.enemyQueue=[];
+    this.lastCombatEvents=[];this.lastActionEvents=[];
+    this.emit();return true;
+  }
   units: Unit[] = [];
   selectedId: string | null = null;
   round = 1;
@@ -210,19 +228,7 @@ export class Battle {
     const saved=this.campaignEnabled
       ? this.sortieStart??(this.campaignStage==="preparation"?this.campaignSnapshot():null)
       : null;
-    this.units = [
-      unit("a1","ally",1,5),
-      unit("a2","ally",1,6),
-      unit("a3","ally",2,6),
-      unit("a4","ally",0,7),
-      unit("e1","enemy",7,1),
-      unit("e2","enemy",8,2),
-      unit("e3","enemy",7,3),
-      unit("e4","enemy",8,4),
-      unit("e5","enemy",9,5),
-      unit("e6","enemy",9,7),
-    ];
-    this.round = 1;
+    this.setupLevel(saved?.selectedLevelId??this.selectedLevelId);    this.round = 1;
     this.ridingPermit=false;
     this.phaseSerial={ally:1,enemy:0};
     this.preparationOpen=true;
@@ -257,6 +263,7 @@ export class Battle {
       ? this.sortieStart.allies
       : this.aliveAndDefeatedAllies().map(captureAlly);
     return {schema:1,sortiesCompleted:this.sortiesCompleted,
+      selectedLevelId:this.selectedLevelId,completedLevelIds:[...this.completedLevelIds],
       ridingPermit:this.ridingPermit,
       funds:{gold:this.preparationFunds.gold,reputation:this.preparationFunds.reputation,
         vouchers:{...this.preparationFunds.vouchers}},
@@ -268,6 +275,7 @@ export class Battle {
         weaponInstances:x.weaponInstances.map(w=>w?{...w}:null)})),
       pendingSettlement:this.pendingSettlement
         ? {result:this.pendingSettlement.result,sortie:this.pendingSettlement.sortie,
+          levelId:this.pendingSettlement.levelId,
           reward:{gold:this.pendingSettlement.reward.gold,
             reputation:this.pendingSettlement.reward.reputation,
             vouchers:{...this.pendingSettlement.reward.vouchers}},
@@ -283,6 +291,7 @@ export class Battle {
   private restoreCampaign(save:CampaignSave,resumeSettlement:boolean):void {
     const checked=parseCampaign(save);
     if(!checked)throw Error("Invalid campaign progress");
+    this.setupLevel(checked.selectedLevelId??DEFAULT_LEVEL_ID);
     for(const p of checked.allies){
       const ally=this.units.find(u=>u.id===p.id&&u.team==="ally");
       if(!ally)throw Error("Unknown ally: "+p.id);
@@ -291,6 +300,7 @@ export class Battle {
     this.preparationFunds={gold:checked.funds.gold,
       reputation:checked.funds.reputation,vouchers:{...checked.funds.vouchers}};
     this.sortiesCompleted=checked.sortiesCompleted;
+    this.completedLevelIds=[...(checked.completedLevelIds??[])];
     this.ridingPermit=checked.ridingPermit??false;
     this.pendingSettlement=resumeSettlement?checked.pendingSettlement:null;
     this.campaignStage=resumeSettlement&&checked.pendingSettlement?"settlement":"preparation";
@@ -310,6 +320,7 @@ export class Battle {
    */
   beginSortie():boolean {
     if(!this.campaignEnabled||this.campaignStage!=="preparation"||
+      !levelUnlocked(this.selectedLevelId,this.completedLevelIds)||
       this.result!=="playing"||this.phase!=="player")return false;
     if(!this.aliveAndDefeatedAllies().every(u=>
       canWield(u.classId,u.inventory[u.equippedIndex]!,u.weaponExp)))return false;
@@ -334,14 +345,7 @@ export class Battle {
       !this.pendingSettlement)return false;
     const finished=this.campaignSnapshot();
     this.sortieStart=null;
-    this.units=[
-      unit("a1","ally",1,5),unit("a2","ally",1,6),
-      unit("a3","ally",2,6),unit("a4","ally",0,7),
-      unit("e1","enemy",7,1),unit("e2","enemy",8,2),
-      unit("e3","enemy",7,3),unit("e4","enemy",8,4),
-      unit("e5","enemy",9,5),unit("e6","enemy",9,7),
-    ];
-    this.round=1;this.phase="player";this.result="playing";
+    this.setupLevel(this.selectedLevelId);    this.round=1;this.phase="player";this.result="playing";
     this.phaseSerial={ally:1,enemy:0};
     this.enemyQueue=[];this.moveOrigin=null;this.selectedId=null;
     this.log=[];this.lastCombatEvents=[];
@@ -357,6 +361,8 @@ export class Battle {
     if(!this.campaignEnabled)throw Error("Campaign is not enabled");
     this.sortieStart=null;
     this.sortiesCompleted=0;
+    this.completedLevelIds=[];
+    this.selectedLevelId=DEFAULT_LEVEL_ID;
     this.ridingPermit=false;
     this.pendingSettlement=null;
     this.campaignStage="battle";
@@ -1374,7 +1380,7 @@ export class Battle {
   private resolve(): void {
     if (!this.alive("ally").length) {
       this.result = "defeat";
-    } else if (!this.units.some(u => u.id === "e6" && u.hp > 0)) {
+    } else if (!this.units.some(u => u.id === this.currentLevel.victory.unitId && u.hp > 0)) {
       this.result = "victory";
     }
     if (this.result !== "playing") {
@@ -1385,10 +1391,15 @@ export class Battle {
         const credited=creditSortieReward(this.preparationFunds,earned);
         this.preparationFunds=credited.funds;
         this.sortiesCompleted++;
-        if(this.result==="victory")this.ridingPermit=true;
+        if(this.result==="victory"){
+          this.ridingPermit=true;
+          if(!this.completedLevelIds.includes(this.selectedLevelId))
+            this.completedLevelIds.push(this.selectedLevelId);
+        }
         this.pendingSettlement=settlementFrom(this.result,this.sortiesCompleted,
           this.sortieStart?.allies??this.aliveAndDefeatedAllies().map(captureAlly),
           this.units,credited.awarded);
+        this.pendingSettlement.levelId=this.selectedLevelId;
         this.campaignStage="settlement";
       }
       this.selectedId = null;

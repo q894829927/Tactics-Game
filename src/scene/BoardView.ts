@@ -58,6 +58,11 @@ export class BoardView {
   private hoveredTile: Point | null = null;
   private readonly miniCells: HTMLButtonElement[] = [];
   private readonly stage: HTMLDivElement;
+  private sceneryLayer:HTMLDivElement;
+  private decalLayer:HTMLDivElement;
+  private miniScenery:HTMLDivElement;
+  private groundPainter:GroundPainter;
+  private renderedLevelId:string;
   private readonly unitLayer: HTMLDivElement;
   private readonly labelLayer: HTMLDivElement;
   private readonly labelNodes = new Map<string, HTMLDivElement>();
@@ -143,6 +148,7 @@ export class BoardView {
 
     // W20: each tree/rock is independently positioned, always below highlights and units.
     const environment = layer("world-environment");
+    this.sceneryLayer=environment;
     const sceneSprites = buildMapScenery(battle.terrain);
     for (const prop of sceneSprites) {
       const sprite = imgAsset(prop.file, prop.x, prop.y, prop.width, prop.height);
@@ -152,6 +158,7 @@ export class BoardView {
 
     // W30: decoration is not input. Terrain symbols are deliberately separate from hit cells.
     const decals = layer("world-decal");
+    this.decalLayer=decals;
     for (let y = 0; y < MAP_HEIGHT; y++) {
       for (let x = 0; x < MAP_WIDTH; x++) {
         const terrain = battle.tile(x, y);
@@ -295,8 +302,10 @@ export class BoardView {
     miniGround.className = "minimap-ground";
     miniGround.setAttribute("aria-hidden", "true");
     mini.appendChild(miniGround);
-    new GroundPainter(groundCanvas, miniGround, battle.terrain);
+    this.groundPainter=new GroundPainter(groundCanvas, miniGround, battle.terrain);
     const miniArt = document.createElement("div");
+    this.miniScenery=miniArt;
+    this.renderedLevelId=battle.selectedLevelId;
     miniArt.className = "minimap-scenery";
     miniArt.setAttribute("aria-hidden", "true");
     for (const prop of sceneSprites) {
@@ -494,7 +503,43 @@ export class BoardView {
     this.renderForecast();
     this.refresh();
   }
+  private syncLevelTerrain():void{
+    if(this.renderedLevelId===this.battle.selectedLevelId)return;
+    this.renderedLevelId=this.battle.selectedLevelId;
+    const terrain=this.battle.terrain;
+    this.groundPainter.setTerrain(terrain);
+    this.sceneryLayer.replaceChildren();
+    this.decalLayer.replaceChildren();
+    this.miniScenery.replaceChildren();
+    for(const prop of buildMapScenery(terrain)){
+      const sprite=imgAsset(prop.file,prop.x,prop.y,prop.width,prop.height);
+      sprite.dataset.assetId=prop.id;this.sceneryLayer.appendChild(sprite);
+      const small=imgAsset(prop.file,prop.x,prop.y,prop.width,prop.height);
+      small.classList.add("minimap-scene-sprite");small.dataset.assetId=prop.id;
+      small.style.left=prop.x/WORLD_WIDTH*100+"%";
+      small.style.top=prop.y/WORLD_HEIGHT*100+"%";
+      small.style.width=prop.width/WORLD_WIDTH*100+"%";
+      small.style.height=prop.height/WORLD_HEIGHT*100+"%";
+      this.miniScenery.appendChild(small);
+    }
+    for(let y=0;y<MAP_HEIGHT;y++)for(let x=0;x<MAP_WIDTH;x++){
+      const t=this.battle.tile(x,y);if(t===".")continue;
+      const marker=document.createElement("div");
+      marker.className="stage-terrain-mark stage-terrain-mark-"+(t==="#"?"wall":t);
+      marker.style.left=TACTICAL_X+x*TILE+"px";
+      marker.style.top=TACTICAL_Y+y*TILE+"px";
+      marker.textContent=terrainGlyphs[t]??"";
+      this.decalLayer.appendChild(marker);
+    }
+    for(let row=2;row<2+MAP_HEIGHT;row++)for(let col=3;col<3+MAP_WIDTH;col++){
+      const t=this.battle.tile(col-3,row-2),btn=this.miniCells[row*WORLD_COLS+col]!;
+      btn.className="mini-"+(t==="."?"plain":t==="#"?"wall":t);
+      btn.title=String.fromCharCode(65+col-3)+(row-1)+" · "+TERRAIN_INFO[t].name;
+      btn.setAttribute("aria-label","镜头定位："+btn.title);
+    }
+  }
   refresh(): void {
+    this.syncLevelTerrain();
     const selected = this.battle.selected;
     const selectedId = selected?.id ?? null;
     if (selectedId !== this.previousSelection) {

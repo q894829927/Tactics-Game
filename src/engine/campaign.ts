@@ -13,6 +13,7 @@ import type {WeaponExperience} from "./proficiency.ts";
 import type {WeaponInstance,SpellCharges} from "./combatResources.ts";
 import {emptySortieReward,RESOURCE_CAPS,type SortieReward} from "./sortieRewards.ts";
 import {ART_SLOTS,unlockedCombatArts,validArtEquipment,type CombatArtId} from "./combatArts.ts";
+import {DEFAULT_LEVEL_ID,isLevelId,validLevelProgress,type LevelId} from "./levels.ts";
 import {MASTERY_LIBRARY,MASTERY_SLOTS,unlockedMasteries,
   type MasteryId,type ClassExperience} from "./mastery.ts";
 
@@ -37,7 +38,7 @@ export type UnitProgressDelta={
 };
 export type SortieSettlement={
   result:Exclude<GameResult,"playing">;
-  sortie:number;
+  sortie:number;levelId?:LevelId;
   units:UnitProgressDelta[];
   /** Fixed victory/defeat payout, already deposited at settlement. */
   reward:SortieReward;
@@ -45,6 +46,8 @@ export type SortieSettlement={
 export type CampaignSave={
   schema:typeof CAMPAIGN_SCHEMA;
   sortiesCompleted:number;
+  selectedLevelId?:LevelId;
+  completedLevelIds?:LevelId[];
   ridingPermit?:boolean; // optional only for legacy C2 saves
   funds:PreparationFunds;
   allies:AllyProgress[];
@@ -192,7 +195,8 @@ function validSettlement(v:unknown):v is SortieSettlement {
   // as already paid zero; never grant resources when migrating.
   if(!obj(v)||!(v.result==="victory"||v.result==="defeat")||
     !integer(v.sortie,1,1000000)||!Array.isArray(v.units)||v.units.length!==4||
-    !(v.reward===undefined||validReward(v.reward)))return false;
+    !(v.reward===undefined||validReward(v.reward))||
+    !(v.levelId===undefined||isLevelId(v.levelId)))return false;
   const rows=v.units as unknown[];
   return ALLY_IDS.every(id=>rows.some((row:unknown)=>obj(row)&&row.id===id&&
     typeof row.name==="string"&&row.name.length<=80&&
@@ -218,6 +222,15 @@ export function parseCampaign(raw:unknown):CampaignSave|null{
     return null;
   if(raw.pendingSettlement&&raw.pendingSettlement.sortie!==raw.sortiesCompleted)
     return null;
+  const oldVictory=raw.ridingPermit===true||
+    (raw.ridingPermit===undefined&&raw.sortiesCompleted>0)||
+    (obj(raw.pendingSettlement)&&raw.pendingSettlement.result==="victory");
+  const cleared=raw.completedLevelIds===undefined?
+    (oldVictory?[DEFAULT_LEVEL_ID]:[]):raw.completedLevelIds;
+  const selected=raw.selectedLevelId??DEFAULT_LEVEL_ID;
+  if(!validLevelProgress(selected,cleared)||
+    (obj(raw.pendingSettlement)&&raw.pendingSettlement.levelId!==undefined&&
+     raw.pendingSettlement.levelId!==selected))return null;
   // Migrate C2-0/C2-1 saves without erasing prior progression. Missing C3
   // fields mean no class XP and no equipped passives; invalid fields reject.
   const allies=(raw.allies as AllyProgress[]).map(ally=>({
@@ -233,7 +246,8 @@ export function parseCampaign(raw:unknown):CampaignSave|null{
       ...unit,classExpGained:unit.classExpGained??0,
     })),
   }:null;
-  return {...raw,ridingPermit:raw.ridingPermit??raw.sortiesCompleted>=1,
+  return {...raw,selectedLevelId:selected,completedLevelIds:[...(cleared as LevelId[])],
+    ridingPermit:raw.ridingPermit??raw.sortiesCompleted>=1,
     allies,pendingSettlement:normalized} as CampaignSave;
 }
 /** Returns a deep, validated copy, never a reference to a browser-owned object. */

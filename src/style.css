@@ -1498,3 +1498,19 @@ button:disabled { cursor: not-allowed; }
 /* S1-2 status details are visible without unlocking a career. */
 .unit-statuses{font-size:11px;line-height:1.4;color:#edc78e;overflow-wrap:anywhere;max-width:100%;}
 .unit-status-count{font-size:11px;color:#eac576;margin-left:3px;}
+
+/* C4-1A: compact campaign stage selector inside existing preparation. */
+.campaign-level-selector{padding:12px 18px 8px;border-bottom:1px solid rgba(193,151,90,.25)}
+.campaign-level-heading{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.campaign-level-heading h3{font-size:14px;margin:0 0 8px;color:#e8c795}
+.campaign-level-heading span{font-size:12px;opacity:.75}
+.campaign-level-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.campaign-level-option{min-width:0;text-align:left;display:flex;flex-direction:column;gap:4px;
+ padding:9px 12px;border-radius:9px;border:1px solid rgba(193,151,90,.3);
+ background:rgba(23,47,64,.8);color:#eaf2f7}
+.campaign-level-option strong{font-size:13px}
+.campaign-level-option span{font-size:11px;color:#c7b7a0}
+.campaign-level-option.selected{border-color:#e4bb75;background:rgba(83,64,39,.5)}
+.campaign-level-option:disabled{opacity:.48}
+.campaign-level-description{font-size:11px;color:#c4cbd1;line-height:1.5;margin:7px 0 0}
+@media(max-width:560px){.campaign-level-selector{padding:10px}.campaign-level-list{grid-template-columns:1fr}}
