@@ -75,7 +75,7 @@ export const LAB_PRESETS={
   allies:[
    {id:"a1",x:1,y:5,classId:"arcanist",weapons:["fire-tome","thunder-tome"]},
    {id:"a2",x:1,y:6,classId:"healer",weapons:["healing-prayer","light-bolt"]},
-   {id:"a3",x:2,y:7,classId:"scout",weapons:["iron-bow","slim-sword"],wounded:12},
+   {id:"a3",x:2,y:7,classId:"sword",weapons:["iron-sword","slim-sword"],wounded:12},
    {id:"a4",x:0,y:7,classId:"mage",weapons:["fire-tome","wind-tome"],wounded:8},
   ],
   enemies:[

@@ -5,6 +5,7 @@ import {Battle} from "../src/engine/battle.ts";
 import {LEVEL_IDS} from "../src/engine/levels.ts";
 import {LAB_PRESETS,LAB_PRESET_IDS,LAB_LEVEL,LAB_TERRAIN} from "../src/engine/testLab.ts";
 import {canWield} from "../src/engine/weapons.ts";
+import {PLAYER_CLASS_CHOICES} from "../src/engine/classCertification.ts";
 
 test("Lab is one mixed terrain map with four playable presets; chapter list unchanged",()=>{
  assert.equal(LAB_PRESET_IDS.length,4);
@@ -17,6 +18,25 @@ test("Lab is one mixed terrain map with four playable presets; chapter list unch
   assert.equal(preset.enemies.length,6);
   assert.equal(new Set([...preset.allies,...preset.enemies].map(s=>s.x+","+s.y)).size,10);
  }
+});
+test("Lab covers all 16 available playable classes across four presets",()=>{
+ const jobs=new Set(Object.values(LAB_PRESETS).flatMap(p=>p.allies.map(u=>u.classId)));
+ assert.deepEqual([...jobs].sort(),[...PLAYER_CLASS_CHOICES].sort());
+});
+test("Lab support sample has reachable injured allies and real available support",()=>{
+ const b=new Battle({lab:true,labPreset:"support"});
+ const healer=b.units.find(u=>u.id==="a2");
+ const injured=b.units.find(u=>u.id==="a3");
+ const heal=b.previewSupport(healer,injured,"heal");
+ assert.ok(heal&&heal.value>0);
+ assert.equal(b.previewSupport(healer,healer,"heal"),null);
+ const before=injured.hp;
+ b.click(healer.x,healer.y);
+ assert.equal(b.commitSupport(healer,injured,"heal"),true);
+ assert.ok(injured.hp>before);
+ assert.equal(healer.spent,true);
+ b.restart();
+ assert.equal(b.units.find(u=>u.id==="a3").hp,b.units.find(u=>u.id==="a3").maxHp-12);
 });
 test("Lab fixtures offer legal equipment and skills without campaign persistence",()=>{
  for(const id of LAB_PRESET_IDS){
