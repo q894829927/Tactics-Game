@@ -202,7 +202,8 @@ function validSettlement(v:unknown):v is SortieSettlement {
     !integer(v.sortie,1,1000000)||!Array.isArray(v.units)||v.units.length!==4||
     !(v.reward===undefined||validReward(v.reward))||
     !(v.levelId===undefined||isLevelId(v.levelId))||
-    !(v.rewardKind===undefined||["first-clear","replay","defeat"].includes(v.rewardKind))||
+    !(v.rewardKind===undefined||
+      (typeof v.rewardKind==="string"&&["first-clear","replay","defeat"].includes(v.rewardKind)))||
     !(v.repeatVoucherEarned===undefined||typeof v.repeatVoucherEarned==="boolean")||
     (v.rewardKind==="defeat"&&v.result!=="defeat")||
     (v.rewardKind==="first-clear"&&v.result!=="victory")||

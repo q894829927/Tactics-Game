@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import {readFileSync} from "node:fs";
 import {Battle} from "../src/engine/battle.ts";
 import {LEVEL_IDS} from "../src/engine/levels.ts";
 import {readCampaignJson,parseCampaign} from "../src/engine/campaign.ts";
@@ -130,9 +131,8 @@ test("C4-1C reject forged voucher milestone; capping wallet remains atomic",()=>
  assert.deepEqual(credited.funds,cap);
 });
 test("C4-1C battle UI previews rewards and settlement kind",()=>{
- const fs=await import("node:fs");
- const html=fs.readFileSync(new URL("../index.html",import.meta.url),"utf8");
- const main=fs.readFileSync(new URL("../src/main.ts",import.meta.url),"utf8");
+ const html=readFileSync(new URL("../index.html",import.meta.url),"utf8");
+ const main=readFileSync(new URL("../src/main.ts",import.meta.url),"utf8");
  for(const id of ["campaign-reward-preview","campaign-reward-kind"])
   assert.match(html,new RegExp('id="'+id+'"'));
  assert.match(main,/planSortieReward\("victory",battle\.selectedLevelId/);
