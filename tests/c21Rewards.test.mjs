@@ -9,7 +9,11 @@ import {calculateSortieReward,creditSortieReward,RESOURCE_CAPS,
 const camp=()=>new Battle({campaign:true});
 const ally=(game,id="a1")=>game.units.find(u=>u.id===id);
 function resolve(game,result="victory"){
-  if(result==="victory")game.units.find(u=>u.id==="e6").hp=0;
+  if(result==="victory"){
+    const victory=game.currentLevel.victory;
+    if(victory.kind==="defeat-unit")game.units.find(u=>u.id===victory.unitId).hp=0;
+    else{const a=ally(game);a.x=victory.x;a.y=victory.y;a.spent=true;}
+  }
   else game.alive("ally").forEach(u=>{u.hp=0;});
   assert.equal(game.beginEnemyTurn(),false);
   assert.equal(game.campaignStage,"settlement");
@@ -77,12 +81,13 @@ test("C2-1 second win earns another voucher; qualifications stay per character",
   assert.equal(game.changeClass("a1","duelist"),true);
   const mage=ally(game,"a4");
   assert.equal(game.classStatus(mage,"duelist").eligible,false,"mage lacks sword D");
+  assert.equal(game.selectLevel("chapter-1-2"),true);
   game.beginSortie();resolve(game);game.returnToPreparation();
-  assert.deepEqual(game.preparationFunds,{gold:250,reputation:80,
+  assert.deepEqual(game.preparationFunds,{gold:330,reputation:90,
     vouchers:{intermediate:1}});
   assert.equal(game.classStatus(ally(game,"a2"),"sentinel").eligible,true);
   assert.equal(game.changeClass("a2","sentinel"),true);
-  assert.deepEqual(game.preparationFunds,{gold:100,reputation:80,
+  assert.deepEqual(game.preparationFunds,{gold:180,reputation:90,
     vouchers:{intermediate:0}});
   assert.equal(ally(game,"a1").classLicenses.includes("sentinel"),false);
   assert.equal(ally(game,"a2").classLicenses.includes("sentinel"),true);

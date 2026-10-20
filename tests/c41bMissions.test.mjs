@@ -54,7 +54,7 @@ test("C4-1B mountain exit is reversible before confirmation and wins after wait"
  b.click(8,3);b.click(9,3);b.waitSelected();
  assert.equal(b.result,"victory");
  assert.deepEqual(b.completedLevelIds,["chapter-1-1","chapter-1-2","chapter-1-3"]);
- assert.equal(b.pendingSettlement.reward.gold,200);
+ assert.equal(b.pendingSettlement.reward.gold,340);
 });
 test("C4-1B exit rejects uncommitted, dead or enemy occupancy",()=>{
  const v=LEVELS["chapter-1-3"].victory;

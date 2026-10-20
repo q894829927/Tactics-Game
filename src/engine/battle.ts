@@ -13,7 +13,7 @@ import type {Weapon} from "./equipmentTypes.ts";
 import {ALLY_IDS,captureAlly,applyAlly,parseCampaign,settlementFrom,
   type AllyProgress,type CampaignSave,type SortieSettlement} from "./campaign.ts";
 import {refillSpells} from "./combatResources.ts";
-import {calculateSortieReward,creditSortieReward} from "./sortieRewards.ts";
+import {planSortieReward,creditSortieReward} from "./sortieRewards.ts";
 import {awardWeaponExperience,meetsWeaponRank} from "./proficiency.ts";
 import {innateHitBonus,inheritedHitBonus,innateDamageBonus,innateHealBonus,
   innateAvoid,innatePhysicalProtection,innateReduction,terrainStepCost}
@@ -152,6 +152,7 @@ export class Battle {
   terrain:readonly string[]=LEVELS[DEFAULT_LEVEL_ID].terrain;
   selectedLevelId:LevelId=DEFAULT_LEVEL_ID;
   completedLevelIds:LevelId[]=[];
+  replayVoucherProgress:LevelId[]=[];
   get currentLevel(){return LEVELS[this.selectedLevelId];}
   get availableLevels(){return LEVEL_IDS.map(id=>({
     ...LEVELS[id],unlocked:levelUnlocked(id,this.completedLevelIds),
@@ -236,7 +237,8 @@ export class Battle {
     // In campaign mode restarting a sortie abandons the current in-battle
     // gains; already completed sorties remain safely committed.
     const saved=this.campaignEnabled
-      ? this.sortieStart??(this.campaignStage==="preparation"?this.campaignSnapshot():null)
+      ? this.campaignStage==="settlement"?this.campaignSnapshot():
+        this.sortieStart??(this.campaignStage==="preparation"?this.campaignSnapshot():null)
       : null;
     this.setupLevel(saved?.selectedLevelId??this.selectedLevelId);    this.round = 1;
     this.ridingPermit=false;
@@ -274,6 +276,7 @@ export class Battle {
       : this.aliveAndDefeatedAllies().map(captureAlly);
     return {schema:1,sortiesCompleted:this.sortiesCompleted,
       selectedLevelId:this.selectedLevelId,completedLevelIds:[...this.completedLevelIds],
+      replayVoucherProgress:[...this.replayVoucherProgress],
       ridingPermit:this.ridingPermit,
       funds:{gold:this.preparationFunds.gold,reputation:this.preparationFunds.reputation,
         vouchers:{...this.preparationFunds.vouchers}},
@@ -286,6 +289,8 @@ export class Battle {
       pendingSettlement:this.pendingSettlement
         ? {result:this.pendingSettlement.result,sortie:this.pendingSettlement.sortie,
           levelId:this.pendingSettlement.levelId,
+          rewardKind:this.pendingSettlement.rewardKind,
+          repeatVoucherEarned:this.pendingSettlement.repeatVoucherEarned,
           reward:{gold:this.pendingSettlement.reward.gold,
             reputation:this.pendingSettlement.reward.reputation,
             vouchers:{...this.pendingSettlement.reward.vouchers}},
@@ -311,6 +316,7 @@ export class Battle {
       reputation:checked.funds.reputation,vouchers:{...checked.funds.vouchers}};
     this.sortiesCompleted=checked.sortiesCompleted;
     this.completedLevelIds=[...(checked.completedLevelIds??[])];
+    this.replayVoucherProgress=[...(checked.replayVoucherProgress??[])];
     this.ridingPermit=checked.ridingPermit??false;
     this.pendingSettlement=resumeSettlement?checked.pendingSettlement:null;
     this.campaignStage=resumeSettlement&&checked.pendingSettlement?"settlement":"preparation";
@@ -372,6 +378,7 @@ export class Battle {
     this.sortieStart=null;
     this.sortiesCompleted=0;
     this.completedLevelIds=[];
+    this.replayVoucherProgress=[];
     this.selectedLevelId=DEFAULT_LEVEL_ID;
     this.ridingPermit=false;
     this.pendingSettlement=null;
@@ -1396,11 +1403,14 @@ export class Battle {
     }
     if (this.result !== "playing") {
       if(this.campaignEnabled&&this.campaignStage==="battle"){
-        // Atomic terminal transition: one outcome, one fixed payout.
-        // No reward processing in the UI, save/restore, or return-to-camp.
-        const earned=calculateSortieReward(this.result);
-        const credited=creditSortieReward(this.preparationFunds,earned);
+        // Determine first-clear/replay against the PRE-win completion ledger.
+        // Advance the diverse-replay voucher cycle only on true victories.
+        // Never calculate or pay on reload, UI preview or acknowledgement.
+        const planned=planSortieReward(this.result,this.selectedLevelId,
+          this.completedLevelIds,this.replayVoucherProgress);
+        const credited=creditSortieReward(this.preparationFunds,planned.reward);
         this.preparationFunds=credited.funds;
+        this.replayVoucherProgress=[...planned.nextReplayIds];
         this.sortiesCompleted++;
         if(this.result==="victory"){
           this.ridingPermit=true;
@@ -1411,6 +1421,8 @@ export class Battle {
           this.sortieStart?.allies??this.aliveAndDefeatedAllies().map(captureAlly),
           this.units,credited.awarded);
         this.pendingSettlement.levelId=this.selectedLevelId;
+        this.pendingSettlement.rewardKind=planned.kind;
+        this.pendingSettlement.repeatVoucherEarned=planned.repeatVoucherEarned;
         this.campaignStage="settlement";
       }
       this.selectedId = null;

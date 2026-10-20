@@ -1,5 +1,7 @@
 import { Battle } from "./engine/battle.ts";
 import {LEVELS,type LevelId} from "./engine/levels.ts";
+import {planSortieReward,DISTINCT_REPLAYS_PER_VOUCHER}
+  from "./engine/sortieRewards.ts";
 import {COMBAT_ARTS,unlockedCombatArts,ART_SLOTS} from "./engine/combatArts.ts";
 import {INNATE_DESCRIPTIONS} from "./engine/innateAbilities.ts";
 import {CAMPAIGN_STORAGE_KEY,readCampaignJson,ALLY_IDS,type AllyId} from "./engine/campaign.ts";
@@ -262,6 +264,17 @@ function renderCampaign():void{
     }
     get("campaign-level-description").textContent=battle.currentLevel.description+
       "　胜利目标："+battle.currentLevel.objectiveLabel;
+    const quoted=planSortieReward("victory",battle.selectedLevelId,
+      battle.completedLevelIds,battle.replayVoucherProgress);
+    const label=quoted.kind==="first-clear"?"首次通关":"重复挑战";
+    const earned=quoted.reward;
+    get("campaign-reward-preview").textContent=label+"预计获得：金币 "+
+      earned.gold+"、名声 "+earned.reputation+"、中级考试凭证 "+
+      earned.vouchers.intermediate+"。"+(quoted.kind==="replay"?
+      quoted.repeatVoucherEarned?"本次完成异关重玩奖励，可额外获得1张凭证。":
+      "不同关卡重玩进度 "+(battle.replayVoucherProgress.includes(battle.selectedLevelId)?
+        battle.replayVoucherProgress.length:battle.replayVoucherProgress.length+1)+
+      "/"+DISTINCT_REPLAYS_PER_VOUCHER+"；重复刷同一关不增加进度。":"");
     const categoryNames={
       sword:"剑",lance:"枪",axe:"斧",bow:"弓",gauntlet:"拳套",
       dark:"黑魔法",white:"白魔法",
@@ -415,6 +428,11 @@ function renderCampaign():void{
         (outcome.result==="victory"?"战斗胜利":"战斗失败")+
         " · "+LEVELS[outcome.levelId??battle.selectedLevelId].name+
         " · 第 "+outcome.sortie+" 次出击";
+      get("campaign-reward-kind").textContent=outcome.rewardKind==="first-clear"?
+        "首次通关奖励":outcome.rewardKind==="replay"?
+        "重复挑战奖励"+(outcome.repeatVoucherEarned?" · 异关重玩凭证 +1":""):
+        outcome.rewardKind==="defeat"?"挑战失败 · 无额外奖励":
+        "历史版本结算 · 既有奖励已入账";
       get("campaign-reward-gold").textContent="+"+outcome.reward.gold;
       get("campaign-reward-reputation").textContent="+"+outcome.reward.reputation;
       get("campaign-reward-vouchers").textContent=
