@@ -6,8 +6,8 @@
   <meta name="description" content="Wildfield Tactics：原创奇幻战棋，可缩放的战场地图与回合制战斗。"/>
   <meta name="theme-color" content="#071522"/>
   <title>Wildfield Tactics · 赤旗要塞</title>
-  <script type="module" crossorigin src="/games/tactics/assets/index-WOT2hG6Y.js"></script>
-  <link rel="stylesheet" crossorigin href="/games/tactics/assets/index-DYLlsLyZ.css">
+  <script type="module" crossorigin src="/games/tactics/assets/index-CjFuLNqn.js"></script>
+  <link rel="stylesheet" crossorigin href="/games/tactics/assets/index-PNx7BlI0.css">
 </head>
 <body>
   <div id="app" class="battle-shell">
@@ -221,6 +221,11 @@
               </div>
               <div id="campaign-equipment" class="campaign-equipment" aria-live="polite"></div>
             </section>
+            <details id="campaign-repair-panel" class="campaign-repair-panel">
+              <summary>装备维修 <span id="campaign-repair-summary">查看费用</span></summary>
+              <p class="campaign-repair-help">仅维修已经损耗耐久的物理武器。魔法次数在每次出击时自动恢复。</p>
+              <div id="campaign-repair-list" class="campaign-repair-list" aria-live="polite"></div>
+            </details>
             <section class="campaign-detail-section" aria-labelledby="campaign-proficiency-title">
               <div class="campaign-detail-heading"><h4 id="campaign-proficiency-title">武器熟练度</h4></div>
               <div id="campaign-proficiency" class="campaign-proficiency"></div>
