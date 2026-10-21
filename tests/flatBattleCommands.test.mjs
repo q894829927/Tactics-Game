@@ -45,8 +45,8 @@ test("Spell submenu lists ALL compatible owned spells, including unequipped",()=
  const spells=skillSubmenuCommands(b,actor,"magic");
  assert.ok(spells.some(c=>c.label==="火焰术"&&c.weaponIndex===0));
  assert.ok(spells.some(c=>c.label==="雷电术"&&c.weaponIndex===1));
- assert.ok(spells.some(c=>c.key==="status-1-burn"&&c.action==="support"));
- assert.ok(spells.some(c=>c.key==="status-0-mark"));
+ assert.equal(spells.filter(c=>c.effect==="burn"&&c.action==="support").length,1);
+ assert.equal(spells.filter(c=>c.effect==="mark").length,1);
  assert.ok(spells.every(c=>c.action!=="submenu"&&c.group==="magic"));
 });
 test("White magic has actual heal, shield and attack choices across inventory",()=>{
@@ -74,6 +74,45 @@ test("Insufficient spell charges disable casting without consuming an action",()
  assert.equal(retry.enabled,false);
  assert.equal(actor.spent,false);
  assert.equal(spell.weaponIndex,retry.weaponIndex);
+});
+test("Multiple lances show each named art once, including career skill and 强击",()=>{
+ const {b,actor}=select("melee","a2");
+ const skills=skillSubmenuCommands(b,actor,"art");
+ assert.equal(skills.filter(c=>c.label==="拦截刺").length,1);
+ assert.equal(skills.filter(c=>c.label==="强击").length,1);
+ assert.equal(new Set(skills.map(c=>c.label)).size,skills.length);
+});
+test("If one duplicate weapon has no durability, choose another usable one",()=>{
+ const {b,actor}=select("melee","a2");
+ // The first lance is depleted, while the second lance can perform the art.
+ actor.weaponInstances[0].durability=1;
+ const foe=b.units.find(u=>u.id==="e1");
+ foe.x=2;foe.y=6;
+ const skills=skillSubmenuCommands(b,actor,"art");
+ const power=skills.find(c=>c.artId===b.basicArt.id);
+ const intercept=skills.find(c=>c.label==="拦截刺");
+ assert.equal(power?.enabled,true);
+ assert.equal(power?.weaponIndex,1);
+ assert.equal(intercept?.enabled,true);
+ assert.equal(intercept?.weaponIndex,1);
+});
+test("Duplicate copies of a spell and status effects remain single commands",()=>{
+ const {b,actor}=select("support","a1");
+ actor.inventory.push("fire-tome");
+ actor.weaponInstances.push(null);
+ const spells=skillSubmenuCommands(b,actor,"magic");
+ assert.equal(spells.filter(c=>c.label==="火焰术").length,1);
+ assert.equal(spells.filter(c=>c.label==="雷电术").length,1);
+ assert.equal(spells.filter(c=>c.effect==="burn").length,1);
+ assert.equal(spells.filter(c=>c.effect==="mark").length,1);
+});
+test("Deduplicated spells prefer a castable source over exhausted current slot",()=>{
+ const {b,actor}=select("support","a2");
+ actor.inventory.push("healing-prayer");
+ actor.weaponInstances.push(null);
+ const heals=skillSubmenuCommands(b,actor,"magic").filter(c=>c.effect==="heal");
+ assert.equal(heals.length,1);
+ assert.ok(heals[0].enabled);
 });
 test("Board UI uses two menu layers and directly equips selected skill",()=>{
  const view=readFileSync(new URL("../src/scene/BoardView.ts",import.meta.url),"utf8");

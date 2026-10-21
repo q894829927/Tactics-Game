@@ -36,6 +36,16 @@ try{
     await page.waitForFunction(()=>document.querySelectorAll(".world-unit").length===10);
     assert.equal(await page.evaluate(key=>localStorage.getItem(key),storage),baseline);
   }
+  // Check that a sentinel with two compatible lances does not show duplicate
+  // career arts or ordinary weapon arts.
+  await preset.selectOption("melee");
+  const sentinel=page.locator('.battle-cell[data-x="1"][data-y="6"]');
+  await sentinel.evaluate(el=>el.click());
+  await sentinel.evaluate(el=>el.click());
+  await page.locator('.unit-command-menu .command-item[data-key="art"]').evaluate(el=>el.click());
+  const arts=await page.locator('.unit-command-menu .command-item[data-group="art"]').allTextContents();
+  assert.equal(arts.filter(s=>s.includes("拦截刺")).length,1);
+  assert.equal(arts.filter(s=>s.includes("强击")).length,1);
   // All heroes see only five top-level commands (six after a real move).
   await preset.selectOption("support");
   const caster=page.locator('.battle-cell[data-x="1"][data-y="5"]');

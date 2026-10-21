@@ -94,7 +94,36 @@ export function skillSubmenuCommands(battle:Battle,actor:Unit,
       }
     }
   }
-  return choices.length?choices:[item("empty-"+group,group==="art"?"暂无可用战技":"暂无可用法术",
+  // Every owned weapon used to emit the same art again. Preserve the list of
+  // distinct skills, and resolve a single eligible weapon slot for each skill.
+  // Prefer a legal action over disabled entries, then the currently equipped
+  // weapon when equally usable. Never merge genuinely different spells.
+  const bySkill=new Map<string,FlatCommand>();
+  const semanticKey=(choice:FlatCommand):string=>{
+    if(choice.artId)return "art:"+choice.artId;
+    if(choice.action==="support"&&choice.effect){
+      if(choice.effect==="heal"){
+        // Two differently named healing spells remain distinct spells.
+        return "heal:"+actor.inventory[choice.weaponIndex!]!+":"+choice.effect;
+      }
+      // An effect is the same command even when multiple weapons can cast it.
+      return "effect:"+choice.effect;
+    }
+    if(choice.action==="attack"&&choice.group==="magic")
+      return "spell:"+actor.inventory[choice.weaponIndex!]!;
+    return "command:"+choice.key;
+  };
+  for(const choice of choices){
+    const id=semanticKey(choice),previous=bySkill.get(id);
+    const shouldReplace=previous&&(
+      (choice.enabled&&!previous.enabled)||
+      (choice.enabled===previous.enabled&&
+        choice.weaponIndex===actor.equippedIndex&&
+        previous.weaponIndex!==actor.equippedIndex));
+    if(!previous||shouldReplace)bySkill.set(id,choice);
+  }
+  const unique=[...bySkill.values()];
+  return unique.length?unique:[item("empty-"+group,group==="art"?"暂无可用战技":"暂无可用法术",
     "–",group,"none",false,"可通过战前整备装备武器与技能")];
 }
 
