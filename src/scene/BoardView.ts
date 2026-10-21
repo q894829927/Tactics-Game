@@ -1,5 +1,6 @@
 import { Battle, MAP_HEIGHT, MAP_WIDTH, key, type Point, type Unit, type AttackForecast, type EnemyActionPlan, type CombatEvent, type SupportEffect, type SupportPreview } from "../engine/battle.ts";
 import { combatPreviewView } from "./combatPreviewView.ts";
+import {flatBattleCommands,type FlatCommand} from "./flatBattleCommands.ts";
 import {WEAPON_LIBRARY,weaponRange,canWield} from "../engine/weapons.ts";
 import {weaponRankForExp,weaponExperienceText} from "../engine/proficiency.ts";
 import {weaponResourceText} from "../engine/combatResources.ts";
@@ -109,6 +110,7 @@ export class BoardView {
   onZoomChange: ((percent: number) => void) | null = null;
   onHint: ((message: string) => void) | null = null;
   onInspectionChange: (() => void) | null = null;
+  onInventoryRequested: (() => void) | null = null;
   get inspectionCell(): Point | null { return this.inspection.cell; }
   clearInspection(): void {
     this.inspection.clear();
@@ -468,18 +470,10 @@ export class BoardView {
       return true;
     }
     if (this.attackMode) {
-      this.attackMode = false;
-      if(this.supportMode){
-        this.supportMode=null;this.careerSupportId=null;
-        this.pickerMode=null;this.menuVisible=true;
-        this.refresh();return true;
-      }
-      this.pickerMode = isCareerArtId(this.attackArtId)?"career":
-        this.attackArtId&&this.attackArtId!==this.battle.basicArt.id?"formal":
-        this.attackArtId?"art":"attack";
-      this.menuVisible = false;
-      this.refresh();
-      return true;
+      // Single-level action bar: cancelling a target always returns to it.
+      this.attackMode=false;this.attackArtId=null;
+      this.supportMode=null;this.careerSupportId=null;this.pickerMode=null;
+      this.menuVisible=true;this.refresh();return true;
     }
     if (this.pickerMode) {
       this.pickerMode = null;
@@ -1016,72 +1010,57 @@ export class BoardView {
     this.onInspectionChange?.();
   }
 
+  private activateFlatCommand(command:FlatCommand,actor:Unit):void {
+    if(this.isAnimating||this.battle.phase!=="player"||this.battle.selected?.id!==actor.id||
+       !command.enabled)return;
+    if(command.action==="wait"){
+      this.battle.waitSelected();this.menuVisible=false;this.refresh();return;
+    }
+    if(command.action==="undo"){this.undoTentativeMove();return;}
+    if(command.action==="inventory"){
+      this.menuVisible=false;this.refresh();this.onInventoryRequested?.();return;
+    }
+    // Exactly one menu layer: the chosen skill goes straight to target selection.
+    this.pickerMode=null;this.menuVisible=false;this.forecastTargetId=null;
+    this.attackArtId=null;this.supportMode=null;this.careerSupportId=null;
+    if(command.action==="attack"){
+      this.attackMode=true;this.onHint?.("选择攻击目标");
+    }else if(command.action==="art"||command.action==="career"){
+      this.attackMode=true;this.attackArtId=command.artId??null;
+      this.onHint?.("选择目标使用"+command.label);
+    }else if(command.action==="support"&&command.effect){
+      this.attackMode=true;this.supportMode=command.effect;
+      this.onHint?.("选择目标使用"+command.label);
+    }else if(command.action==="career-support"&&command.artId){
+      this.attackMode=true;this.supportMode="heal";this.careerSupportId=command.artId;
+      this.onHint?.("选择受伤友军使用"+command.label);
+    }else{
+      this.menuVisible=true;
+    }
+    this.refresh();
+  }
+
   private renderMenu(): void {
-    const actor = this.battle.selected;
+    const actor=this.battle.selected;
     this.menu.replaceChildren();
-    if (!actor || !this.menuVisible || this.attackMode || this.pickerMode || actor.spent || this.battle.result !== "playing") {
-      this.menu.hidden = true;
-      return;
+    if(!actor||!this.menuVisible||this.attackMode||this.pickerMode||
+       actor.spent||this.battle.result!=="playing"){
+      this.menu.hidden=true;return;
     }
-    const commands = [
-      { text: "攻击", icon: "⚔", enabled: this.battle.availableAttackWeapons(actor).length > 0, key: "attack" },
-      { text: "战技", icon: "✦", enabled:this.battle.availableFormalArtWeapons(actor).length>0,key:"formal" },
-      { text: "职业技", icon: "◆", enabled:this.battle.availableCareerWeapons(actor).length>0,key:"career" },
-      { text: "战技·试验", icon: "✧", enabled: this.battle.availableArtWeapons(actor).length>0, key: "art" },
-      { text:"治疗",icon:"✚",enabled:this.battle.units.some(u=>this.battle.previewSupport(actor,u,"heal")),key:"heal" },
-      { text:"护盾·试验",icon:"⬡",enabled:this.battle.units.some(u=>this.battle.previewSupport(actor,u,"shield")),key:"shield" },
-      { text:"异常·试验",icon:"☄",enabled:this.battle.units.some(u=>this.battle.previewSupport(actor,u,"burn")),key:"status" },
-      { text: "背包", icon: "▣", enabled: true, key: "item" },
-      { text: "术法", icon: "✦", enabled: false, key: "magic" },
-      { text: "交换", icon: "⇄", enabled: false, key: "trade" },
-      { text: "待机", icon: "⌛", enabled: true, key: "wait" },
-      ...(this.battle.canCancelMove
-        ? [{ text: "取消移动", icon: "↶", enabled: true, key: "undo" }]
-        : []),
-    ];
-    for (const cmd of commands) {
-      const button = document.createElement("button");
-      button.type = "button";
-      button.className = "command-item" + (cmd.enabled && cmd.key === "attack" ? " command-primary" : "");
-      button.textContent = cmd.icon + "　" + cmd.text;
-      button.disabled = !cmd.enabled;
-      button.title = cmd.enabled ? cmd.text : cmd.key === "attack" ? "当前射程内没有可攻击的目标，可先移动" : "后续版本开放";
-      button.addEventListener("click", () => {
-        if (this.isAnimating || this.battle.phase !== "player") return;
-        if (cmd.key === "wait") {
-          this.battle.waitSelected();
-          this.menuVisible = false;
-          this.refresh();
-        } else if (cmd.key === "undo") {
-          this.undoTentativeMove();
-        } else if(cmd.key==="heal"||cmd.key==="shield"||cmd.key==="status"){
-          this.menuVisible=false;this.forecastTargetId=null;this.attackArtId=null;
-          if(cmd.key==="status"){this.pickerMode="status";}
-          else{
-            this.supportMode=cmd.key;this.attackMode=true;
-            this.onHint?.("选择友方目标");
-          }
-          this.refresh();
-        } else if(cmd.key==="career"){
-          this.menuVisible=false;this.forecastTargetId=null;
-          this.attackMode=false;this.attackArtId=null;this.supportMode=null;
-          this.careerSupportId=null;this.pickerMode="career";this.refresh();
-        } else if(cmd.key==="formal"){
-          this.menuVisible=false;this.forecastTargetId=null;
-          this.attackMode=false;this.attackArtId=null;this.supportMode=null;
-          this.pickerMode="formal";this.refresh();
-        } else if (cmd.key === "attack" || cmd.key === "art" || cmd.key === "item") {
-          this.menuVisible = false;
-          this.forecastTargetId = null;
-          this.attackMode = false;
-          this.attackArtId=null;
-          this.pickerMode = cmd.key === "attack" ? "attack" : cmd.key === "art"?"art":"equip";
-          this.refresh();
-        }
-      });
-      this.menu.appendChild(button);
+    const commands=flatBattleCommands(this.battle,actor);
+    for(const cmd of commands){
+      const entry=document.createElement("button");
+      entry.type="button";
+      entry.className="command-item"+(cmd.enabled&&cmd.group==="attack"?" command-primary":"");
+      entry.textContent=cmd.icon+"　"+cmd.label;
+      entry.dataset.action=cmd.action;
+      entry.dataset.group=cmd.group;
+      entry.disabled=!cmd.enabled;
+      entry.title=cmd.hint;
+      entry.addEventListener("click",()=>this.activateFlatCommand(cmd,actor));
+      this.menu.appendChild(entry);
     }
-    this.menu.hidden = false;
+    this.menu.hidden=false;
     this.positionMenu(actor);
   }
 
@@ -1216,8 +1195,9 @@ export class BoardView {
 
   private positionMenu(actor: Unit): void {
     const point = tileWorld(actor.x, actor.y);
-    const menuWidth = 150;
-    const menuHeight = this.menu.offsetHeight || (this.battle.canCancelMove ? 256 : 218);
+    const menuWidth = Math.min(190,Math.max(150,this.viewport.clientWidth-16));
+    const menuHeight=Math.min(this.menu.scrollHeight||300,
+      this.viewport.clientHeight-this.touchDockInset()-16);
     let x = this.offsetX + (point.x + TILE / 2) * this.zoom + 10;
     let y = this.offsetY + (point.y - TILE / 2) * this.zoom - 20;
     if (x + menuWidth > this.viewport.clientWidth - 10) {

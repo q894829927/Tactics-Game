@@ -36,6 +36,23 @@ try{
     await page.waitForFunction(()=>document.querySelectorAll(".world-unit").length===10);
     assert.equal(await page.evaluate(key=>localStorage.getItem(key),storage),baseline);
   }
+  // Confirm in-place command menu: single layer, no extra weapon/category picker.
+  await preset.selectOption("support");
+  const caster=page.locator('.battle-cell[data-x="1"][data-y="5"]');
+  await caster.click();await caster.click();
+  await page.locator(".unit-command-menu .command-item").first().waitFor();
+  const labels=await page.locator(".unit-command-menu .command-item").allTextContents();
+  assert.ok(labels.some(s=>s.includes("攻击")));
+  assert.ok(labels.some(s=>s.includes("法术 · 灼烧")));
+  assert.ok(labels.some(s=>s.includes("背包")));
+  assert.ok(labels.some(s=>s.includes("待机")));
+  assert.ok(labels.every(s=>!/战技·试验|护盾·试验|异常·试验|职业技|术法|交换/.test(s)));
+  assert.equal(await page.locator(".weapon-picker").isVisible(),false);
+  await page.locator('.unit-command-menu .command-item[data-action="inventory"]').click();
+  assert.equal(await page.locator(".weapon-picker").isVisible(),false);
+  if(spec.isMobile)assert.equal(await page.locator("#unit-sidebar").isVisible(),true);
+  assert.equal(await page.evaluate(key=>localStorage.getItem(key),storage),baseline);
+  await page.locator("#mobile-sidebar-close").click({force:true}).catch(()=>{});
   await page.locator("#lab-reset").click();
   assert.equal(await page.locator("#result-banner").isVisible(),false);
   assert.match(await page.locator("#lab-status").innerText(),/第 1 回合/);
