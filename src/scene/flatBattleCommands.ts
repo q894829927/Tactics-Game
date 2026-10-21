@@ -1,112 +1,121 @@
-/** Flat single-level battle commands.
- * All choices in this model execute immediately (or start target selection).
- * No weapon, combat-art or status submenu is part of the main command flow.
+/** Tactical command menu:
+ * first level: six stable categories (undo is conditional);
+ * second level: one ungrouped list of the actor's actual arts or spells.
+ * Each executable choice carries the legal inventory slot it needs.
  */
 import {Battle,type Unit,type SupportEffect} from "../engine/battle.ts";
-import {CAREER_ARTS} from "../engine/careerArts.ts";
-import {WEAPON_LIBRARY} from "../engine/weapons.ts";
+import {WEAPON_LIBRARY,weaponFor,canWield} from "../engine/weapons.ts";
+import {careerArtForClass} from "../engine/careerArts.ts";
 
+export type CommandGroup="attack"|"art"|"magic"|"inventory"|"wait"|"undo";
 export type FlatCommand={
- key:string; label:string; icon:string; enabled:boolean;
- hint:string;
- action:"attack"|"art"|"career"|"support"|"career-support"|"inventory"|"wait"|"undo"|"none";
- artId?:string; effect?:SupportEffect; group:"attack"|"art"|"magic"|"inventory"|"wait"|"undo";
+ key:string; label:string;icon:string;enabled:boolean;hint:string;
+ action:"attack"|"art"|"career"|"support"|"career-support"|"inventory"|"wait"|"undo"|"submenu"|"none";
+ group:CommandGroup;weaponIndex?:number;artId?:string;effect?:SupportEffect;
 };
-const supports:readonly {effect:SupportEffect;label:string}[]=[
- {effect:"burn",label:"灼烧"},
- {effect:"slow",label:"缓足"},
- {effect:"weakArmor",label:"弱甲"},
- {effect:"weakMagic",label:"弱咒"},
- {effect:"mark",label:"标记"},
+const effects:readonly {effect:SupportEffect;name:string}[]=[
+ {effect:"burn",name:"灼烧"},{effect:"slow",name:"缓足"},
+ {effect:"weakArmor",name:"弱甲"},{effect:"weakMagic",name:"弱咒"},
+ {effect:"mark",name:"标记"},
 ];
+const item=(key:string,label:string,icon:string,group:CommandGroup,
+  action:FlatCommand["action"],enabled:boolean,hint:string,
+  other:Partial<FlatCommand>={}):FlatCommand=>
+  ({key,label,icon,group,action,enabled,hint,...other});
+
+/** Reads all owned weapon slots without changing current equipment. */
+export function skillSubmenuCommands(battle:Battle,actor:Unit,
+  group:"art"|"magic"):FlatCommand[]{
+  const choices:FlatCommand[]=[];
+  const attacks=battle.availableAttackWeapons(actor);
+  const basics=battle.availableArtWeapons(actor);
+  const formals=battle.availableFormalArtWeapons(actor);
+  const careers=battle.availableCareerWeapons(actor);
+  const careerArt=careerArtForClass(actor.classId);
+  const supported=(unit:Unit,effect:SupportEffect,careerId?:string)=>
+    battle.units.some(target=>careerId?
+      battle.previewCareerSupport(unit,target,careerId)!==null:
+      battle.previewSupport(unit,target,effect)!==null);
+  for(const [index,id] of actor.inventory.entries()){
+    if(!canWield(actor.classId,id,actor.weaponExp))continue;
+    const weapon=weaponFor(id);
+    const candidate={...actor,weapon,equippedIndex:index,
+      minRange:weapon.minRange,maxRange:weapon.maxRange};
+    const magical=weapon.kind==="magical";
+    if(group==="art"){
+      if(!magical){
+        const formal=battle.formalArtForWeapon(candidate);
+        if(formal&&formal.target==="enemy")
+          choices.push(item("formal-"+index+"-"+formal.id,formal.name,"✦","art","art",
+            formals.includes(index),formal.description,{weaponIndex:index,artId:formal.id}));
+        if(careerArt&&careerArt.target==="enemy"){
+          const active=battle.currentCareerArt(candidate);
+          if(active)choices.push(item("career-"+index+"-"+active.id,active.name,"◆","art",
+            "career",careers.includes(index),active.description,
+            {weaponIndex:index,artId:active.id}));
+        }
+        choices.push(item("basic-"+index,"强击","✧","art","art",
+          basics.includes(index),"普通物理战技，消耗3点武器耐久",
+          {weaponIndex:index,artId:battle.basicArt.id}));
+      }else{
+        // Magical job-specific offensive arts are arts, not ordinary spells.
+        const active=battle.currentCareerArt(candidate);
+        if(active&&active.target==="enemy")
+          choices.push(item("career-"+index+"-"+active.id,active.name,"◆","art","career",
+            careers.includes(index),active.description,
+            {weaponIndex:index,artId:active.id}));
+      }
+    }else{
+      if(!magical)continue;
+      if(weapon.effect==="heal"){
+        for(const [effect,name] of [["heal",weapon.name],["shield","护盾"]] as const)
+          choices.push(item("support-"+index+"-"+effect,name,"✚","magic","support",
+            supported(candidate,effect),effect==="heal"?"恢复受伤友军生命":"为友军提供护盾",
+            {weaponIndex:index,effect}));
+        const active=battle.currentCareerArt(candidate);
+        if(active?.target==="ally")
+          choices.push(item("career-"+index+"-"+active.id,active.name,"◆","magic",
+            "career-support",careers.includes(index)&&supported(candidate,"heal",active.id),
+            active.description,{weaponIndex:index,artId:active.id}));
+        const formal=battle.formalArtForWeapon(candidate);
+        if(formal?.target==="ally")
+          choices.push(item("formal-"+index+"-"+formal.id,formal.name,"✧","magic",
+            "support",formals.includes(index),formal.description,
+            {weaponIndex:index,effect:"wardArmor"}));
+      }else{
+        choices.push(item("spell-"+index,weapon.name,"✦","magic","attack",
+          attacks.includes(index),"施放"+weapon.name+"，消耗1次法术",
+          {weaponIndex:index}));
+        if(weapon.category==="dark")for(const {effect,name} of effects)
+          choices.push(item("status-"+index+"-"+effect,
+            name+" · "+weapon.name,"☄","magic","support",
+            supported(candidate,effect),"使用"+weapon.name+"施加"+name,
+            {weaponIndex:index,effect}));
+      }
+    }
+  }
+  return choices.length?choices:[item("empty-"+group,group==="art"?"暂无可用战技":"暂无可用法术",
+    "–",group,"none",false,"可通过战前整备装备武器与技能")];
+}
+
+/** Only six stable category headings are ever rendered at the top level. */
 export function flatBattleCommands(battle:Battle,actor:Unit):FlatCommand[]{
-  const current=actor.equippedIndex;
-  const armedAttack=battle.availableAttackWeapons(actor).includes(current);
-  const magic=actor.weapon.kind==="magical";
-  const commands:FlatCommand[]=[{
-    key:"attack",label:"攻击",icon:"⚔",enabled:armedAttack&&!magic,
-    hint:magic?"当前装备为法术，请使用「法术」":armedAttack?"选择攻击目标":"当前武器射程内无目标；可通过背包换装",
-    action:"attack",group:"attack",
-  }];
-  const career=battle.currentCareerArt(actor);
-  const canCareer=battle.availableCareerWeapons(actor).includes(current);
-  if(career&&career.target==="enemy")
-    commands.push({
-      key:"career-"+career.id,label:"战技 · "+career.name,icon:"◆",
-      enabled:canCareer,hint:career.description,
-      action:"career",artId:career.id,group:"art",
-    });
-  const formal=battle.formalArtForWeapon(actor);
-  const canFormal=battle.availableFormalArtWeapons(actor).includes(current);
-  if(formal&&formal.target==="enemy")
-    commands.push({
-      key:"formal-"+formal.id,label:"战技 · "+formal.name,icon:"✦",
-      enabled:canFormal,hint:formal.description,
-      action:"art",artId:formal.id,group:"art",
-    });
-  if(!magic&&battle.availableArtWeapons(actor).includes(current))
-    commands.push({
-      key:"basic-power",label:"战技 · 强击",icon:"✧",enabled:true,
-      hint:"消耗3点武器耐久，首击伤害+2",
-      action:"art",artId:battle.basicArt.id,group:"art",
-    });
-  if(!commands.some(c=>c.group==="art"))commands.push({
-    key:"no-art",label:"战技",icon:"✦",enabled:false,
-    hint:"当前未装备可用战技或职业技",action:"none",group:"art",
-  });
-  if(magic&&actor.weapon.effect!=="heal")
-    commands.push({
-      key:"spell-attack",label:"法术 · "+actor.weapon.name,icon:"✦",
-      enabled:armedAttack,hint:armedAttack?"选择施法目标":"当前射程内没有可攻击目标或法术次数不足",
-      action:"attack",group:"magic",
-    });
-  const canSupport=(effect:SupportEffect)=>battle.units.some(unit=>
-    battle.previewSupport(actor,unit,effect)!==null);
-  for(const {effect,label} of [
-    {effect:"heal" as const,label:actor.weapon.effect==="heal"?actor.weapon.name:"治疗"},
-    {effect:"shield" as const,label:"护盾"},
-  ]){
-    if(actor.weapon.effect!=="heal")continue;
-    commands.push({
-      key:"support-"+effect,label:"法术 · "+label,icon:"✚",
-      enabled:canSupport(effect),
-      hint:canSupport(effect)?"选择友方目标":"目标已满血、效果已存在或法术次数不足",
-      effect,action:"support",group:"magic",
-    });
-  }
-  if(formal&&formal.target==="ally")
-    commands.push({
-      key:"formal-"+formal.id,label:"法术 · "+formal.name,icon:"✧",
-      enabled:canFormal,hint:formal.description,
-      effect:"wardArmor",action:"support",group:"magic",
-    });
-  if(career&&career.target==="ally")
-    commands.push({
-      key:"career-"+career.id,label:"法术 · "+career.name,icon:"◆",
-      enabled:canCareer,hint:career.description,
-      artId:career.id,action:"career-support",group:"magic",
-    });
-  if(actor.weapon.category==="dark")for(const {effect,label} of supports){
-    commands.push({
-      key:"status-"+effect,label:"法术 · "+label,icon:"☄",
-      enabled:canSupport(effect),
-      hint:canSupport(effect)?"选择敌方目标":"目标不在范围内或法术次数不足",
-      effect,action:"support",group:"magic",
-    });
-  }
-  if(!commands.some(c=>c.group==="magic"))commands.push({
-    key:"no-magic",label:"法术",icon:"✦",enabled:false,
-    hint:"当前装备没有可用的法术；可通过背包换装",action:"none",group:"magic",
-  });
-  commands.push(
-    {key:"inventory",label:"背包",icon:"▣",enabled:true,
-      hint:"在角色背包中直接换装，不打开第二层指令",action:"inventory",group:"inventory"},
-    {key:"wait",label:"待机",icon:"⌛",enabled:true,
-      hint:"结束当前单位行动",action:"wait",group:"wait"},
-  );
-  if(battle.canCancelMove)commands.push({
-    key:"undo",label:"撤销移动",icon:"↶",enabled:true,
-    hint:"返回本回合移动前的格子，不消耗行动",action:"undo",group:"undo",
-  });
-  return commands;
+  const arts=skillSubmenuCommands(battle,actor,"art");
+  const spells=skillSubmenuCommands(battle,actor,"magic");
+  const canOpen=(xs:FlatCommand[])=>xs.some(x=>x.action!=="none");
+  const attack=battle.availableAttackWeapons(actor).includes(actor.equippedIndex)&&
+    actor.weapon.kind==="physical";
+  const result:FlatCommand[]=[
+    item("attack","攻击","⚔","attack","attack",attack,
+      attack?"使用当前装备攻击":"当前装备无法攻击；法术请从「法术」选择"),
+    item("art","战技","✦","art","submenu",canOpen(arts),
+      canOpen(arts)?"查看已装备的通用与职业战技":"当前无可用战技"),
+    item("magic","法术","✧","magic","submenu",canOpen(spells),
+      canOpen(spells)?"查看所有已持有且符合职业要求的法术":"当前无可用法术"),
+    item("inventory","背包","▣","inventory","inventory",true,"查看与切换装备"),
+    item("wait","待机","⌛","wait","wait",true,"结束此单位行动"),
+  ];
+  if(battle.canCancelMove)result.push(item("undo","撤销移动","↶","undo","undo",true,
+    "撤回未提交的移动"));
+  return result;
 }

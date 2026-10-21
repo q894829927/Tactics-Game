@@ -1574,3 +1574,13 @@ button:disabled { cursor: not-allowed; }
  .unit-command-menu{width:min(190px,calc(100vw - 16px));max-height:calc(100dvh - 114px)}
  .command-item{min-height:44px}
 }
+
+/* Two-level compact combat menu: categories, then only concrete skill choices. */
+.command-subtitle{
+  padding:6px 9px 8px;font-size:12px;font-weight:700;color:#d7b780;
+  border-bottom:1px solid #4a6875;text-align:center;
+}
+.command-item.command-back{
+  min-height:34px;color:#c0d2db;font-size:12px;
+  background:rgba(42,75,93,.4);
+}

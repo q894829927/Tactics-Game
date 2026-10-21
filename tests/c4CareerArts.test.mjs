@@ -208,7 +208,8 @@ test("C4-A scouts must keep sword D along with bow E to perform their action",()
 test("C4-A dedicated command and prognosis exist independently of seven-family arts",()=>{
  const ui=readFileSync(new URL("../src/scene/BoardView.ts",import.meta.url),"utf8");
  const flat=readFileSync(new URL("../src/scene/flatBattleCommands.ts",import.meta.url),"utf8");
- assert.match(flat,/label:"战技 · "\+career.name/);
+ assert.match(flat,/active\.name/);
+ assert.match(flat,/currentCareerArt\(candidate\)/);
  assert.match(flat,/availableCareerWeapons\(actor\)/);
  assert.match(ui,/previewCareerSupport/);
  assert.match(ui,/command.action==="career"/);

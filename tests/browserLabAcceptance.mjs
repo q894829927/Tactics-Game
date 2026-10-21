@@ -36,19 +36,31 @@ try{
     await page.waitForFunction(()=>document.querySelectorAll(".world-unit").length===10);
     assert.equal(await page.evaluate(key=>localStorage.getItem(key),storage),baseline);
   }
-  // Confirm in-place command menu: single layer, no extra weapon/category picker.
+  // All heroes see only five top-level commands (six after a real move).
   await preset.selectOption("support");
   const caster=page.locator('.battle-cell[data-x="1"][data-y="5"]');
-  await caster.click();await caster.click();
+  await caster.evaluate(el=>el.click());await caster.evaluate(el=>el.click());
   await page.locator(".unit-command-menu .command-item").first().waitFor();
-  const labels=await page.locator(".unit-command-menu .command-item").allTextContents();
-  assert.ok(labels.some(s=>s.includes("攻击")));
-  assert.ok(labels.some(s=>s.includes("法术 · 灼烧")));
-  assert.ok(labels.some(s=>s.includes("背包")));
-  assert.ok(labels.some(s=>s.includes("待机")));
-  assert.ok(labels.every(s=>!/战技·试验|护盾·试验|异常·试验|职业技|术法|交换/.test(s)));
+  let labels=await page.locator(".unit-command-menu .command-item").allTextContents();
+  assert.deepEqual(labels.map(s=>s.replace(/[⚔✦✧▣⌛]/gu,"").trim()),
+    ["攻击","战技","法术","背包","待机"]);
   assert.equal(await page.locator(".weapon-picker").isVisible(),false);
-  await page.locator('.unit-command-menu .command-item[data-action="inventory"]').click();
+  // Clicking 法术 reveals owned 火焰术 and 雷电术 plus status actions.
+  await page.locator('.unit-command-menu .command-item[data-key="magic"]').evaluate(el=>el.click());
+  await page.locator(".command-subtitle").waitFor();
+  assert.equal(await page.locator(".command-subtitle").innerText(),"选择法术");
+  labels=await page.locator(".unit-command-menu .command-item").allTextContents();
+  assert.ok(labels.some(s=>s.includes("火焰术")));
+  assert.ok(labels.some(s=>s.includes("雷电术")));
+  assert.ok(labels.some(s=>s.includes("灼烧")));
+  assert.equal(await page.locator(".weapon-picker").isVisible(),false);
+  await page.locator('.command-item[data-action="back"]').evaluate(el=>el.click());
+  assert.equal(await page.locator(".command-subtitle").count(),0);
+  await page.locator('.command-item[data-key="art"]').evaluate(el=>el.click());
+  assert.equal(await page.locator(".command-subtitle").innerText(),"选择战技");
+  assert.ok(await page.locator('.command-item[data-action="back"]').count());
+  await page.locator('.command-item[data-action="back"]').evaluate(el=>el.click());
+  await page.locator('.unit-command-menu .command-item[data-action="inventory"]').evaluate(el=>el.click());
   assert.equal(await page.locator(".weapon-picker").isVisible(),false);
   if(spec.isMobile)assert.equal(await page.locator("#unit-sidebar").isVisible(),true);
   assert.equal(await page.evaluate(key=>localStorage.getItem(key),storage),baseline);

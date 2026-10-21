@@ -1,6 +1,6 @@
 import { Battle, MAP_HEIGHT, MAP_WIDTH, key, type Point, type Unit, type AttackForecast, type EnemyActionPlan, type CombatEvent, type SupportEffect, type SupportPreview } from "../engine/battle.ts";
 import { combatPreviewView } from "./combatPreviewView.ts";
-import {flatBattleCommands,type FlatCommand} from "./flatBattleCommands.ts";
+import {flatBattleCommands,skillSubmenuCommands,type FlatCommand} from "./flatBattleCommands.ts";
 import {WEAPON_LIBRARY,weaponRange,canWield} from "../engine/weapons.ts";
 import {weaponRankForExp,weaponExperienceText} from "../engine/proficiency.ts";
 import {weaponResourceText} from "../engine/combatResources.ts";
@@ -101,6 +101,7 @@ export class BoardView {
   private readonly touchPoints = new Map<number,Contact>();
   private pinchOrigin:PinchOrigin | null = null;
   private menuVisible = false;
+  private commandSubmenu:"art"|"magic"|null=null;
   private attackMode = false;
   private forecastTargetId: string | null = null;
   private readonly forecastPanel: HTMLElement;
@@ -433,6 +434,7 @@ export class BoardView {
   /** Undo the selected ally's tentative move without spending an action. */
   private undoTentativeMove(): boolean {
     if (this.isAnimating || !this.battle.canCancelMove) return false;
+    this.commandSubmenu=null;
     this.menuVisible = false;
     this.attackMode = false;
     this.supportMode=null;this.careerSupportId=null;
@@ -452,6 +454,7 @@ export class BoardView {
         this.battle.phase !== "player" || this.battle.result !== "playing" ||
         this.isAnimating) return;
     this.pickerMode = null;
+    this.commandSubmenu=null;
     this.forecastTargetId = null;
     this.attackMode = false;
     this.attackArtId=null;
@@ -470,7 +473,7 @@ export class BoardView {
       return true;
     }
     if (this.attackMode) {
-      // Single-level action bar: cancelling a target always returns to it.
+      // Cancel target selection back to its spell/art list, not another picker.
       this.attackMode=false;this.attackArtId=null;
       this.supportMode=null;this.careerSupportId=null;this.pickerMode=null;
       this.menuVisible=true;this.refresh();return true;
@@ -482,6 +485,7 @@ export class BoardView {
       return true;
     }
     if (this.menuVisible) {
+      if(this.commandSubmenu){this.commandSubmenu=null;this.refresh();return true;}
       if (this.battle.canCancelMove) return this.undoTentativeMove();
       this.menuVisible = false;
       this.refresh();
@@ -491,6 +495,7 @@ export class BoardView {
     return false;
   }
   hideCommandMenu(): void {
+    this.commandSubmenu=null;
     this.pickerMode = null;
     this.forecastTargetId = null;
     this.attackMode = false;
@@ -543,6 +548,7 @@ export class BoardView {
     const selected = this.battle.selected;
     const selectedId = selected?.id ?? null;
     if (selectedId !== this.previousSelection) {
+      this.commandSubmenu=null;
       this.pickerMode = null;
       this.attackMode = false;
       this.attackArtId=null;
@@ -761,6 +767,7 @@ export class BoardView {
     this.forecastTargetId = null;
     this.menuVisible = false;
     this.attackMode = false;
+    this.commandSubmenu=null;
     this.pickerMode = null;
     this.careerSupportId=null;
     if (intent === "select-ally" || intent === "move") {
@@ -794,6 +801,7 @@ export class BoardView {
   private onRightCellClick(x: number, y: number): void {
     if (this.battle.result !== "playing" || this.battle.phase !== "player" || this.isAnimating) return;
     if (rightClickIntent(this.battle,x,y) === "undo-move" && this.undoTentativeMove()) return;
+    this.commandSubmenu=null;
     this.pickerMode = null;
     this.forecastTargetId = null;
     this.attackMode = false;
@@ -1018,9 +1026,16 @@ export class BoardView {
     }
     if(command.action==="undo"){this.undoTentativeMove();return;}
     if(command.action==="inventory"){
-      this.menuVisible=false;this.refresh();this.onInventoryRequested?.();return;
+      this.commandSubmenu=null;this.menuVisible=false;
+      this.refresh();this.onInventoryRequested?.();return;
     }
-    // Exactly one menu layer: the chosen skill goes straight to target selection.
+    if(command.action==="submenu"){
+      this.commandSubmenu=command.group==="art"?"art":"magic";
+      this.menuVisible=true;this.refresh();return;
+    }
+    // The concrete skill was chosen in the single ungrouped spell/art list.
+    if(command.weaponIndex!==undefined&&
+      !this.battle.equipWeapon(actor,command.weaponIndex))return;
     this.pickerMode=null;this.menuVisible=false;this.forecastTargetId=null;
     this.attackArtId=null;this.supportMode=null;this.careerSupportId=null;
     if(command.action==="attack"){
@@ -1047,7 +1062,22 @@ export class BoardView {
        actor.spent||this.battle.result!=="playing"){
       this.menu.hidden=true;return;
     }
-    const commands=flatBattleCommands(this.battle,actor);
+    const commands=this.commandSubmenu
+      ?skillSubmenuCommands(this.battle,actor,this.commandSubmenu)
+      :flatBattleCommands(this.battle,actor);
+    if(this.commandSubmenu){
+      const back=document.createElement("button");
+      back.type="button";back.className="command-item command-back";
+      back.dataset.action="back";
+      back.textContent="← 返回"+(this.commandSubmenu==="art"?"战斗指令":"战斗指令");
+      back.addEventListener("click",()=>{
+        this.commandSubmenu=null;this.refresh();
+      });
+      this.menu.appendChild(back);
+      const label=document.createElement("div");label.className="command-subtitle";
+      label.textContent=this.commandSubmenu==="art"?"选择战技":"选择法术";
+      this.menu.appendChild(label);
+    }
     for(const cmd of commands){
       const entry=document.createElement("button");
       entry.type="button";
@@ -1055,6 +1085,7 @@ export class BoardView {
       entry.textContent=cmd.icon+"　"+cmd.label;
       entry.dataset.action=cmd.action;
       entry.dataset.group=cmd.group;
+      entry.dataset.key=cmd.key;
       entry.disabled=!cmd.enabled;
       entry.title=cmd.hint;
       entry.addEventListener("click",()=>this.activateFlatCommand(cmd,actor));

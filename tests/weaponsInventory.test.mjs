@@ -97,7 +97,7 @@ test("UI uses current equipment for one-step attack, and bag accesses existing i
  const main=readFileSync(new URL("../src/main.ts",import.meta.url),"utf8");
  const flat=readFileSync(new URL("../src/scene/flatBattleCommands.ts",import.meta.url),"utf8");
  const html=readFileSync(new URL("../index.html",import.meta.url),"utf8");
- assert.match(flat,/availableAttackWeapons\(actor\)\.includes\(current\)/);
+ assert.match(flat,/availableAttackWeapons\(actor\)\.includes\(actor\.equippedIndex\)/);
  assert.match(board,/command\.action==="attack"/);
  assert.match(board,/onInventoryRequested\?\.\(\)/);
  assert.match(board,/this\.battle\.forecastAttack\(selected, target,\s*this\.attackArtId\?\?undefined\)/);
