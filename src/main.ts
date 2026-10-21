@@ -241,7 +241,10 @@ function saveCampaignProgress():void{
 function renderCampaign():void{
   const preparing=battle.campaignStage==="preparation";
   const settling=battle.campaignStage==="settlement"&&!board.isAnimating&&!endingTurn;
-  get("campaign-preparation-overlay").hidden=!preparing;
+  const prepOverlay=get("campaign-preparation-overlay");
+  const firstOpen=preparing&&prepOverlay.hidden;
+  prepOverlay.hidden=!preparing;
+  if(firstOpen)get("campaign-preparation-scroll").scrollTop=0;
   get("campaign-settlement-overlay").hidden=!settling;
   if(preparing){
     const roster=get("campaign-roster"),equipment=get("campaign-equipment");

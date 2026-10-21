@@ -30,6 +30,8 @@ jobs:
           node tests/browserMapAcceptance.mjs
       - name: Verify test lab and storage isolation across viewports
         run: node tests/browserLabAcceptance.mjs
+      - name: Verify mobile preparation scroll and sortie entry
+        run: node tests/browserMobilePreparation.mjs
       - name: Upload map screenshot evidence
         if: always()
         uses: actions/upload-artifact@v4
