@@ -407,6 +407,49 @@ function renderCampaign():void{
       equipment.appendChild(entry);
     });
 
+    // E1-0: price each actual physical instance; never nest buttons within buttons.
+    const repairList=get("campaign-repair-list");repairList.replaceChildren();
+    const repairs=selected.inventory.flatMap((id,index)=>{
+      const quote=battle.repairQuote(selected.id,index);
+      return quote?[{id,index,quote}]:[];
+    });
+    const party=battle.partyRepairQuote();
+    get("campaign-repair-summary").textContent=repairs.length
+      ? repairs.length+" 件待修 · "+repairs.reduce((n,r)=>n+r.quote.cost,0)+" 金币"
+      : "当前角色无需维修";
+    if(!repairs.length){
+      const none=document.createElement("p");none.className="campaign-repair-empty";
+      none.textContent="该角色物理武器耐久完好，或只持有魔法。";
+      repairList.appendChild(none);
+    }
+    for(const {id,index,quote} of repairs){
+      const option=document.createElement("button");option.type="button";
+      option.className="campaign-repair-button";
+      option.dataset.repairIndex=String(index);
+      option.textContent="维修 "+WEAPON_LIBRARY[id].name+
+        " · 恢复 "+quote.missing+" 耐久 · "+quote.cost+" 金币";
+      option.disabled=battle.preparationFunds.gold<quote.cost;
+      option.title=option.disabled?"金币不足，无法维修":
+        "恢复该件武器缺失的全部耐久；不会改变其他武器";
+      option.addEventListener("click",()=>battle.prepareRepairWeapon(selected.id,index));
+      repairList.appendChild(option);
+    }
+    if(party.weapons>0){
+      const summary=document.createElement("p");
+      summary.className="campaign-repair-bulk-summary";
+      summary.textContent="全队 "+party.weapons+" 件武器缺少 "+party.missing+
+        " 耐久，合计 "+party.cost+" 金币。";
+      const repairAll=document.createElement("button");repairAll.type="button";
+      repairAll.className="campaign-repair-button campaign-repair-all";
+      repairAll.id="campaign-repair-all";
+      repairAll.textContent="一键修理全队 · "+party.cost+" 金币";
+      repairAll.disabled=battle.preparationFunds.gold<party.cost;
+      repairAll.title=repairAll.disabled?"金币不足，暂不可一键维修":
+        "一次修复所有队员已损坏的物理武器";
+      repairAll.addEventListener("click",()=>battle.prepareRepairAll());
+      repairList.append(summary,repairAll);
+    }
+
     const prof=get("campaign-proficiency");prof.replaceChildren();
     for(const category of WEAPON_CATEGORIES){
       const xp=selected.weaponExp[category];

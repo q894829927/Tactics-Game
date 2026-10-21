@@ -31,7 +31,7 @@ import {makeAttackAction,makeSupportAction,canPayActionCosts,payActionCosts,
 import {applyStatus,removeStatus,statusPower,startStatusPhase,finishStatusPhase,
   absorbDamage,previewDamage,type StatusKind,type StatusInstance}
   from "./statusEffects.ts";
-import {initialWeaponInstances,initialSpellCharges,makeWeaponInstance,
+import {repairWeapon,initialWeaponInstances,initialSpellCharges,makeWeaponInstance,
   resourceWeapon,remainingSpellCharges,canUseAttack,
   canUseArt,isSpell,type WeaponInstance,type SpellCharges}
   from "./combatResources.ts";
@@ -39,6 +39,7 @@ export type { Terrain } from "./terrain.ts";
 import {LEVELS,LEVEL_IDS,DEFAULT_LEVEL_ID,levelUnlocked,objectiveComplete,type LevelId} from "./levels.ts";
 import {LAB_LEVEL,LAB_TERRAIN,LAB_PRESETS,DEFAULT_LAB_PRESET,type LabPresetId} from "./testLab.ts";
 import {WEAPON_CATEGORIES} from "./equipmentTypes.ts";
+import {quoteWeaponRepair,type RepairQuote} from "./campRepair.ts";
 
 export const MAP_WIDTH = 10;
 export const MAP_HEIGHT = 8;
@@ -439,6 +440,60 @@ export class Battle {
       !canWield(unit.classId,unit.inventory[index]!,unit.weaponExp))return false;
     unit.equippedIndex=index;unit.weapon=weaponFor(unit.inventory[index]!);
     unit.minRange=unit.weapon.minRange;unit.maxRange=unit.weapon.maxRange;
+    this.emit();return true;
+  }
+
+  /** E1-0: quote one concrete physical weapon. Spell charges remain sortie-only. */
+  repairQuote(unitId:string,index:number):RepairQuote|null{
+    if(!this.campaignEnabled||this.campaignStage!=="preparation"||
+      this.result!=="playing"||this.phase!=="player"||
+      !Number.isInteger(index)||index<0)return null;
+    const unit=this.units.find(u=>u.id===unitId&&u.team==="ally");
+    if(!unit||index>=unit.inventory.length)return null;
+    return quoteWeaponRepair(unit.inventory[index]!,unit.weaponInstances[index]??null);
+  }
+  /** Aggregate every damaged physical instance, including unselected weapons. */
+  partyRepairQuote():{cost:number;missing:number;weapons:number}{
+    if(!this.campaignEnabled||this.campaignStage!=="preparation")
+      return {cost:0,missing:0,weapons:0};
+    let cost=0,missing=0,weapons=0;
+    for(const unit of this.aliveAndDefeatedAllies())
+      for(const [index] of unit.inventory.entries()){
+        const quote=this.repairQuote(unit.id,index);
+        if(!quote)continue;
+        cost+=quote.cost;missing+=quote.missing;weapons++;
+      }
+    return {cost,missing,weapons};
+  }
+  /** Pay only for missing durability; invalid/duplicate/insufficient repairs are no-ops. */
+  prepareRepairWeapon(unitId:string,index:number):boolean{
+    const quote=this.repairQuote(unitId,index);
+    if(!quote||this.preparationFunds.gold<quote.cost)return false;
+    const unit=this.units.find(u=>u.id===unitId&&u.team==="ally")!;
+    const instance=unit.weaponInstances[index];
+    if(!instance||repairWeapon(instance,quote.missing)!==quote.missing)
+      throw Error("E1 repair quote inconsistent with weapon instance");
+    this.preparationFunds.gold-=quote.cost;
+    this.emit();return true;
+  }
+  /** All-or-nothing bulk checkout, no partial payment or invisible debt. */
+  prepareRepairAll():boolean{
+    if(!this.campaignEnabled||this.campaignStage!=="preparation"||
+      this.result!=="playing"||this.phase!=="player")return false;
+    const quote=this.partyRepairQuote();
+    if(quote.weapons===0||quote.cost<=0||this.preparationFunds.gold<quote.cost)
+      return false;
+    const jobs:{unit:Unit;index:number;missing:number}[]=[];
+    for(const unit of this.aliveAndDefeatedAllies())
+      for(const [index] of unit.inventory.entries()){
+        const item=this.repairQuote(unit.id,index);
+        if(item)jobs.push({unit,index,missing:item.missing});
+      }
+    for(const job of jobs){
+      const instance=job.unit.weaponInstances[job.index]!;
+      repairWeapon(instance,job.missing);
+    }
+    this.preparationFunds.gold-=quote.cost;
     this.emit();return true;
   }
 

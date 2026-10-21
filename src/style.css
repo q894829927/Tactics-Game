@@ -1654,3 +1654,41 @@ button:disabled { cursor: not-allowed; }
   .campaign-preparation-panel #campaign-reset-save{min-height:22px;font-size:10px}
   .campaign-preparation-panel .campaign-footer{padding-top:4px;gap:4px}
 }
+
+
+/* E1-0: collapsible paid physical durability repair beneath gear inspector. */
+.campaign-repair-panel{
+  margin-top:9px;border:1px solid #86734f;
+  background:linear-gradient(125deg,#102f3f,#0a2230);border-radius:5px;
+}
+.campaign-repair-panel summary{
+  cursor:pointer;min-height:40px;display:flex;align-items:center;
+  justify-content:space-between;gap:10px;padding:8px 12px;
+  color:#e9c98f;font-size:13px;font-weight:700;touch-action:manipulation;
+}
+.campaign-repair-panel summary::marker{color:#d1a770}
+.campaign-repair-panel summary span{font-size:11px;color:#b7cbd1;font-weight:400}
+.campaign-repair-panel[open] summary{border-bottom:1px solid #675b40}
+.campaign-repair-help,.campaign-repair-empty,.campaign-repair-bulk-summary{
+  margin:7px 11px;color:#becfd4;font-size:11px;line-height:1.5;
+}
+.campaign-repair-list{display:grid;gap:6px;padding:4px 10px 12px}
+.campaign-repair-list .campaign-repair-empty{margin:0}
+.campaign-repair-button{
+  display:block;width:100%;min-height:42px;text-align:left;
+  padding:8px 11px;background:#1b4156;color:#f0dec3;
+  border:1px solid #8a784f;border-radius:5px;
+  font-size:12px;font-weight:600;cursor:pointer;touch-action:manipulation;
+}
+.campaign-repair-button:not(:disabled):hover,
+.campaign-repair-button:not(:disabled):focus-visible{
+  background:#365666;outline:1px solid #dfba75;
+}
+.campaign-repair-button:disabled{opacity:.48;cursor:not-allowed}
+.campaign-repair-all{background:#415038;border-color:#b2a16e}
+.campaign-repair-bulk-summary{margin:6px 1px 0}
+@media(max-width:600px){
+  .campaign-repair-panel{margin-top:7px}
+  .campaign-repair-panel summary{min-height:44px}
+  .campaign-repair-button{min-height:44px}
+}
