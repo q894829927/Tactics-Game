@@ -294,7 +294,7 @@ try {
         "initial selection must not open commands");
       await page.locator('.battle-cell[data-x="2"][data-y="5"]').evaluate(el => el.click());
       await page.locator(".unit-command-menu").waitFor({state:"visible",timeout:6500});
-      assert.ok(await page.locator(".unit-command-menu").getByText("取消移动",{exact:false}).count());
+      assert.ok(await page.locator(".unit-command-menu").getByText("撤销移动",{exact:false}).count());
       if(isMobile) {
         const movedAttacks=await page.locator(attackSelector).count();
         assert.ok(movedAttacks>0 && movedAttacks<initialAttackCount,
@@ -324,7 +324,7 @@ try {
       }
       await page.locator('.battle-cell[data-x="1"][data-y="5"]').evaluate(el => el.click());
       await page.locator(".unit-command-menu").waitFor({state:"visible",timeout:3000});
-      assert.equal(await page.locator(".unit-command-menu").getByText("取消移动",{exact:false}).count(),0,
+      assert.equal(await page.locator(".unit-command-menu").getByText("撤销移动",{exact:false}).count(),0,
         "confirming stay must not offer movement rollback");
       if(isMobile) {
         assert.equal(await page.locator(attackSelector).count(),initialAttackCount,

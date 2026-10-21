@@ -88,8 +88,9 @@ test("S1-0 rejected art action does not consume durability, hp, log or an action
 test("S1-0 UI exposes only a clearly labelled W2 sample art and action cost",()=>{
  const board=readFileSync(new URL("../src/scene/BoardView.ts",import.meta.url),"utf8");
  const index=readFileSync(new URL("../index.html",import.meta.url),"utf8");
- assert.match(board,/战技·试验/);
- assert.match(board,/availableArtWeapons\(actor\)/);
+ const flat=readFileSync(new URL("../src/scene/flatBattleCommands.ts",import.meta.url),"utf8");
+ assert.match(flat,/战技 · 强击/);
+ assert.match(flat,/availableArtWeapons\(actor\)/);
  assert.match(board,/useCombatArt\(attacker,target,this\.attackArtId\)/);
  assert.match(index,/id="forecast-action-cost"/);
 });
