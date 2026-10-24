@@ -118,9 +118,9 @@ test("Deduplicated spells prefer a castable source over exhausted current slot",
 test("Board UI uses two menu layers and directly equips selected skill",()=>{
  const view=readFileSync(new URL("../src/scene/BoardView.ts",import.meta.url),"utf8");
  assert.match(view,/command\.action==="submenu"/);
- assert.match(view,/this\\.commandSubmenu=command\\.group==="art"\\?"art":/);
- assert.match(view,/command\\.group==="magic"\\?"magic":"inventory"/);
- assert.match(view,/inventorySubmenuCommands\\(actor\\)/);
+ assert.ok(view.includes('this.commandSubmenu=command.group==="art"?"art":'));
+ assert.ok(view.includes('command.group==="magic"?"magic":"inventory"'));
+ assert.ok(view.includes("inventorySubmenuCommands(actor)"));
  assert.match(view,/skillSubmenuCommands\(this\.battle,actor,this\.commandSubmenu\)/);
  assert.match(view,/this\.battle\.equipWeapon\(actor,command\.weaponIndex\)/);
  assert.match(view,/this\.commandSubmenu=null;this\.refresh\(\)/);
