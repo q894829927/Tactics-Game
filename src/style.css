@@ -1692,3 +1692,59 @@ button:disabled { cursor: not-allowed; }
   .campaign-repair-panel summary{min-height:44px}
   .campaign-repair-button{min-height:44px}
 }
+
+
+/* E1-1: compact native shop drawer with scroll-safe buying buttons. */
+.campaign-shop-panel{
+ margin-top:9px;border:1px solid #8d7950;border-radius:5px;
+ background:linear-gradient(135deg,#102f40,#0a2030);
+}
+.campaign-shop-panel summary{
+ display:flex;justify-content:space-between;align-items:center;
+ gap:8px;cursor:pointer;min-height:44px;padding:9px 12px;
+ color:#eac98c;font-size:13px;font-weight:700;touch-action:manipulation;
+}
+.campaign-shop-panel summary span{font-size:11px;color:#becbd1;font-weight:400}
+.campaign-shop-panel[open] summary{border-bottom:1px solid #746044}
+.campaign-shop-intro,.campaign-shop-empty{
+ margin:8px 12px;color:#bccbd0;font-size:11px;line-height:1.5;
+}
+.campaign-shop-filter{
+ display:flex;justify-content:space-between;align-items:center;
+ gap:10px;padding:2px 11px 8px;color:#d3d4ce;font-size:12px;
+}
+.campaign-shop-filter select{
+ max-width:68%;min-height:36px;padding:6px;
+ border:1px solid #746947;border-radius:4px;background:#163348;
+ color:#f1e0bd;font-size:12px;touch-action:manipulation;
+}
+.campaign-shop-list{display:grid;gap:7px;padding:6px 10px 13px}
+.campaign-shop-item{
+ display:flex;align-items:center;justify-content:space-between;
+ gap:9px;min-width:0;padding:9px;
+ background:#092537;border:1px solid #445f69;border-radius:5px;
+}
+.campaign-shop-item-info{display:flex;flex-direction:column;gap:4px;min-width:0;flex:1}
+.campaign-shop-item-info strong{font-size:13px;color:#efdab2}
+.campaign-shop-owned{font-size:10px;color:#bed3df}
+.campaign-shop-item-info small{
+ font-size:10px;line-height:1.5;color:#c6c7c6;overflow-wrap:anywhere;
+}
+.campaign-shop-item-info small.campaign-shop-reason{color:#deb985}
+.campaign-shop-buy{
+ flex:none;min-width:103px;min-height:44px;padding:7px;
+ border:1px solid #c09b61;border-radius:4px;background:#3b563f;
+ color:#f4e2bc;font-size:11px;font-weight:700;cursor:pointer;
+ touch-action:manipulation;
+}
+.campaign-shop-buy:disabled{opacity:.44;cursor:not-allowed;background:#263849}
+.campaign-shop-buy:not(:disabled):focus-visible,
+.campaign-shop-buy:not(:disabled):hover{
+ outline:1px solid #f0d295;background:#506d4e;
+}
+@media(max-width:600px){
+ .campaign-shop-panel{margin-top:7px}
+ .campaign-shop-item{padding:8px;gap:6px}
+ .campaign-shop-buy{min-width:93px}
+ .campaign-shop-filter select{max-width:70%}
+}

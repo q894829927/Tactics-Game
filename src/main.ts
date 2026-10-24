@@ -10,12 +10,13 @@ import { TERRAIN_INFO, movementCostLabel } from "./engine/terrain.ts";
 import { BoardView } from "./scene/BoardView.ts";
 import { GAME_VERSION } from "./version.ts";
 import {BASIC_KEYS,BASIC_LABELS,GROWTH_KEYS,GROWTH_LABELS} from "./engine/attributes.ts";
-import {WEAPON_LIBRARY,weaponRange,canWield} from "./engine/weapons.ts";
+import {WEAPON_LIBRARY,weaponRange,canWield,MAX_INVENTORY} from "./engine/weapons.ts";
+import {CAMP_SHOP_STOCK} from "./engine/campShop.ts";
 import {weaponRankForExp,weaponExperienceText,WEAPON_RANK_THRESHOLDS} from "./engine/proficiency.ts";
 import {WEAPON_CATEGORIES} from "./engine/equipmentTypes.ts";
 import {weaponResourceText} from "./engine/combatResources.ts";
 import {statusDescription} from "./engine/statusEffects.ts";
-import {CLASS_LIBRARY,effectiveClassStats,effectiveClassGrowths,type ClassId} from "./engine/classes.ts";
+import {CLASS_LIBRARY,effectiveClassStats,effectiveClassGrowths,classAllowsWeapon,type ClassId} from "./engine/classes.ts";
 import {classWeaponAvailable,certificationRequirements} from "./engine/classCertification.ts";
 import {MASTERY_LIBRARY,MASTERY_SLOTS,classExperienceFor,
   classMastered,unlockedMasteries} from "./engine/mastery.ts";
@@ -407,6 +408,49 @@ function renderCampaign():void{
       equipment.appendChild(entry);
     });
 
+    // E1-1: finite store. Prices, eligibility, inventory slots and payments
+    // come from Battle, never from a client-side click-only balance estimate.
+    const shopList=get("campaign-shop-list");shopList.replaceChildren();
+    const filter=(get("campaign-shop-filter") as HTMLSelectElement).value;
+    get("campaign-shop-summary").textContent=
+      selected.inventory.length+" / "+MAX_INVENTORY+" 件 · 金币 "+
+      battle.preparationFunds.gold;
+    for(const id of CAMP_SHOP_STOCK){
+      const weapon=WEAPON_LIBRARY[id];
+      if(filter!=="all"&&!classAllowsWeapon(selected.classId,weapon.category))
+        continue;
+      const quote=battle.shopQuote(selected.id,id);
+      if(!quote)continue;
+      const line=document.createElement("div");line.className="campaign-shop-item";
+      line.dataset.weaponId=id;
+      const details=document.createElement("div");details.className="campaign-shop-item-info";
+      const title=document.createElement("strong");title.textContent=weapon.name;
+      const owned=document.createElement("span");owned.className="campaign-shop-owned";
+      owned.textContent="已持有 "+quote.owned+" 件";
+      const stats=document.createElement("small");
+      stats.textContent="威力 "+weapon.might+" · 命中 "+weapon.hit+
+        " · 射程 "+weaponRange(weapon)+" · 熟练 "+weapon.requiredRank+
+        " · "+(weapon.kind==="physical"
+          ?"耐久 "+weapon.maxDurability:"次数 "+weapon.maxCharges);
+      const reason=document.createElement("small");
+      reason.className="campaign-shop-reason";
+      reason.textContent=quote.canBuy?"符合职业要求 · 可购买":quote.reason;
+      details.append(title,owned,stats,reason);
+      const buy=document.createElement("button");buy.type="button";
+      buy.className="campaign-shop-buy";buy.dataset.buyWeapon=id;
+      buy.textContent="购买 · "+quote.price+" 金币";
+      buy.disabled=!quote.canBuy;
+      buy.title=quote.reason;
+      buy.setAttribute("aria-label","为"+selected.name+"购买"+weapon.name+
+        "，价格"+quote.price+"金币"+(quote.canBuy?"":"，"+quote.reason));
+      buy.addEventListener("click",()=>battle.prepareBuyWeapon(selected.id,id));
+      line.append(details,buy);shopList.appendChild(line);
+    }
+    if(shopList.children.length===0){
+      const info=document.createElement("p");info.className="campaign-shop-empty";
+      info.textContent="当前筛选条件下没有商品。";shopList.appendChild(info);
+    }
+
     // E1-0: price each actual physical instance; never nest buttons within buttons.
     const repairList=get("campaign-repair-list");repairList.replaceChildren();
     const repairs=selected.inventory.flatMap((id,index)=>{
@@ -508,6 +552,7 @@ function renderCampaign():void{
     }
   }
 }
+get("campaign-shop-filter").addEventListener("change",()=>renderCampaign());
 button("campaign-tab-stats").addEventListener("click",()=>{
   campaignAttributeMode="stats";renderCampaign();
 });

@@ -40,6 +40,7 @@ import {LEVELS,LEVEL_IDS,DEFAULT_LEVEL_ID,levelUnlocked,objectiveComplete,type L
 import {LAB_LEVEL,LAB_TERRAIN,LAB_PRESETS,DEFAULT_LAB_PRESET,type LabPresetId} from "./testLab.ts";
 import {WEAPON_CATEGORIES} from "./equipmentTypes.ts";
 import {quoteWeaponRepair,type RepairQuote} from "./campRepair.ts";
+import {CAMP_SHOP_STOCK,shopEligibility,type ShopEligibility,type ShopWeaponId} from "./campShop.ts";
 
 export const MAP_WIDTH = 10;
 export const MAP_HEIGHT = 8;
@@ -495,6 +496,33 @@ export class Battle {
     }
     this.preparationFunds.gold-=quote.cost;
     this.emit();return true;
+  }
+
+  /** E1-1: check an actual shop offer for a selected ally, with no side effects. */
+  shopQuote(unitId:string,id:WeaponId):ShopEligibility|null{
+    if(!this.campaignEnabled||this.campaignStage!=="preparation"||
+      this.result!=="playing"||this.phase!=="player"||
+      !CAMP_SHOP_STOCK.includes(id as ShopWeaponId))return null;
+    const actor=this.units.find(u=>u.id===unitId&&u.team==="ally");
+    if(!actor)return null;
+    return shopEligibility(actor,id as ShopWeaponId,this.preparationFunds.gold);
+  }
+  /** Purchase exactly one real inventory item. Never overwrite training loaners. */
+  prepareBuyWeapon(unitId:string,id:WeaponId):boolean{
+    const quote=this.shopQuote(unitId,id);
+    if(!quote?.canBuy||quote.slot===null||
+      this.preparationFunds.gold<quote.price)return false;
+    const actor=this.units.find(u=>u.id===unitId&&u.team==="ally");
+    if(!actor||actor.inventory.length!==quote.slot||quote.slot>=MAX_INVENTORY)return false;
+    const instance=makeWeaponInstance(actor.characterId,quote.slot,id);
+    const weapon=weaponFor(id);
+    // Everything above this line is read-only; pay and append atomically.
+    actor.inventory.push(id);
+    actor.weaponInstances.push(instance);
+    if(isSpell(weapon))actor.spellCharges[id]??=weapon.maxCharges??0;
+    this.preparationFunds.gold-=quote.price;
+    this.emit();
+    return true;
   }
 
   get classChoices():readonly ClassId[]{return PLAYER_CLASS_CHOICES;}
