@@ -32,8 +32,6 @@ export function combatPreviewView(
         unit: attacker, hpAfter: forecast.attackerHpAfter,
         hitText: odds(forecast.attackerHit, forecast.attackerCrit,forecast.attackerTrait),
         damageText: dealt(forecast.damage, forecast.followUp === "attacker" ? forecast.followUpDamage : null),
-      firstDamage:forecast.damage,
-      followUpDamage:forecast.followUp==="attacker"?forecast.followUpDamage:null,
         firstDamage:forecast.damage,
         followUpDamage:forecast.followUp==="attacker"?forecast.followUpDamage:null,
       },
@@ -60,6 +58,8 @@ export function combatPreviewView(
       unit: attacker, hpAfter: forecast.attackerHpAfter,
       hitText: odds(forecast.attackerHit, forecast.attackerCrit,forecast.attackerTrait),
       damageText: dealt(forecast.damage, forecast.followUp === "attacker" ? forecast.followUpDamage : null),
+      firstDamage:forecast.damage,
+      followUpDamage:forecast.followUp==="attacker"?forecast.followUpDamage:null,
     },
   };
 }
