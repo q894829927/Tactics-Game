@@ -219,6 +219,15 @@
               </div>
               <div id="campaign-equipment" class="campaign-equipment" aria-live="polite"></div>
             </section>
+            <details id="campaign-inventory-panel" class="campaign-inventory-panel">
+              <summary>背包与公共仓库 <span id="campaign-warehouse-summary">整理与出售</span></summary>
+              <p class="campaign-inventory-hint">当前角色可存入、出售背包装备，也可从公共仓库取出。训练借用装备和最后一把可用武器不可移走。</p>
+              <h4>当前角色背包</h4>
+              <div id="campaign-bag-manage-list" class="campaign-inventory-list" aria-live="polite"></div>
+              <h4>全队公共仓库 <span id="campaign-warehouse-count">0/40</span></h4>
+              <p class="campaign-inventory-hint">仓库物品取出后归当前所选角色；可通过出击成员栏切换接收人。</p>
+              <div id="campaign-warehouse-list" class="campaign-inventory-list" aria-live="polite"></div>
+            </details>
             <details id="campaign-shop-panel" class="campaign-shop-panel">
               <summary>武器商店 <span id="campaign-shop-summary">查看价格与采购</span></summary>
               <p class="campaign-shop-intro">为当前选中角色采购武器与法术书；每人最多携带5件。购买不会自动替换当前装备。</p>

@@ -7,6 +7,7 @@ import type {CharacterId} from "./characters.ts";
 import {BASIC_KEYS,GROWTH_KEYS,type BasicStats,type GrowthRates} from "./attributes.ts";
 import {WEAPON_CATEGORIES,type Weapon} from "./equipmentTypes.ts";
 import {WEAPON_LIBRARY,type WeaponId,MAX_INVENTORY,canWield} from "./weapons.ts";
+import {WAREHOUSE_CAPACITY,WAREHOUSE_SERIAL_CAP,type StoredEquipment} from "./campInventory.ts";
 import {CLASS_LIBRARY,type ClassId} from "./classes.ts";
 import {PLAYER_CLASS_CHOICES,type PreparationFunds} from "./classCertification.ts";
 import type {WeaponExperience} from "./proficiency.ts";
@@ -55,6 +56,9 @@ export type CampaignSave={
   replayVoucherProgress?:LevelId[];
   ridingPermit?:boolean; // optional only for legacy C2 saves
   funds:PreparationFunds;
+  /** Optional for C2–E1-1 saves; normalize missing values to an empty warehouse. */
+  warehouse?:StoredEquipment[];
+  warehouseSerial?:number;
   allies:AllyProgress[];
   pendingSettlement:SortieSettlement|null;
 };
@@ -190,6 +194,33 @@ function validAlly(v:unknown):v is AllyProgress {
   }
   return true;
 }
+/** Storage has the same strict physical and magical validation as ally bags. */
+function validWarehouse(items:unknown,serial:unknown):boolean{
+  if(items===undefined&&serial===undefined)return true; // legacy schema=1
+  if(!Array.isArray(items)||items.length>WAREHOUSE_CAPACITY||
+    !integer(serial,0,WAREHOUSE_SERIAL_CAP))return false;
+  const ids=new Set<number>();
+  for(const raw of items as unknown[]){
+    if(!obj(raw)||!integer(raw.entryId,1,WAREHOUSE_SERIAL_CAP)||
+      raw.entryId>serial||ids.has(raw.entryId)||
+      typeof raw.weaponId!=="string"||
+      !Object.hasOwn(WEAPON_LIBRARY,raw.weaponId))return false;
+    ids.add(raw.entryId);
+    const id=raw.weaponId as WeaponId,weapon:Weapon=WEAPON_LIBRARY[id];
+    if(weapon.kind==="magical"){
+      if(raw.instance!==null||!integer(raw.charges,0,weapon.maxCharges??0))
+        return false;
+    }else{
+      if(raw.charges!==null||!obj(raw.instance)||
+        raw.instance.weaponId!==id||
+        !integer(raw.instance.durability,0,weapon.maxDurability??0)||
+        raw.instance.maxDurability!==weapon.maxDurability||
+        typeof raw.instance.instanceId!=="string"||
+        raw.instance.instanceId.length>128)return false;
+    }
+  }
+  return true;
+}
 function validReward(v:unknown):v is SortieReward{
   return obj(v)&&integer(v.gold,0,RESOURCE_CAPS.gold)&&
     integer(v.reputation,0,RESOURCE_CAPS.reputation)&&
@@ -227,6 +258,7 @@ export function parseCampaign(raw:unknown):CampaignSave|null{
     !integer(raw.funds.gold,0,100000000)||
     !obj(raw.funds.vouchers)||
     !integer(raw.funds.vouchers.intermediate,0,100000)||
+    !validWarehouse(raw.warehouse,raw.warehouseSerial)||
     !Array.isArray(raw.allies)||raw.allies.length!==4||
     !raw.allies.every(validAlly)||
     !ALLY_IDS.every(id=>(raw.allies as unknown[]).some(x=>obj(x)&&x.id===id))||
@@ -263,7 +295,11 @@ export function parseCampaign(raw:unknown):CampaignSave|null{
       ...unit,classExpGained:unit.classExpGained??0,
     })),
   }:null;
-  return {...raw,selectedLevelId:selected,completedLevelIds:[...(cleared as LevelId[])],
+  const warehouse=(raw.warehouse??[]) as StoredEquipment[];
+  return {...raw,
+    warehouse:warehouse.map(entry=>({...entry,instance:entry.instance?{...entry.instance}:null})),
+    warehouseSerial:raw.warehouseSerial??0,
+    selectedLevelId:selected,completedLevelIds:[...(cleared as LevelId[])],
     replayVoucherProgress:[...(replay as LevelId[])],
     ridingPermit:raw.ridingPermit??raw.sortiesCompleted>=1,
     allies,pendingSettlement:normalized} as CampaignSave;

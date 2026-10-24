@@ -1748,3 +1748,59 @@ button:disabled { cursor: not-allowed; }
  .campaign-shop-buy{min-width:93px}
  .campaign-shop-filter select{max-width:70%}
 }
+
+
+/* E1-2 shared warehouse and bag sale; preserve mobile preparation scroll. */
+.campaign-inventory-panel{
+ margin-top:9px;border:1px solid #817e62;border-radius:6px;
+ background:linear-gradient(135deg,#102c39,#0a1e2d);
+}
+.campaign-inventory-panel summary{
+ min-height:44px;padding:9px 12px;display:flex;gap:8px;
+ justify-content:space-between;align-items:center;cursor:pointer;
+ color:#edcca0;font-size:13px;font-weight:700;touch-action:manipulation;
+}
+.campaign-inventory-panel summary span{
+ color:#b5d0d7;font-size:11px;font-weight:400;
+}
+.campaign-inventory-panel[open] summary{border-bottom:1px solid #746c58}
+.campaign-inventory-panel h4{
+ margin:8px 11px;font-size:13px;color:#f1d2a1;
+}
+.campaign-inventory-panel h4 span{
+ float:right;color:#a7c5c7;font-size:11px;font-weight:400;
+}
+.campaign-inventory-hint{
+ color:#b7c7d2;font-size:11px;line-height:1.55;margin:7px 11px;
+}
+.campaign-inventory-list{display:grid;gap:7px;padding:5px 10px 12px}
+.campaign-inventory-row{
+ display:flex;justify-content:space-between;align-items:center;
+ gap:10px;padding:9px;min-width:0;
+ background:#092535;border:1px solid #435e62;border-radius:5px;
+}
+.campaign-inventory-info{display:flex;flex-direction:column;gap:4px;min-width:0;flex:1}
+.campaign-inventory-info strong{color:#e9dbc0;font-size:13px}
+.campaign-inventory-info small{
+ color:#bbcbd0;font-size:10px;line-height:1.45;overflow-wrap:anywhere;
+}
+.campaign-inventory-info small.campaign-inventory-warning{color:#e2b77b}
+.campaign-inventory-actions{display:flex;gap:5px;flex:none}
+.campaign-inventory-action{
+ min-width:56px;min-height:44px;padding:7px 8px;
+ border:1px solid #91825b;border-radius:4px;
+ background:#284658;color:#eee0bd;font-size:11px;
+ cursor:pointer;touch-action:manipulation;
+}
+.campaign-inventory-action:disabled{opacity:.42;cursor:not-allowed}
+.campaign-inventory-action:not(:disabled):focus-visible,
+.campaign-inventory-action:not(:disabled):hover{
+ outline:1px solid #efcc85;background:#3e6172;
+}
+@media(max-width:600px){
+ .campaign-inventory-panel{margin-top:7px}
+ .campaign-inventory-row{gap:6px;padding:7px}
+ .campaign-inventory-actions{flex-direction:column}
+ .campaign-inventory-action{min-height:38px;min-width:86px;padding:6px}
+ .campaign-inventory-panel summary{flex-wrap:wrap}
+}

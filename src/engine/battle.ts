@@ -41,6 +41,7 @@ import {LAB_LEVEL,LAB_TERRAIN,LAB_PRESETS,DEFAULT_LAB_PRESET,type LabPresetId} f
 import {WEAPON_CATEGORIES} from "./equipmentTypes.ts";
 import {quoteWeaponRepair,type RepairQuote} from "./campRepair.ts";
 import {CAMP_SHOP_STOCK,shopEligibility,type ShopEligibility,type ShopWeaponId} from "./campShop.ts";
+import {WAREHOUSE_CAPACITY,WAREHOUSE_SERIAL_CAP,GOLD_CAP,sellWeaponValue,type StoredEquipment} from "./campInventory.ts";
 
 export const MAP_WIDTH = 10;
 export const MAP_HEIGHT = 8;
@@ -250,6 +251,8 @@ export class Battle {
   ridingPermit=false;
   pendingSettlement:SortieSettlement|null=null;
   private sortieStart:CampaignSave|null=null;
+  warehouse:StoredEquipment[]=[];
+  warehouseSerial=0;
   /** C1 supports credential checks. The E1 reward/economy loop is future work. */
   preparationFunds:PreparationFunds={
     reputation:0,gold:0,vouchers:{intermediate:0},
@@ -291,6 +294,7 @@ export class Battle {
     this.ridingPermit=this.labMode;
     this.phaseSerial={ally:1,enemy:0};
     this.preparationOpen=true;
+    this.warehouse=[];this.warehouseSerial=0;
     this.preparationFunds={
       reputation:INITIAL_PREPARATION_FUNDS.reputation,
       gold:INITIAL_PREPARATION_FUNDS.gold,
@@ -327,6 +331,8 @@ export class Battle {
       ridingPermit:this.ridingPermit,
       funds:{gold:this.preparationFunds.gold,reputation:this.preparationFunds.reputation,
         vouchers:{...this.preparationFunds.vouchers}},
+      warehouse:this.warehouse.map(e=>({...e,instance:e.instance?{...e.instance}:null})),
+      warehouseSerial:this.warehouseSerial,
       allies:units.map(x=>({...x,stats:{...x.stats},growths:{...x.growths},
         weaponExp:{...x.weaponExp},inventory:[...x.inventory],
         classLicenses:[...x.classLicenses],classExperience:{...x.classExperience},
@@ -361,6 +367,9 @@ export class Battle {
     }
     this.preparationFunds={gold:checked.funds.gold,
       reputation:checked.funds.reputation,vouchers:{...checked.funds.vouchers}};
+    this.warehouse=(checked.warehouse??[]).map(e=>({...e,
+      instance:e.instance?{...e.instance}:null}));
+    this.warehouseSerial=checked.warehouseSerial??0;
     this.sortiesCompleted=checked.sortiesCompleted;
     this.completedLevelIds=[...(checked.completedLevelIds??[])];
     this.replayVoucherProgress=[...(checked.replayVoucherProgress??[])];
@@ -523,6 +532,119 @@ export class Battle {
     this.preparationFunds.gold-=quote.price;
     this.emit();
     return true;
+  }
+
+  /** Shared warehouse and trade are only open in genuine battle preparation. */
+  private canManageEquipment():boolean{
+    return this.campaignEnabled&&!this.labMode&&
+      this.campaignStage==="preparation"&&this.result==="playing"&&
+      this.phase==="player"&&this.preparationOpen;
+  }
+  private managedAlly(id:string):Unit|null{
+    return this.units.find(u=>u.id===id&&u.team==="ally")??null;
+  }
+  /** Preview prevents selling the last usable weapon and protects loaners. */
+  bagManagementStatus(unitId:string,index:number):{
+    canDeposit:boolean;canSell:boolean;reason:string;sellValue:number|null;
+  }{
+    const no={canDeposit:false,canSell:false,reason:"当前不可管理装备",sellValue:null};
+    if(!this.canManageEquipment()||!Number.isInteger(index)||index<0)return no;
+    const actor=this.managedAlly(unitId);
+    if(!actor||index>=actor.inventory.length)return no;
+    if(actor.trainingSlot===index)
+      return {...no,reason:"转职借用武器不能入库或出售"};
+    const weaponId=actor.inventory[index]!;
+    const instance=actor.weaponInstances[index]??null;
+    const sellValue=sellWeaponValue(weaponId,instance);
+    const remaining=actor.inventory.filter((_,i)=>i!==index);
+    if(!remaining.some(id=>canWield(actor.classId,id,actor.weaponExp)))
+      return {...no,reason:"必须保留至少一把当前职业可用武器"};
+    const canDeposit=this.warehouse.length<WAREHOUSE_CAPACITY&&
+      this.warehouseSerial<WAREHOUSE_SERIAL_CAP;
+    const canSell=sellValue!==null&&
+      this.preparationFunds.gold+sellValue<=GOLD_CAP;
+    return {canDeposit,canSell,sellValue,reason:
+      !canDeposit?"仓库已满":!canSell?"不可出售或金币达到上限":"可管理"};
+  }
+  warehouseManagementStatus(unitId:string,entryId:number):{
+    canWithdraw:boolean;canSell:boolean;reason:string;sellValue:number|null;
+  }{
+    const no={canWithdraw:false,canSell:false,reason:"当前不可管理仓库",sellValue:null};
+    if(!this.canManageEquipment()||!Number.isInteger(entryId)||entryId<=0)return no;
+    const actor=this.managedAlly(unitId);
+    const entry=this.warehouse.find(e=>e.entryId===entryId);
+    if(!actor||!entry)return no;
+    const value=sellWeaponValue(entry.weaponId,entry.instance);
+    const tooMany=actor.inventory.length>=MAX_INVENTORY;
+    const spell=weaponFor(entry.weaponId).kind==="magical";
+    const duplicateSpell=spell&&actor.inventory.includes(entry.weaponId);
+    const canWithdraw=!tooMany&&!duplicateSpell;
+    const canSell=value!==null&&this.preparationFunds.gold+value<=GOLD_CAP;
+    return {canWithdraw,canSell,sellValue:value,reason:
+      tooMany?"角色背包已满（最多5件）":
+      duplicateSpell?"该角色已有相同魔法书":
+      !canSell?"此物品不可出售或金币已满":"可取出"};
+  }
+  /** Remove a single real slot, retaining a different legal equipped weapon. */
+  private removeManagedItem(actor:Unit,index:number):{
+    weaponId:WeaponId;instance:StoredEquipment["instance"];charges:number|null;
+  }{
+    const weaponId=actor.inventory[index]!,weapon=weaponFor(weaponId);
+    const instance=actor.weaponInstances[index]??null;
+    const charges=weapon.kind==="magical"
+      ?actor.spellCharges[weaponId]??weapon.maxCharges??0:null;
+    actor.inventory.splice(index,1);
+    actor.weaponInstances.splice(index,1);
+    if(actor.trainingSlot!==null&&actor.trainingSlot>index)actor.trainingSlot--;
+    if(weapon.kind==="magical"&&!actor.inventory.includes(weaponId))
+      delete actor.spellCharges[weaponId];
+    if(actor.equippedIndex===index){
+      actor.equippedIndex=actor.inventory.findIndex(id=>
+        canWield(actor.classId,id,actor.weaponExp));
+    }else if(actor.equippedIndex>index)actor.equippedIndex--;
+    const equipped=weaponFor(actor.inventory[actor.equippedIndex]!);
+    actor.weapon=equipped;
+    actor.minRange=equipped.minRange;actor.maxRange=equipped.maxRange;
+    return {weaponId,instance:instance?{...instance}:null,charges};
+  }
+  prepareDepositWeapon(unitId:string,index:number):boolean{
+    if(!this.bagManagementStatus(unitId,index).canDeposit)return false;
+    const actor=this.managedAlly(unitId)!;
+    const item=this.removeManagedItem(actor,index);
+    this.warehouseSerial++;
+    this.warehouse.push({entryId:this.warehouseSerial,...item});
+    this.emit();return true;
+  }
+  prepareWithdrawWeapon(unitId:string,entryId:number):boolean{
+    if(!this.warehouseManagementStatus(unitId,entryId).canWithdraw)return false;
+    const actor=this.managedAlly(unitId)!;
+    const ix=this.warehouse.findIndex(e=>e.entryId===entryId);
+    if(ix<0)return false;
+    const [entry]=this.warehouse.splice(ix,1);
+    actor.inventory.push(entry.weaponId);
+    actor.weaponInstances.push(entry.instance?{...entry.instance}:null);
+    if(weaponFor(entry.weaponId).kind==="magical")
+      actor.spellCharges[entry.weaponId]=entry.charges??0;
+    this.emit();return true;
+  }
+  prepareSellInventory(unitId:string,index:number):boolean{
+    const status=this.bagManagementStatus(unitId,index);
+    if(!status.canSell||status.sellValue===null)return false;
+    const actor=this.managedAlly(unitId)!;
+    this.removeManagedItem(actor,index);
+    this.preparationFunds.gold+=status.sellValue;
+    this.emit();return true;
+  }
+  prepareSellWarehouse(entryId:number):boolean{
+    if(!this.canManageEquipment()||!Number.isInteger(entryId))return false;
+    const ix=this.warehouse.findIndex(e=>e.entryId===entryId);
+    if(ix<0)return false;
+    const item=this.warehouse[ix]!;
+    const value=sellWeaponValue(item.weaponId,item.instance);
+    if(value===null||this.preparationFunds.gold+value>GOLD_CAP)return false;
+    this.warehouse.splice(ix,1);
+    this.preparationFunds.gold+=value;
+    this.emit();return true;
   }
 
   get classChoices():readonly ClassId[]{return PLAYER_CLASS_CHOICES;}

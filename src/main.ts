@@ -408,6 +408,78 @@ function renderCampaign():void{
       equipment.appendChild(entry);
     });
 
+    // E1-2: render real equip instances and warehouse receipts without nesting
+    // buttons inside existing equip selection buttons.
+    const bagManage=get("campaign-bag-manage-list");bagManage.replaceChildren();
+    const warehouseList=get("campaign-warehouse-list");warehouseList.replaceChildren();
+    get("campaign-warehouse-summary").textContent=
+      selected.inventory.length+"/5件 · 仓库 "+battle.warehouse.length+"/40";
+    get("campaign-warehouse-count").textContent=battle.warehouse.length+"/40";
+    const addManageRow=(root:HTMLElement,id:keyof typeof WEAPON_LIBRARY,
+      key:string,subtitle:string,reason:string,actions:{
+        text:string;action:string;disabled:boolean;why:string;click:()=>void;
+      }[])=>{
+      const row=document.createElement("div");row.className="campaign-inventory-row";
+      row.dataset.weaponId=id;row.dataset.entryKey=key;
+      const info=document.createElement("div");info.className="campaign-inventory-info";
+      const name=document.createElement("strong");name.textContent=WEAPON_LIBRARY[id].name;
+      const sub=document.createElement("small");sub.textContent=subtitle;
+      info.append(name,sub);
+      if(reason&&reason!=="可管理"&&reason!=="可取出"){
+        const warning=document.createElement("small");
+        warning.className="campaign-inventory-warning";warning.textContent=reason;
+        info.appendChild(warning);
+      }
+      const buttons=document.createElement("div");buttons.className="campaign-inventory-actions";
+      for(const action of actions){
+        const button=document.createElement("button");button.type="button";
+        button.className="campaign-inventory-action";button.dataset.action=action.action;
+        button.textContent=action.text;button.disabled=action.disabled;button.title=action.why;
+        button.addEventListener("click",action.click);buttons.appendChild(button);
+      }
+      row.append(info,buttons);root.appendChild(row);
+    };
+    for(const [index,id] of selected.inventory.entries()){
+      const status=battle.bagManagementStatus(selected.id,index);
+      addManageRow(bagManage,id,"bag-"+index,
+        "第"+(index+1)+"格 · "+weaponResourceText(selected,index)+
+        (selected.equippedIndex===index?" · 当前装备":"")+
+        (selected.trainingSlot===index?" · 训练借用":""),
+        status.reason,[
+          {text:"存仓",action:"deposit",disabled:!status.canDeposit,why:status.reason,
+            click:()=>battle.prepareDepositWeapon(selected.id,index)},
+          {text:status.sellValue===null?"不可出售":"出售 +"+status.sellValue+" 金币",
+            action:"sell-bag",disabled:!status.canSell,why:status.reason,
+            click:()=>{
+              if(window.confirm("确认出售"+WEAPON_LIBRARY[id].name+
+                "，获得"+status.sellValue+"金币？"))battle.prepareSellInventory(selected.id,index);
+            }},
+        ]);
+    }
+    for(const entry of battle.warehouse){
+      const status=battle.warehouseManagementStatus(selected.id,entry.entryId);
+      const def=WEAPON_LIBRARY[entry.weaponId];
+      const subtitle="仓库编号 "+entry.entryId+" · "+(def.kind==="magical"
+        ?"次数 "+entry.charges+"/"+def.maxCharges
+        :"耐久 "+entry.instance?.durability+"/"+entry.instance?.maxDurability);
+      addManageRow(warehouseList,entry.weaponId,String(entry.entryId),subtitle,status.reason,[
+        {text:"取出",action:"withdraw",disabled:!status.canWithdraw,why:status.reason,
+          click:()=>battle.prepareWithdrawWeapon(selected.id,entry.entryId)},
+        {text:status.sellValue===null?"不可出售":"出售 +"+status.sellValue+" 金币",
+          action:"sell-warehouse",disabled:!status.canSell,why:status.reason,
+          click:()=>{
+            if(window.confirm("确认出售仓库中的"+def.name+
+              "，获得"+status.sellValue+"金币？"))battle.prepareSellWarehouse(entry.entryId);
+          }},
+      ]);
+    }
+    if(!battle.warehouse.length){
+      const empty=document.createElement("p");
+      empty.className="campaign-inventory-hint";
+      empty.textContent="仓库为空。可存放备用武器，再为其他角色取出。";
+      warehouseList.appendChild(empty);
+    }
+
     // E1-1: finite store. Prices, eligibility, inventory slots and payments
     // come from Battle, never from a client-side click-only balance estimate.
     const shopList=get("campaign-shop-list");shopList.replaceChildren();

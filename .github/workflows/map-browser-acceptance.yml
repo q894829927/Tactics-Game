@@ -36,6 +36,8 @@ jobs:
         run: node tests/browserE10Repair.mjs
       - name: Verify E1-1 weapon shop purchase, inventory capacity and save
         run: node tests/browserE11Shop.mjs
+      - name: Verify E1-2 warehouse and selling in desktop and mobile
+        run: node tests/browserE12Inventory.mjs
       - name: Upload map screenshot evidence
         if: always()
         uses: actions/upload-artifact@v4
