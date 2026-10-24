@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {readFileSync} from "node:fs";
 import {Battle} from "../src/engine/battle.ts";
-import {flatBattleCommands,skillSubmenuCommands} from "../src/scene/flatBattleCommands.ts";
+import {flatBattleCommands,skillSubmenuCommands,inventorySubmenuCommands} from "../src/scene/flatBattleCommands.ts";
 
 const select=(preset,id="a1")=>{
  const b=new Battle({lab:true,labPreset:preset});
@@ -15,6 +15,7 @@ test("Top-level commands are the exact five or six requested categories",()=>{
  assert.deepEqual(commands.map(c=>c.label),["攻击","战技","法术","背包","待机"]);
  assert.equal(commands.find(c=>c.key==="art").action,"submenu");
  assert.equal(commands.find(c=>c.key==="magic").action,"submenu");
+ assert.equal(commands.find(c=>c.key==="inventory").action,"submenu");
  assert.equal(commands.filter(c=>c.group==="art").length,1);
  assert.equal(commands.filter(c=>c.group==="magic").length,1);
  assert.ok(commands.every(c=>!/试验|职业技|术法|交换|取消移动/.test(c.label)));
@@ -121,4 +122,42 @@ test("Board UI uses two menu layers and directly equips selected skill",()=>{
  assert.match(view,/skillSubmenuCommands\(this\.battle,actor,this\.commandSubmenu\)/);
  assert.match(view,/this\.battle\.equipWeapon\(actor,command\.weaponIndex\)/);
  assert.match(view,/this\.commandSubmenu=null;this\.refresh\(\)/);
+});
+
+test("Battle bag shows every owned weapon or spell once, preserving original slot order",()=>{
+ const {actor}=select("support","a1");
+ const options=inventorySubmenuCommands(actor);
+ assert.deepEqual(options.map(c=>c.key),["gear-0","gear-1"]);
+ assert.ok(options[0].label.includes("火焰术"));
+ assert.ok(options[1].label.includes("雷电术"));
+ assert.equal(options[0].action,"equip");
+ assert.equal(options[1].weaponIndex,1);
+ assert.equal(options[0].group,"inventory");
+ assert.equal(options[1].enabled,true);
+ assert.ok(options.every(c=>c.action!=="submenu"));
+});
+test("Equipping from in-battle bag is reversible and does not consume action",()=>{
+ const {b,actor}=select("support","a1");
+ const [first,second]=inventorySubmenuCommands(actor);
+ assert.ok(first.label.startsWith("◆"));
+ assert.equal(second.weaponIndex,1);
+ assert.equal(b.equipWeapon(actor,second.weaponIndex),true);
+ const options=inventorySubmenuCommands(actor);
+ assert.ok(options[1].label.startsWith("◆"));
+ assert.ok(!options[0].label.startsWith("◆"));
+ assert.equal(actor.weapon.name,"雷电术");
+ assert.equal(actor.spent,false);
+ assert.equal(actor.moved,false);
+ assert.equal(actor.acted,false);
+ assert.equal(b.equipWeapon(actor,first.weaponIndex),true);
+ assert.equal(actor.weapon.name,"火焰术");
+});
+test("Items unusable by current class are shown disabled, not silently equipped",()=>{
+ const {b,actor}=select("mixed","a1");
+ actor.inventory.push("fire-tome");
+ actor.weaponInstances.push(null);
+ const option=inventorySubmenuCommands(actor).at(-1);
+ assert.equal(option.enabled,false);
+ assert.match(option.hint,/职业或武器熟练度不足/);
+ assert.equal(b.equipWeapon(actor,actor.inventory.length-1),false);
 });

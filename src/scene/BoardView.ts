@@ -1,6 +1,6 @@
 import { Battle, MAP_HEIGHT, MAP_WIDTH, key, type Point, type Unit, type AttackForecast, type EnemyActionPlan, type CombatEvent, type SupportEffect, type SupportPreview } from "../engine/battle.ts";
 import { combatPreviewView } from "./combatPreviewView.ts";
-import {flatBattleCommands,skillSubmenuCommands,type FlatCommand} from "./flatBattleCommands.ts";
+import {flatBattleCommands,skillSubmenuCommands,inventorySubmenuCommands,type FlatCommand} from "./flatBattleCommands.ts";
 import {WEAPON_LIBRARY,weaponRange,canWield} from "../engine/weapons.ts";
 import {weaponRankForExp,weaponExperienceText} from "../engine/proficiency.ts";
 import {weaponResourceText} from "../engine/combatResources.ts";
@@ -101,7 +101,7 @@ export class BoardView {
   private readonly touchPoints = new Map<number,Contact>();
   private pinchOrigin:PinchOrigin | null = null;
   private menuVisible = false;
-  private commandSubmenu:"art"|"magic"|null=null;
+  private commandSubmenu:"art"|"magic"|"inventory"|null=null;
   private attackMode = false;
   private forecastTargetId: string | null = null;
   private readonly forecastPanel: HTMLElement;
@@ -111,7 +111,6 @@ export class BoardView {
   onZoomChange: ((percent: number) => void) | null = null;
   onHint: ((message: string) => void) | null = null;
   onInspectionChange: (() => void) | null = null;
-  onInventoryRequested: (() => void) | null = null;
   get inspectionCell(): Point | null { return this.inspection.cell; }
   clearInspection(): void {
     this.inspection.clear();
@@ -1025,13 +1024,20 @@ export class BoardView {
       this.battle.waitSelected();this.menuVisible=false;this.refresh();return;
     }
     if(command.action==="undo"){this.undoTentativeMove();return;}
-    if(command.action==="inventory"){
-      this.commandSubmenu=null;this.menuVisible=false;
-      this.refresh();this.onInventoryRequested?.();return;
-    }
     if(command.action==="submenu"){
-      this.commandSubmenu=command.group==="art"?"art":"magic";
+      this.commandSubmenu=command.group==="art"?"art":
+        command.group==="magic"?"magic":"inventory";
       this.menuVisible=true;this.refresh();return;
+    }
+    if(command.action==="equip"){
+      if(command.weaponIndex===undefined||!this.battle.equipWeapon(actor,command.weaponIndex))
+        return;
+      // Keep the list open, update the equipped marker and leave action
+      // economy untouched. Returning to the main commands is explicit.
+      this.commandSubmenu="inventory";
+      this.menuVisible=true;
+      this.onHint?.("已装备 "+actor.weapon.name+"，可以返回战斗指令");
+      this.refresh();return;
     }
     // The concrete skill was chosen in the single ungrouped spell/art list.
     if(command.weaponIndex!==undefined&&
@@ -1062,30 +1068,44 @@ export class BoardView {
        actor.spent||this.battle.result!=="playing"){
       this.menu.hidden=true;return;
     }
-    const commands=this.commandSubmenu
-      ?skillSubmenuCommands(this.battle,actor,this.commandSubmenu)
-      :flatBattleCommands(this.battle,actor);
+    const commands=this.commandSubmenu==="inventory"
+      ?inventorySubmenuCommands(actor)
+      :this.commandSubmenu
+        ?skillSubmenuCommands(this.battle,actor,this.commandSubmenu)
+        :flatBattleCommands(this.battle,actor);
     if(this.commandSubmenu){
       const back=document.createElement("button");
       back.type="button";back.className="command-item command-back";
       back.dataset.action="back";
-      back.textContent="← 返回"+(this.commandSubmenu==="art"?"战斗指令":"战斗指令");
+      back.textContent="← 返回战斗指令";
       back.addEventListener("click",()=>{
         this.commandSubmenu=null;this.refresh();
       });
       this.menu.appendChild(back);
       const label=document.createElement("div");label.className="command-subtitle";
-      label.textContent=this.commandSubmenu==="art"?"选择战技":"选择法术";
+      label.textContent=this.commandSubmenu==="art"?"选择战技":
+        this.commandSubmenu==="magic"?"选择法术":"选择装备";
       this.menu.appendChild(label);
     }
     for(const cmd of commands){
       const entry=document.createElement("button");
       entry.type="button";
-      entry.className="command-item"+(cmd.enabled&&cmd.group==="attack"?" command-primary":"");
+      entry.className="command-item"+(cmd.enabled&&cmd.group==="attack"?" command-primary":"")+
+        (cmd.action==="equip"&&cmd.weaponIndex===actor.equippedIndex?" command-equipped":"");
       entry.textContent=cmd.icon+"　"+cmd.label;
+      if(cmd.action==="equip"){
+        const detail=document.createElement("small");
+        detail.className="command-item-resource";
+        detail.textContent=weaponResourceText(actor,cmd.weaponIndex!)+
+          " · "+weaponRange(WEAPON_LIBRARY[actor.inventory[cmd.weaponIndex!]!]);
+        entry.appendChild(detail);
+      }
       entry.dataset.action=cmd.action;
       entry.dataset.group=cmd.group;
       entry.dataset.key=cmd.key;
+      if(cmd.weaponIndex!==undefined)entry.dataset.weaponIndex=String(cmd.weaponIndex);
+      if(cmd.action==="equip")entry.setAttribute("aria-pressed",
+        String(cmd.weaponIndex===actor.equippedIndex));
       entry.disabled=!cmd.enabled;
       entry.title=cmd.hint;
       entry.addEventListener("click",()=>this.activateFlatCommand(cmd,actor));

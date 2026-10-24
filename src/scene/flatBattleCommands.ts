@@ -1,16 +1,17 @@
 /** Tactical command menu:
  * first level: six stable categories (undo is conditional);
- * second level: one ungrouped list of the actor's actual arts or spells.
+ * second level: one ungrouped list of the actor's arts, spells or gear.
  * Each executable choice carries the legal inventory slot it needs.
  */
 import {Battle,type Unit,type SupportEffect} from "../engine/battle.ts";
-import {WEAPON_LIBRARY,weaponFor,canWield} from "../engine/weapons.ts";
+import {weaponFor,canWield} from "../engine/weapons.ts";
+import {weaponResourceText} from "../engine/combatResources.ts";
 import {careerArtForClass} from "../engine/careerArts.ts";
 
 export type CommandGroup="attack"|"art"|"magic"|"inventory"|"wait"|"undo";
 export type FlatCommand={
  key:string; label:string;icon:string;enabled:boolean;hint:string;
- action:"attack"|"art"|"career"|"support"|"career-support"|"inventory"|"wait"|"undo"|"submenu"|"none";
+ action:"attack"|"art"|"career"|"support"|"career-support"|"inventory"|"wait"|"undo"|"submenu"|"equip"|"none";
  group:CommandGroup;weaponIndex?:number;artId?:string;effect?:SupportEffect;
 };
 const effects:readonly {effect:SupportEffect;name:string}[]=[
@@ -127,6 +128,22 @@ export function skillSubmenuCommands(battle:Battle,actor:Unit,
     "–",group,"none",false,"可通过战前整备装备武器与技能")];
 }
 
+/** One direct equipment list; no detour into the side panel. */
+export function inventorySubmenuCommands(actor:Unit):FlatCommand[]{
+  if(!actor.inventory.length)return [item("no-gear","暂无装备","–","inventory",
+    "none",false,"该角色没有可切换的装备")];
+  return actor.inventory.map((id,index)=>{
+    const weapon=weaponFor(id);
+    const allowed=canWield(actor.classId,id,actor.weaponExp);
+    const resource=weaponResourceText(actor,index);
+    return item("gear-"+index,(index===actor.equippedIndex?"◆ ":"")+weapon.name,
+      "▣","inventory","equip",allowed,
+      (allowed?"选择装备":"当前职业或武器熟练度不足")+" · "+resource+
+        " · 射程 "+weapon.minRange+"–"+weapon.maxRange,
+      {weaponIndex:index});
+  });
+}
+
 /** Only six stable category headings are ever rendered at the top level. */
 export function flatBattleCommands(battle:Battle,actor:Unit):FlatCommand[]{
   const arts=skillSubmenuCommands(battle,actor,"art");
@@ -141,7 +158,7 @@ export function flatBattleCommands(battle:Battle,actor:Unit):FlatCommand[]{
       canOpen(arts)?"查看已装备的通用与职业战技":"当前无可用战技"),
     item("magic","法术","✧","magic","submenu",canOpen(spells),
       canOpen(spells)?"查看所有已持有且符合职业要求的法术":"当前无可用法术"),
-    item("inventory","背包","▣","inventory","inventory",true,"查看与切换装备"),
+    item("inventory","背包","▣","inventory","submenu",true,"展开该角色持有的全部装备，直接换装"),
     item("wait","待机","⌛","wait","wait",true,"结束此单位行动"),
   ];
   if(battle.canCancelMove)result.push(item("undo","撤销移动","↶","undo","undo",true,

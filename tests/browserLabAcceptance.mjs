@@ -70,11 +70,33 @@ try{
   assert.equal(await page.locator(".command-subtitle").innerText(),"选择战技");
   assert.ok(await page.locator('.command-item[data-action="back"]').count());
   await page.locator('.command-item[data-action="back"]').evaluate(el=>el.click());
-  await page.locator('.unit-command-menu .command-item[data-action="inventory"]').evaluate(el=>el.click());
+  // Bag opens IN PLACE, not an offscreen side panel, on desktop and phone.
+  await page.locator('.unit-command-menu .command-item[data-key="inventory"]').evaluate(el=>el.click());
+  assert.equal(await page.locator(".command-subtitle").innerText(),"选择装备");
+  assert.equal(await page.locator('.unit-command-menu [data-action="equip"]').count(),2);
+  assert.ok(await page.locator('.unit-command-menu [data-weapon-index="0"]').getAttribute("aria-pressed")==="true");
+  assert.match(await page.locator('.unit-command-menu [data-weapon-index="1"]').innerText(),/雷电术/);
   assert.equal(await page.locator(".weapon-picker").isVisible(),false);
-  if(spec.isMobile)assert.equal(await page.locator("#unit-sidebar").isVisible(),true);
+  if(spec.isMobile)
+    assert.equal(await page.locator("#unit-sidebar").isVisible(),false,
+      "Mobile gear is available without opening the side drawer");
+  // Click the non-equipped weapon, retain list, inspect the new equipped mark.
+  await page.locator('.unit-command-menu [data-weapon-index="1"]').evaluate(el=>el.click());
+  assert.equal(await page.locator(".command-subtitle").innerText(),"选择装备");
+  assert.equal(await page.locator('.unit-command-menu [data-weapon-index="1"]').getAttribute("aria-pressed"),"true");
+  assert.equal(await page.locator('.unit-command-menu [data-weapon-index="0"]').getAttribute("aria-pressed"),"false");
+  assert.match(await page.locator("#weapon-name").innerText(),/雷电术/);
+  await page.locator('.unit-command-menu [data-action="back"]').evaluate(el=>el.click());
+  assert.equal(await page.locator(".command-subtitle").count(),0);
+  assert.equal(await page.locator('.unit-command-menu [data-key="inventory"]').count(),1);
+  // Escape/back returns to the main commands without spending a turn.
+  await page.locator('.unit-command-menu [data-key="inventory"]').evaluate(el=>el.click());
+  if(spec.isMobile){
+    await page.locator("#mobile-back").evaluate(el=>el.click());
+  }else await page.keyboard.press("Escape");
+  assert.equal(await page.locator(".command-subtitle").count(),0);
+  assert.equal(await page.locator('.unit-command-menu [data-key="wait"]').count(),1);
   assert.equal(await page.evaluate(key=>localStorage.getItem(key),storage),baseline);
-  await page.locator("#mobile-sidebar-close").click({force:true}).catch(()=>{});
   await page.locator("#lab-reset").click();
   assert.equal(await page.locator("#result-banner").isVisible(),false);
   assert.match(await page.locator("#lab-status").innerText(),/第 1 回合/);

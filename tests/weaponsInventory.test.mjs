@@ -92,18 +92,19 @@ test("changing equipment preserves movable origin and reset restores default",()
  assert.equal(fresh.equippedIndex,0);
 });
 
-test("UI uses current equipment for one-step attack, and bag accesses existing inventory",()=>{
+test("UI uses current equipment for attack and an actual inline battle bag submenu",()=>{
  const board=readFileSync(new URL("../src/scene/BoardView.ts",import.meta.url),"utf8");
  const main=readFileSync(new URL("../src/main.ts",import.meta.url),"utf8");
  const flat=readFileSync(new URL("../src/scene/flatBattleCommands.ts",import.meta.url),"utf8");
  const html=readFileSync(new URL("../index.html",import.meta.url),"utf8");
  assert.match(flat,/availableAttackWeapons\(actor\)\.includes\(actor\.equippedIndex\)/);
  assert.match(board,/command\.action==="attack"/);
- assert.match(board,/onInventoryRequested\?\.\(\)/);
+ assert.match(board,/command.action==="equip"/);
+ assert.match(board,/inventorySubmenuCommands\(actor\)/);
  assert.match(board,/this\.battle\.forecastAttack\(selected, target,\s*this\.attackArtId\?\?undefined\)/);
  assert.match(board,/this\.battle\.click\(target\.x,target\.y\)/);
  assert.match(main,/battle\.equipWeapon\(selected,index\)/);
- assert.match(main,/board\.onInventoryRequested=/);
+ assert.doesNotMatch(main,/board\.onInventoryRequested=/);
  assert.match(html,/id="inventory-list"/);
  assert.match(html,/id="forecast-ally-weapon"/);
  assert.match(html,/id="forecast-enemy-weapon"/);

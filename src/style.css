@@ -1804,3 +1804,17 @@ button:disabled { cursor: not-allowed; }
  .campaign-inventory-action{min-height:38px;min-width:86px;padding:6px}
  .campaign-inventory-panel summary{flex-wrap:wrap}
 }
+
+
+/* v0.1.42.2: inline gear selection directly under the "背包" command. */
+.unit-command-menu .command-item.command-equipped{
+  border-left:3px solid #eac487;
+  background:#23465a;color:#ffe3ae;
+}
+.unit-command-menu .command-item-resource{
+  display:block;margin:4px 0 0 26px;
+  font-size:11px;font-weight:400;line-height:1.4;
+  white-space:normal;color:#afcbd6;
+}
+.unit-command-menu .command-item:disabled .command-item-resource{opacity:.7}
+.unit-command-menu .command-item[data-action="equip"]{text-align:left}

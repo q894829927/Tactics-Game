@@ -210,14 +210,6 @@ function setMobileInfo(open:boolean):void {
   mobileSidebar.setAttribute("aria-hidden",String(!open &&
     window.matchMedia("(max-width: 900px), (max-height: 600px) and (pointer: coarse)").matches));
 }
-board.onInventoryRequested=()=>{
-  renderSelection();
-  if(window.matchMedia("(max-width: 900px), (max-height: 600px) and (pointer: coarse)").matches)
-    setMobileInfo(true);
-  const bag=get("inventory-list");
-  bag.scrollIntoView({block:"nearest",behavior:"instant"});
-  (bag.querySelector("button:not(:disabled)") as HTMLButtonElement|null)?.focus();
-};
 mobileInfo.addEventListener("click",()=>setMobileInfo(!mobileSidebar.classList.contains("mobile-open")));
 button("mobile-sidebar-close").addEventListener("click",()=>setMobileInfo(false));
 mobileBack.addEventListener("click",()=>{if(!endingTurn)board.cancelAction();renderSelection();});
