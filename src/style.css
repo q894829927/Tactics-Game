@@ -1818,3 +1818,116 @@ button:disabled { cursor: not-allowed; }
 }
 .unit-command-menu .command-item:disabled .command-item-resource{opacity:.7}
 .unit-command-menu .command-item[data-action="equip"]{text-align:left}
+
+
+/* v0.1.43.0 Duel UI: symmetric character panels, action hub and mirrored HP gauges. */
+.attack-forecast.duel-v2{
+  isolation:isolate;min-height:0;height:auto;max-height:min(70dvh,510px);
+  padding:0 0 max(14px,env(safe-area-inset-bottom));overflow:visible;
+  background:linear-gradient(180deg,#08132108,#071623e8 42%,#08111af9);
+  border-top:0;backdrop-filter:none;
+}
+.duel-v2 .forecast-v2-scrim{
+  position:absolute;inset:-42px 0 0;pointer-events:none;z-index:-1;
+  background:linear-gradient(180deg,transparent,#020a12a8 35%,#050d16eb);
+}
+.duel-v2 .forecast-v2-content{position:relative;width:100%;max-width:1550px;margin:auto;padding:10px clamp(12px,2vw,28px)}
+.duel-v2 .forecast-duel{
+  display:grid;grid-template-columns:minmax(0,1fr) minmax(205px,24%) minmax(0,1fr);
+  gap:clamp(8px,1vw,18px);align-items:end;min-height:210px;
+}
+.duel-v2 .forecast-combatant{
+  position:relative;display:flex;gap:clamp(7px,1vw,18px);
+  min-height:200px;align-items:end;justify-content:flex-start;padding-bottom:10px;
+  border-bottom:2px solid #d2b37d8a;
+  background:linear-gradient(180deg,transparent 0%,#06172390 48%,#06121b 100%);
+}
+.duel-v2 .forecast-combatant-enemy{justify-content:flex-end}
+.duel-v2 .forecast-portrait{
+  flex:0 0 clamp(76px,12vw,190px);height:clamp(160px,23vw,295px);
+  display:grid;place-items:center;overflow:hidden;
+  color:#c7e8ff;font:700 clamp(62px,11vw,138px)/1 Georgia,serif;
+  background:radial-gradient(ellipse at 50% 35%,#42769d76,transparent 68%);
+  filter:drop-shadow(0 9px 8px #0008);text-shadow:0 6px 14px #071019;
+}
+.duel-v2 .forecast-portrait-enemy{
+  color:#e6bbab;background:radial-gradient(ellipse at 50% 35%,#a14e4e73,transparent 68%);
+}
+.duel-v2 .forecast-identity{flex:1;gap:7px;min-width:0;padding-bottom:5px}
+.duel-v2 .forecast-identity strong{font-size:clamp(18px,2.3vw,29px);color:#f9dfb5;
+  border-bottom:1px solid #bea56a9c;padding-bottom:6px}
+.duel-v2 .forecast-identity span{letter-spacing:0}
+.duel-v2 .forecast-initiative{
+  color:#e6d7aa;font:600 12px/1.3 "Noto Serif SC",serif;
+  align-self:flex-start;padding:2px 12px;border-bottom:1px solid #ae9769;
+  background:linear-gradient(90deg,#92825a65,transparent)
+}
+.duel-v2 .forecast-combatant-enemy .forecast-initiative{align-self:flex-end}
+.duel-v2 .forecast-class-line{display:flex;gap:8px;align-items:center;color:#e8ddc3;font-size:14px}
+.duel-v2 .forecast-combatant-enemy .forecast-class-line{justify-content:flex-end}
+.duel-v2 .forecast-class-icon{min-width:23px;height:23px;display:grid;place-items:center;
+  border:1px solid #a89064;font-size:13px;color:#eed5a5;background:#0b2233}
+.duel-v2 .forecast-weapon-line{display:flex;gap:9px;align-items:center;padding:5px 9px;
+  background:#a49a7960;color:#f5e1bd;border-block:1px solid #ae98613d}
+.duel-v2 .forecast-combatant-enemy .forecast-weapon-line{justify-content:flex-end}
+.duel-v2 .forecast-weapon-mark{color:#d3bc8a}
+.duel-v2 .forecast-odds{color:#e6e0cf;font-size:12px;line-height:1.4}
+.duel-v2 .forecast-center{align-self:end;gap:10px;padding-bottom:16px;min-width:0}
+.duel-v2 .forecast-action-label{color:#dbcbad;font:600 13px/1.3 serif;letter-spacing:.16em}
+.duel-v2 .forecast-actions{order:-1;justify-content:center;width:100%}
+.duel-v2 .forecast-actions button{min-height:38px;font-size:13px;flex:1;
+  background:linear-gradient(#23394a,#101d29);border-color:#b6a17a}
+.duel-v2 #forecast-confirm{background:linear-gradient(#64543b,#322719);color:#ffe6ac}
+.duel-v2 .forecast-stat-values{display:grid;grid-template-columns:1fr 54px 1fr;width:100%;
+  gap:5px;align-items:center}
+.duel-v2 .forecast-stat-values strong{font:italic 750 clamp(28px,3.8vw,49px)/1 Georgia,serif}
+.duel-v2 .forecast-hp-diamond{display:grid;place-items:center;width:42px;height:42px;
+  border:2px solid #bcad86;transform:rotate(45deg);font:bold 13px Georgia,serif;
+  background:#0b1d28;color:#efd8ab}
+.duel-v2 .forecast-hp-diamond::first-letter{font-size:13px}
+.duel-v2 .forecast-v2-hint{font-size:10px;color:#bdc6cb;text-align:center}
+.duel-v2 .forecast-action-cost{font-size:11px;line-height:1.4;max-width:100%;text-align:center}
+.duel-v2 .forecast-health{grid-template-columns:minmax(0,1fr) 62px minmax(0,1fr);
+  gap:12px;margin-top:6px;border-top:1px solid #b7a57a8a;padding-top:8px}
+.duel-v2 .forecast-health-side{gap:12px;min-width:0}
+.duel-v2 .forecast-hp-value{font:italic 800 clamp(18px,2.9vw,33px)/1 Georgia,serif;color:#f2dfba}
+.duel-v2 .forecast-hp-track{height:23px;border-color:#a49979a8}
+.duel-v2 .forecast-hp-center{font-size:22px}
+.duel-v2 .forecast-line{display:none}
+@media(max-width:900px){
+ .attack-forecast.duel-v2{bottom:calc(env(safe-area-inset-bottom) + 64px);
+  max-height:calc(100dvh - 90px);overflow-y:auto}
+ .duel-v2 .forecast-v2-content{padding:7px 9px}
+ .duel-v2 .forecast-duel{grid-template-columns:minmax(0,1fr) 132px minmax(0,1fr);
+  gap:5px;min-height:160px}
+ .duel-v2 .forecast-combatant{min-height:155px;gap:3px}
+ .duel-v2 .forecast-portrait{flex-basis:48px;height:112px;font-size:47px}
+ .duel-v2 .forecast-identity{gap:3px}
+ .duel-v2 .forecast-identity strong{font-size:13px;padding-bottom:3px}
+ .duel-v2 .forecast-class-line{font-size:11px;gap:3px}
+ .duel-v2 .forecast-class-icon{min-width:17px;height:17px;font-size:10px}
+ .duel-v2 .forecast-weapon-line{font-size:11px;padding:3px}
+ .duel-v2 .forecast-odds{font-size:10px}
+ .duel-v2 .forecast-center{gap:5px;padding-bottom:5px}
+ .duel-v2 .forecast-stat-values{grid-template-columns:1fr 31px 1fr}
+ .duel-v2 .forecast-stat-values strong{font-size:23px}
+ .duel-v2 .forecast-hp-diamond{width:26px;height:26px;font-size:10px}
+ .duel-v2 .forecast-health{grid-template-columns:1fr 28px 1fr;gap:4px}
+ .duel-v2 .forecast-hp-track{height:12px}
+ .duel-v2 .forecast-hp-center{font-size:13px}
+ .duel-v2 .forecast-hp-value{font-size:12px}
+ .duel-v2 .forecast-action-label,.duel-v2 .forecast-v2-hint{display:none}
+ .duel-v2 .forecast-actions button{padding:4px 2px;min-width:0;font-size:11px;min-height:44px}
+}
+@media(max-width:540px){
+ .duel-v2 .forecast-duel{grid-template-columns:minmax(0,1fr) 91px minmax(0,1fr)}
+ .duel-v2 .forecast-portrait{flex-basis:29px;height:85px;font-size:29px}
+ .duel-v2 .forecast-combatant{min-height:118px}
+ .duel-v2 .forecast-identity strong{font-size:11px}
+ .duel-v2 .forecast-weapon-line,.duel-v2 .forecast-odds{font-size:9px}
+ .duel-v2 .forecast-initiative{font-size:9px;padding:2px 4px}
+ .duel-v2 .forecast-stat-values strong{font-size:20px;min-width:0}
+ .duel-v2 .forecast-stat-values{grid-template-columns:1fr 22px 1fr;gap:0}
+ .duel-v2 .forecast-hp-diamond{width:20px;height:20px;font-size:8px}
+ .duel-v2 .forecast-health-side{gap:3px}
+}

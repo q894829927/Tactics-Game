@@ -896,17 +896,26 @@ export class BoardView {
     this.paintForecast(attacker, defender, forecast);
   }
 
+  /** Duel presentation shared by player attacks, enemy turns and support. */
+  private setForecastIdentity(unit:Unit,side:"ally"|"enemy"):void{
+    const prefix="forecast-"+side+"-";
+    const definition=CLASS_LIBRARY[unit.classId];
+    document.getElementById(side==="ally"?"forecast-attacker":"forecast-defender")!.textContent=unit.name;
+    document.getElementById(prefix+"role")!.textContent=definition.name;
+    document.getElementById(prefix+"emblem")!.textContent=definition.emblem;
+    document.getElementById(prefix+"portrait")!.textContent=definition.portrait;
+    document.getElementById(prefix+"weapon")!.textContent=unit.weapon.name;
+  }
+
   private paintForecast(attacker: Unit, defender: Unit, forecast: AttackForecast): void {
     const view = combatPreviewView(attacker, defender, forecast);
     const byId = (id: string): HTMLElement => document.getElementById(id)!;
-    byId("forecast-attacker").textContent = view.ally.unit.name;
-    byId("forecast-defender").textContent = view.enemy.unit.name;
-    byId("forecast-ally-role").textContent = CLASS_LIBRARY[view.ally.unit.classId].emblem;
-    byId("forecast-ally-weapon").textContent = view.ally.unit.weapon.name;
-    byId("forecast-enemy-role").textContent = CLASS_LIBRARY[view.enemy.unit.classId].emblem;
-    byId("forecast-enemy-weapon").textContent = view.enemy.unit.weapon.name;
-    byId("forecast-ally-emblem").textContent = CLASS_LIBRARY[view.ally.unit.classId].emblem;
-    byId("forecast-enemy-emblem").textContent = CLASS_LIBRARY[view.enemy.unit.classId].emblem;
+    this.setForecastIdentity(view.ally.unit,"ally");
+    this.setForecastIdentity(view.enemy.unit,"enemy");
+    byId("forecast-ally-initiative").textContent=attacker.team==="ally"?"先攻":"后攻";
+    byId("forecast-enemy-initiative").textContent=attacker.team==="enemy"?"先攻":
+      forecast.canCounter?"后攻":"无法反击";
+    byId("forecast-action-label").textContent=attacker.team==="enemy"?"敌军进攻":"攻击预览";
     byId("forecast-ally-hp").textContent = view.ally.unit.hp + " → " + view.ally.hpAfter;
     byId("forecast-enemy-hp").textContent = view.enemy.unit.hp + " → " + view.enemy.hpAfter;
     byId("forecast-ally-odds").textContent = view.ally.hitText;
@@ -944,14 +953,11 @@ export class BoardView {
     const elem=(id:string):HTMLElement=>document.getElementById(id)!;
     const label:Record<SupportEffect,string>={heal:"治疗",shield:"护盾",burn:"灼烧",
       slow:"缓足",weakArmor:"弱甲",weakMagic:"弱咒",mark:"标记",wardArmor:"护壁"};
-    elem("forecast-attacker").textContent=actor.name;
-    elem("forecast-defender").textContent=target.name;
-    elem("forecast-ally-role").textContent=CLASS_LIBRARY[actor.classId].emblem;
-    elem("forecast-enemy-role").textContent=CLASS_LIBRARY[target.classId].emblem;
-    elem("forecast-ally-emblem").textContent=CLASS_LIBRARY[actor.classId].emblem;
-    elem("forecast-enemy-emblem").textContent=CLASS_LIBRARY[target.classId].emblem;
-    elem("forecast-ally-weapon").textContent=actor.weapon.name;
-    elem("forecast-enemy-weapon").textContent=target.weapon.name;
+    this.setForecastIdentity(actor,"ally");
+    this.setForecastIdentity(target,"enemy");
+    elem("forecast-ally-initiative").textContent="支援方";
+    elem("forecast-enemy-initiative").textContent="受术方";
+    elem("forecast-action-label").textContent="辅助预览";
     elem("forecast-ally-odds").textContent="本次支援行动 · 无反击";
     elem("forecast-enemy-odds").textContent=label[preview.effect];
     elem("forecast-damage").textContent=preview.effect==="heal"?"+"+preview.value:String(preview.value);
