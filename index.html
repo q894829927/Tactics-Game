@@ -6,8 +6,8 @@
   <meta name="description" content="Wildfield Tactics：原创奇幻战棋，可缩放的战场地图与回合制战斗。"/>
   <meta name="theme-color" content="#071522"/>
   <title>Wildfield Tactics · 赤旗要塞</title>
-  <script type="module" crossorigin src="/games/tactics/assets/index-CjFuLNqn.js"></script>
-  <link rel="stylesheet" crossorigin href="/games/tactics/assets/index-PNx7BlI0.css">
+  <script type="module" crossorigin src="/games/tactics/assets/index-Dn4Ffmfu.js"></script>
+  <link rel="stylesheet" crossorigin href="/games/tactics/assets/index-BeBtTLi9.css">
 </head>
 <body>
   <div id="app" class="battle-shell">
@@ -221,6 +221,17 @@
               </div>
               <div id="campaign-equipment" class="campaign-equipment" aria-live="polite"></div>
             </section>
+            <details id="campaign-shop-panel" class="campaign-shop-panel">
+              <summary>武器商店 <span id="campaign-shop-summary">查看价格与采购</span></summary>
+              <p class="campaign-shop-intro">为当前选中角色采购武器与法术书；每人最多携带5件。购买不会自动替换当前装备。</p>
+              <label class="campaign-shop-filter" for="campaign-shop-filter">商品范围
+                <select id="campaign-shop-filter" aria-label="武器商店商品范围">
+                  <option value="compatible">当前职业武器类别</option>
+                  <option value="all">全部商品</option>
+                </select>
+              </label>
+              <div id="campaign-shop-list" class="campaign-shop-list" aria-live="polite"></div>
+            </details>
             <details id="campaign-repair-panel" class="campaign-repair-panel">
               <summary>装备维修 <span id="campaign-repair-summary">查看费用</span></summary>
               <p class="campaign-repair-help">仅维修已经损耗耐久的物理武器。魔法次数在每次出击时自动恢复。</p>
