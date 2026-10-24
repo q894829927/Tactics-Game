@@ -620,7 +620,9 @@ export class Battle {
     const actor=this.managedAlly(unitId)!;
     const ix=this.warehouse.findIndex(e=>e.entryId===entryId);
     if(ix<0)return false;
-    const [entry]=this.warehouse.splice(ix,1);
+    const entry=this.warehouse[ix];
+    if(!entry)return false;
+    this.warehouse.splice(ix,1);
     actor.inventory.push(entry.weaponId);
     actor.weaponInstances.push(entry.instance?{...entry.instance}:null);
     if(weaponFor(entry.weaponId).kind==="magical")
