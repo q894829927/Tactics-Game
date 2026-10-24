@@ -916,12 +916,35 @@ export class BoardView {
     byId("forecast-enemy-initiative").textContent=attacker.team==="enemy"?"先攻":
       forecast.canCounter?"后攻":"无法反击";
     byId("forecast-action-label").textContent=attacker.team==="enemy"?"敌军进攻":"攻击预览";
-    byId("forecast-ally-hp").textContent = view.ally.unit.hp + " → " + view.ally.hpAfter;
-    byId("forecast-enemy-hp").textContent = view.enemy.unit.hp + " → " + view.enemy.hpAfter;
-    byId("forecast-ally-odds").textContent = view.ally.hitText;
-    byId("forecast-enemy-odds").textContent = view.enemy.hitText;
-    byId("forecast-damage").textContent = view.ally.damageText;
-    byId("forecast-counter").textContent = view.enemy.damageText;
+    // Four ordered forecast layers: current HP, hit/crit odds, individual strikes,
+    // then the HP remaining after the full normal-hit forecast.
+    byId("forecast-ally-hp-current").textContent=String(view.ally.unit.hp);
+    byId("forecast-enemy-hp-current").textContent=String(view.enemy.unit.hp);
+    byId("forecast-ally-hp").textContent=String(view.ally.hpAfter);
+    byId("forecast-enemy-hp").textContent=String(view.enemy.hpAfter);
+    byId("forecast-ally-odds").textContent=view.ally.hitText;
+    byId("forecast-enemy-odds").textContent=view.enemy.hitText;
+    const first=(id:string,value:number|null)=>{
+      const el=byId(id);
+      el.textContent=value!==null&&value>0?"−"+value:"";
+      el.hidden=value===null||value<=0;
+    };
+    first("forecast-damage",view.ally.firstDamage);
+    first("forecast-counter",view.enemy.firstDamage);
+    byId("forecast-first-strike-row").hidden=
+      (view.ally.firstDamage===null||view.ally.firstDamage<=0)&&
+      (view.enemy.firstDamage===null||view.enemy.firstDamage<=0);
+    const followUp=byId("forecast-followup-row");
+    const second=(id:string,value:number|null)=>{
+      const el=byId(id);
+      el.textContent=value!==null&&value>0?"−"+value:"";
+      el.hidden=value===null||value<=0;
+    };
+    second("forecast-ally-followup",view.ally.followUpDamage);
+    second("forecast-enemy-followup",view.enemy.followUpDamage);
+    followUp.hidden=!(view.ally.followUpDamage!==null&&view.ally.followUpDamage>0||
+      view.enemy.followUpDamage!==null&&view.enemy.followUpDamage>0);
+    byId("forecast-strike-label").textContent="伤害";
     for (const [id, amount] of [
       ["forecast-ally-bar", view.ally.unit.hp / view.ally.unit.maxHp],
       ["forecast-ally-after", view.ally.hpAfter / view.ally.unit.maxHp],
@@ -960,11 +983,24 @@ export class BoardView {
     elem("forecast-action-label").textContent="辅助预览";
     elem("forecast-ally-odds").textContent="本次支援行动 · 无反击";
     elem("forecast-enemy-odds").textContent=label[preview.effect];
-    elem("forecast-damage").textContent=preview.effect==="heal"?"+"+preview.value:String(preview.value);
-    elem("forecast-counter").textContent="—";
-    const after=preview.effect==="heal"?Math.min(target.maxHp,target.hp+preview.value):target.hp;
-    elem("forecast-ally-hp").textContent=actor.hp+" → "+actor.hp;
-    elem("forecast-enemy-hp").textContent=target.hp+" → "+after;
+    // Support actions never inherit visible follow-up/counter damage from
+    // the previously inspected attack.
+    const healing=preview.effect==="heal"&&preview.value>0;
+    elem("forecast-strike-label").textContent=healing?"治疗":"效果";
+    elem("forecast-damage").textContent=preview.value>0?
+      (healing?"+"+preview.value:String(preview.value)):"";
+    elem("forecast-damage").hidden=preview.value<=0;
+    elem("forecast-first-strike-row").hidden=preview.value<=0;
+    elem("forecast-counter").textContent="";
+    elem("forecast-counter").hidden=true;
+    elem("forecast-followup-row").hidden=true;
+    elem("forecast-ally-followup").textContent="";
+    elem("forecast-enemy-followup").textContent="";
+    const after=healing?Math.min(target.maxHp,target.hp+preview.value):target.hp;
+    elem("forecast-ally-hp-current").textContent=String(actor.hp);
+    elem("forecast-enemy-hp-current").textContent=String(target.hp);
+    elem("forecast-ally-hp").textContent=String(actor.hp);
+    elem("forecast-enemy-hp").textContent=String(after);
     for(const [id,value] of [["forecast-ally-bar",actor.hp/actor.maxHp],
       ["forecast-ally-after",actor.hp/actor.maxHp],["forecast-enemy-bar",target.hp/target.maxHp],
       ["forecast-enemy-after",after/target.maxHp]] as const)

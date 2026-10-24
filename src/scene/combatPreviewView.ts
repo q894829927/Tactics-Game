@@ -5,7 +5,11 @@ export type SidePreview = {
   unit: Unit;
   hpAfter: number;
   hitText: string;
+  /** Existing compact combined text, retained for non-UI callers. */
   damageText: string;
+  /** Each strike is intentionally separate: reference shows a follow-up row. */
+  firstDamage: number | null;
+  followUpDamage: number | null;
 };
 export type CombatPreviewView = { ally: SidePreview; enemy: SidePreview };
 
@@ -28,12 +32,18 @@ export function combatPreviewView(
         unit: attacker, hpAfter: forecast.attackerHpAfter,
         hitText: odds(forecast.attackerHit, forecast.attackerCrit,forecast.attackerTrait),
         damageText: dealt(forecast.damage, forecast.followUp === "attacker" ? forecast.followUpDamage : null),
+      firstDamage:forecast.damage,
+      followUpDamage:forecast.followUp==="attacker"?forecast.followUpDamage:null,
+        firstDamage:forecast.damage,
+        followUpDamage:forecast.followUp==="attacker"?forecast.followUpDamage:null,
       },
       enemy: {
         unit: defender, hpAfter: forecast.defenderHpAfter,
         hitText: forecast.canCounter ? odds(forecast.defenderHit, forecast.defenderCrit,forecast.defenderTrait) : "无法反击",
         damageText: forecast.canCounter
           ? dealt(forecast.counterDamage, forecast.followUp === "defender" ? forecast.followUpDamage : null) : "—",
+        firstDamage:forecast.canCounter?forecast.counterDamage:null,
+        followUpDamage:forecast.followUp==="defender"?forecast.followUpDamage:null,
       },
     };
   }
@@ -43,6 +53,8 @@ export function combatPreviewView(
       hitText: forecast.canCounter ? odds(forecast.defenderHit, forecast.defenderCrit,forecast.defenderTrait) : "无法反击",
       damageText: forecast.canCounter
         ? dealt(forecast.counterDamage, forecast.followUp === "defender" ? forecast.followUpDamage : null) : "—",
+      firstDamage:forecast.canCounter?forecast.counterDamage:null,
+      followUpDamage:forecast.followUp==="defender"?forecast.followUpDamage:null,
     },
     enemy: {
       unit: attacker, hpAfter: forecast.attackerHpAfter,
