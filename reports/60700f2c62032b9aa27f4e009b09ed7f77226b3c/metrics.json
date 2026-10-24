@@ -1,0 +1,3252 @@
+{
+  "summary": {
+    "samples": 12,
+    "fullClears": 12,
+    "noGrindAttempts": 8,
+    "noGrindClears": 8,
+    "perLevel": {
+      "chapter-1-1": {
+        "wins": 12,
+        "meanTurns": 4,
+        "minTurns": 4,
+        "maxTurns": 4
+      },
+      "chapter-1-2": {
+        "wins": 12,
+        "meanTurns": 3.92,
+        "minTurns": 3,
+        "maxTurns": 6
+      },
+      "chapter-1-3": {
+        "wins": 12,
+        "meanTurns": 8.08,
+        "minTurns": 7,
+        "maxTurns": 10
+      },
+      "chapter-1-4": {
+        "wins": 12,
+        "meanTurns": 5.67,
+        "minTurns": 5,
+        "maxTurns": 6
+      }
+    }
+  },
+  "samples": [
+    {
+      "seed": 7,
+      "mode": "base",
+      "grind": 0,
+      "stages": [
+        {
+          "id": "chapter-1-1",
+          "result": "victory",
+          "rounds": 4,
+          "standing": 3,
+          "actions": 15,
+          "attacks": 8,
+          "hits": 8,
+          "damageDealt": 72,
+          "damageTaken": 12,
+          "failedPlans": 0,
+          "classXpGained": [
+            38,
+            22,
+            34,
+            24
+          ],
+          "durabilityConsumed": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "masteredCount": 0,
+          "wallet": {
+            "gold": 200,
+            "reputation": 40,
+            "vouchers": {
+              "intermediate": 1
+            }
+          },
+          "reward": {
+            "gold": 200,
+            "reputation": 40,
+            "vouchers": {
+              "intermediate": 1
+            }
+          },
+          "rewardKind": "first-clear"
+        },
+        {
+          "id": "chapter-1-2",
+          "result": "victory",
+          "rounds": 6,
+          "standing": 2,
+          "actions": 20,
+          "attacks": 11,
+          "hits": 11,
+          "damageDealt": 107,
+          "damageTaken": 24,
+          "failedPlans": 0,
+          "classXpGained": [
+            41,
+            39,
+            46,
+            48
+          ],
+          "durabilityConsumed": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "masteredCount": 1,
+          "wallet": {
+            "gold": 480,
+            "reputation": 90,
+            "vouchers": {
+              "intermediate": 2
+            }
+          },
+          "reward": {
+            "gold": 280,
+            "reputation": 50,
+            "vouchers": {
+              "intermediate": 1
+            }
+          },
+          "rewardKind": "first-clear"
+        },
+        {
+          "id": "chapter-1-3",
+          "result": "victory",
+          "rounds": 9,
+          "standing": 3,
+          "actions": 30,
+          "attacks": 16,
+          "hits": 16,
+          "damageDealt": 124,
+          "damageTaken": 19,
+          "failedPlans": 0,
+          "classXpGained": [
+            1,
+            19,
+            0,
+            8
+          ],
+          "durabilityConsumed": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "masteredCount": 4,
+          "wallet": {
+            "gold": 820,
+            "reputation": 150,
+            "vouchers": {
+              "intermediate": 4
+            }
+          },
+          "reward": {
+            "gold": 340,
+            "reputation": 60,
+            "vouchers": {
+              "intermediate": 2
+            }
+          },
+          "rewardKind": "first-clear"
+        },
+        {
+          "id": "chapter-1-4",
+          "result": "victory",
+          "rounds": 6,
+          "standing": 3,
+          "actions": 22,
+          "attacks": 17,
+          "hits": 16,
+          "damageDealt": 141,
+          "damageTaken": 23,
+          "failedPlans": 0,
+          "classXpGained": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "durabilityConsumed": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "masteredCount": 4,
+          "wallet": {
+            "gold": 1220,
+            "reputation": 225,
+            "vouchers": {
+              "intermediate": 6
+            }
+          },
+          "reward": {
+            "gold": 400,
+            "reputation": 75,
+            "vouchers": {
+              "intermediate": 2
+            }
+          },
+          "rewardKind": "first-clear"
+        }
+      ],
+      "replays": [],
+      "certifications": [],
+      "blockedAt": null,
+      "cleared": true,
+      "totalRounds": 25,
+      "completedLevels": [
+        "chapter-1-1",
+        "chapter-1-2",
+        "chapter-1-3",
+        "chapter-1-4"
+      ],
+      "wallet": {
+        "gold": 1220,
+        "reputation": 225,
+        "vouchers": 6
+      },
+      "classXp": [
+        {
+          "id": "a1",
+          "classId": "sword",
+          "experience": {
+            "sword": 80
+          },
+          "mastered": [
+            "swordFocus"
+          ]
+        },
+        {
+          "id": "a2",
+          "classId": "lancer",
+          "experience": {
+            "lancer": 80
+          },
+          "mastered": [
+            "lanceGuard"
+          ]
+        },
+        {
+          "id": "a3",
+          "classId": "archer",
+          "experience": {
+            "archer": 80
+          },
+          "mastered": [
+            "bowFocus"
+          ]
+        },
+        {
+          "id": "a4",
+          "classId": "mage",
+          "experience": {
+            "mage": 80
+          },
+          "mastered": [
+            "mageWard"
+          ]
+        }
+      ]
+    },
+    {
+      "seed": 7,
+      "mode": "promotion",
+      "grind": 0,
+      "stages": [
+        {
+          "id": "chapter-1-1",
+          "result": "victory",
+          "rounds": 4,
+          "standing": 3,
+          "actions": 15,
+          "attacks": 8,
+          "hits": 8,
+          "damageDealt": 72,
+          "damageTaken": 12,
+          "failedPlans": 0,
+          "classXpGained": [
+            38,
+            22,
+            34,
+            24
+          ],
+          "durabilityConsumed": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "masteredCount": 0,
+          "wallet": {
+            "gold": 200,
+            "reputation": 40,
+            "vouchers": {
+              "intermediate": 1
+            }
+          },
+          "reward": {
+            "gold": 200,
+            "reputation": 40,
+            "vouchers": {
+              "intermediate": 1
+            }
+          },
+          "rewardKind": "first-clear"
+        },
+        {
+          "id": "chapter-1-2",
+          "result": "victory",
+          "rounds": 4,
+          "standing": 3,
+          "actions": 15,
+          "attacks": 10,
+          "hits": 11,
+          "damageDealt": 98,
+          "damageTaken": 24,
+          "failedPlans": 0,
+          "classXpGained": [
+            28,
+            39,
+            34,
+            39
+          ],
+          "durabilityConsumed": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "masteredCount": 0,
+          "wallet": {
+            "gold": 330,
+            "reputation": 90,
+            "vouchers": {
+              "intermediate": 1
+            }
+          },
+          "reward": {
+            "gold": 280,
+            "reputation": 50,
+            "vouchers": {
+              "intermediate": 1
+            }
+          },
+          "rewardKind": "first-clear"
+        },
+        {
+          "id": "chapter-1-3",
+          "result": "victory",
+          "rounds": 7,
+          "standing": 4,
+          "actions": 28,
+          "attacks": 15,
+          "hits": 18,
+          "damageDealt": 147,
+          "damageTaken": 19,
+          "failedPlans": 0,
+          "classXpGained": [
+            52,
+            40,
+            12,
+            17
+          ],
+          "durabilityConsumed": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "masteredCount": 2,
+          "wallet": {
+            "gold": 520,
+            "reputation": 150,
+            "vouchers": {
+              "intermediate": 2
+            }
+          },
+          "reward": {
+            "gold": 340,
+            "reputation": 60,
+            "vouchers": {
+              "intermediate": 2
+            }
+          },
+          "rewardKind": "first-clear"
+        },
+        {
+          "id": "chapter-1-4",
+          "result": "victory",
+          "rounds": 6,
+          "standing": 4,
+          "actions": 24,
+          "attacks": 17,
+          "hits": 17,
+          "damageDealt": 129,
+          "damageTaken": 20,
+          "failedPlans": 0,
+          "classXpGained": [
+            40,
+            54,
+            48,
+            65
+          ],
+          "durabilityConsumed": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "masteredCount": 3,
+          "wallet": {
+            "gold": 620,
+            "reputation": 225,
+            "vouchers": {
+              "intermediate": 2
+            }
+          },
+          "reward": {
+            "gold": 400,
+            "reputation": 75,
+            "vouchers": {
+              "intermediate": 2
+            }
+          },
+          "rewardKind": "first-clear"
+        }
+      ],
+      "replays": [],
+      "certifications": [
+        {
+          "id": "a1",
+          "job": "duelist",
+          "cost": 150
+        },
+        {
+          "id": "a2",
+          "job": "sentinel",
+          "cost": 150
+        },
+        {
+          "id": "a3",
+          "job": "eliteMarksman",
+          "cost": 150
+        },
+        {
+          "id": "a4",
+          "job": "arcanist",
+          "cost": 150
+        }
+      ],
+      "blockedAt": null,
+      "cleared": true,
+      "totalRounds": 21,
+      "completedLevels": [
+        "chapter-1-1",
+        "chapter-1-2",
+        "chapter-1-3",
+        "chapter-1-4"
+      ],
+      "wallet": {
+        "gold": 620,
+        "reputation": 225,
+        "vouchers": 2
+      },
+      "classXp": [
+        {
+          "id": "a1",
+          "classId": "duelist",
+          "experience": {
+            "sword": 38,
+            "duelist": 120
+          },
+          "mastered": [
+            "duelistTempo"
+          ]
+        },
+        {
+          "id": "a2",
+          "classId": "sentinel",
+          "experience": {
+            "lancer": 61,
+            "sentinel": 94
+          },
+          "mastered": []
+        },
+        {
+          "id": "a3",
+          "classId": "eliteMarksman",
+          "experience": {
+            "archer": 80,
+            "eliteMarksman": 48
+          },
+          "mastered": [
+            "bowFocus"
+          ]
+        },
+        {
+          "id": "a4",
+          "classId": "arcanist",
+          "experience": {
+            "mage": 80,
+            "arcanist": 65
+          },
+          "mastered": [
+            "mageWard"
+          ]
+        }
+      ]
+    },
+    {
+      "seed": 7,
+      "mode": "promotion",
+      "grind": 2,
+      "stages": [
+        {
+          "id": "chapter-1-1",
+          "result": "victory",
+          "rounds": 4,
+          "standing": 3,
+          "actions": 15,
+          "attacks": 8,
+          "hits": 8,
+          "damageDealt": 72,
+          "damageTaken": 12,
+          "failedPlans": 0,
+          "classXpGained": [
+            38,
+            22,
+            34,
+            24
+          ],
+          "durabilityConsumed": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "masteredCount": 0,
+          "wallet": {
+            "gold": 200,
+            "reputation": 40,
+            "vouchers": {
+              "intermediate": 1
+            }
+          },
+          "reward": {
+            "gold": 200,
+            "reputation": 40,
+            "vouchers": {
+              "intermediate": 1
+            }
+          },
+          "rewardKind": "first-clear"
+        },
+        {
+          "id": "chapter-1-2",
+          "result": "victory",
+          "rounds": 4,
+          "standing": 3,
+          "actions": 16,
+          "attacks": 11,
+          "hits": 13,
+          "damageDealt": 106,
+          "damageTaken": 28,
+          "failedPlans": 0,
+          "classXpGained": [
+            28,
+            24,
+            0,
+            8
+          ],
+          "durabilityConsumed": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "masteredCount": 3,
+          "wallet": {
+            "gold": 480,
+            "reputation": 106,
+            "vouchers": {
+              "intermediate": 1
+            }
+          },
+          "reward": {
+            "gold": 280,
+            "reputation": 50,
+            "vouchers": {
+              "intermediate": 1
+            }
+          },
+          "rewardKind": "first-clear"
+        },
+        {
+          "id": "chapter-1-3",
+          "result": "victory",
+          "rounds": 8,
+          "standing": 4,
+          "actions": 29,
+          "attacks": 15,
+          "hits": 18,
+          "damageDealt": 147,
+          "damageTaken": 19,
+          "failedPlans": 0,
+          "classXpGained": [
+            31,
+            40,
+            0,
+            0
+          ],
+          "durabilityConsumed": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "masteredCount": 4,
+          "wallet": {
+            "gold": 670,
+            "reputation": 166,
+            "vouchers": {
+              "intermediate": 2
+            }
+          },
+          "reward": {
+            "gold": 340,
+            "reputation": 60,
+            "vouchers": {
+              "intermediate": 2
+            }
+          },
+          "rewardKind": "first-clear"
+        },
+        {
+          "id": "chapter-1-4",
+          "result": "victory",
+          "rounds": 5,
+          "standing": 3,
+          "actions": 19,
+          "attacks": 16,
+          "hits": 16,
+          "damageDealt": 141,
+          "damageTaken": 20,
+          "failedPlans": 0,
+          "classXpGained": [
+            0,
+            44,
+            44,
+            50
+          ],
+          "durabilityConsumed": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "masteredCount": 4,
+          "wallet": {
+            "gold": 770,
+            "reputation": 241,
+            "vouchers": {
+              "intermediate": 2
+            }
+          },
+          "reward": {
+            "gold": 400,
+            "reputation": 75,
+            "vouchers": {
+              "intermediate": 2
+            }
+          },
+          "rewardKind": "first-clear"
+        }
+      ],
+      "replays": [
+        {
+          "id": "chapter-1-1",
+          "result": "victory",
+          "rounds": 4,
+          "standing": 4,
+          "actions": 15,
+          "attacks": 8,
+          "hits": 9,
+          "damageDealt": 61,
+          "damageTaken": 5,
+          "failedPlans": 0,
+          "classXpGained": [
+            38,
+            22,
+            34,
+            24
+          ],
+          "durabilityConsumed": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "masteredCount": 0,
+          "wallet": {
+            "gold": 125,
+            "reputation": 48,
+            "vouchers": {
+              "intermediate": 0
+            }
+          },
+          "reward": {
+            "gold": 75,
+            "reputation": 8,
+            "vouchers": {
+              "intermediate": 0
+            }
+          },
+          "rewardKind": "replay"
+        },
+        {
+          "id": "chapter-1-1",
+          "result": "victory",
+          "rounds": 3,
+          "standing": 4,
+          "actions": 12,
+          "attacks": 5,
+          "hits": 5,
+          "damageDealt": 40,
+          "damageTaken": 0,
+          "failedPlans": 0,
+          "classXpGained": [
+            23,
+            12,
+            12,
+            24
+          ],
+          "durabilityConsumed": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "masteredCount": 1,
+          "wallet": {
+            "gold": 200,
+            "reputation": 56,
+            "vouchers": {
+              "intermediate": 0
+            }
+          },
+          "reward": {
+            "gold": 75,
+            "reputation": 8,
+            "vouchers": {
+              "intermediate": 0
+            }
+          },
+          "rewardKind": "replay"
+        }
+      ],
+      "certifications": [
+        {
+          "id": "a1",
+          "job": "duelist",
+          "cost": 150
+        },
+        {
+          "id": "a2",
+          "job": "sentinel",
+          "cost": 150
+        },
+        {
+          "id": "a3",
+          "job": "eliteMarksman",
+          "cost": 150
+        },
+        {
+          "id": "a4",
+          "job": "arcanist",
+          "cost": 150
+        }
+      ],
+      "blockedAt": null,
+      "cleared": true,
+      "totalRounds": 28,
+      "completedLevels": [
+        "chapter-1-1",
+        "chapter-1-2",
+        "chapter-1-3",
+        "chapter-1-4"
+      ],
+      "wallet": {
+        "gold": 770,
+        "reputation": 241,
+        "vouchers": 2
+      },
+      "classXp": [
+        {
+          "id": "a1",
+          "classId": "duelist",
+          "experience": {
+            "sword": 38,
+            "duelist": 120
+          },
+          "mastered": [
+            "duelistTempo"
+          ]
+        },
+        {
+          "id": "a2",
+          "classId": "sentinel",
+          "experience": {
+            "lancer": 80,
+            "sentinel": 84
+          },
+          "mastered": [
+            "lanceGuard"
+          ]
+        },
+        {
+          "id": "a3",
+          "classId": "eliteMarksman",
+          "experience": {
+            "archer": 80,
+            "eliteMarksman": 44
+          },
+          "mastered": [
+            "bowFocus"
+          ]
+        },
+        {
+          "id": "a4",
+          "classId": "arcanist",
+          "experience": {
+            "mage": 80,
+            "arcanist": 50
+          },
+          "mastered": [
+            "mageWard"
+          ]
+        }
+      ]
+    },
+    {
+      "seed": 19,
+      "mode": "base",
+      "grind": 0,
+      "stages": [
+        {
+          "id": "chapter-1-1",
+          "result": "victory",
+          "rounds": 4,
+          "standing": 3,
+          "actions": 15,
+          "attacks": 8,
+          "hits": 8,
+          "damageDealt": 72,
+          "damageTaken": 12,
+          "failedPlans": 0,
+          "classXpGained": [
+            38,
+            22,
+            34,
+            24
+          ],
+          "durabilityConsumed": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "masteredCount": 0,
+          "wallet": {
+            "gold": 200,
+            "reputation": 40,
+            "vouchers": {
+              "intermediate": 1
+            }
+          },
+          "reward": {
+            "gold": 200,
+            "reputation": 40,
+            "vouchers": {
+              "intermediate": 1
+            }
+          },
+          "rewardKind": "first-clear"
+        },
+        {
+          "id": "chapter-1-2",
+          "result": "victory",
+          "rounds": 4,
+          "standing": 3,
+          "actions": 15,
+          "attacks": 10,
+          "hits": 10,
+          "damageDealt": 98,
+          "damageTaken": 24,
+          "failedPlans": 0,
+          "classXpGained": [
+            28,
+            39,
+            34,
+            39
+          ],
+          "durabilityConsumed": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "masteredCount": 0,
+          "wallet": {
+            "gold": 480,
+            "reputation": 90,
+            "vouchers": {
+              "intermediate": 2
+            }
+          },
+          "reward": {
+            "gold": 280,
+            "reputation": 50,
+            "vouchers": {
+              "intermediate": 1
+            }
+          },
+          "rewardKind": "first-clear"
+        },
+        {
+          "id": "chapter-1-3",
+          "result": "victory",
+          "rounds": 9,
+          "standing": 3,
+          "actions": 31,
+          "attacks": 17,
+          "hits": 16,
+          "damageDealt": 137,
+          "damageTaken": 26,
+          "failedPlans": 0,
+          "classXpGained": [
+            14,
+            19,
+            12,
+            17
+          ],
+          "durabilityConsumed": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "masteredCount": 4,
+          "wallet": {
+            "gold": 820,
+            "reputation": 150,
+            "vouchers": {
+              "intermediate": 4
+            }
+          },
+          "reward": {
+            "gold": 340,
+            "reputation": 60,
+            "vouchers": {
+              "intermediate": 2
+            }
+          },
+          "rewardKind": "first-clear"
+        },
+        {
+          "id": "chapter-1-4",
+          "result": "victory",
+          "rounds": 6,
+          "standing": 4,
+          "actions": 21,
+          "attacks": 16,
+          "hits": 16,
+          "damageDealt": 141,
+          "damageTaken": 15,
+          "failedPlans": 0,
+          "classXpGained": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "durabilityConsumed": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "masteredCount": 4,
+          "wallet": {
+            "gold": 1220,
+            "reputation": 225,
+            "vouchers": {
+              "intermediate": 6
+            }
+          },
+          "reward": {
+            "gold": 400,
+            "reputation": 75,
+            "vouchers": {
+              "intermediate": 2
+            }
+          },
+          "rewardKind": "first-clear"
+        }
+      ],
+      "replays": [],
+      "certifications": [],
+      "blockedAt": null,
+      "cleared": true,
+      "totalRounds": 23,
+      "completedLevels": [
+        "chapter-1-1",
+        "chapter-1-2",
+        "chapter-1-3",
+        "chapter-1-4"
+      ],
+      "wallet": {
+        "gold": 1220,
+        "reputation": 225,
+        "vouchers": 6
+      },
+      "classXp": [
+        {
+          "id": "a1",
+          "classId": "sword",
+          "experience": {
+            "sword": 80
+          },
+          "mastered": [
+            "swordFocus"
+          ]
+        },
+        {
+          "id": "a2",
+          "classId": "lancer",
+          "experience": {
+            "lancer": 80
+          },
+          "mastered": [
+            "lanceGuard"
+          ]
+        },
+        {
+          "id": "a3",
+          "classId": "archer",
+          "experience": {
+            "archer": 80
+          },
+          "mastered": [
+            "bowFocus"
+          ]
+        },
+        {
+          "id": "a4",
+          "classId": "mage",
+          "experience": {
+            "mage": 80
+          },
+          "mastered": [
+            "mageWard"
+          ]
+        }
+      ]
+    },
+    {
+      "seed": 19,
+      "mode": "promotion",
+      "grind": 0,
+      "stages": [
+        {
+          "id": "chapter-1-1",
+          "result": "victory",
+          "rounds": 4,
+          "standing": 3,
+          "actions": 15,
+          "attacks": 8,
+          "hits": 8,
+          "damageDealt": 72,
+          "damageTaken": 12,
+          "failedPlans": 0,
+          "classXpGained": [
+            38,
+            22,
+            34,
+            24
+          ],
+          "durabilityConsumed": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "masteredCount": 0,
+          "wallet": {
+            "gold": 200,
+            "reputation": 40,
+            "vouchers": {
+              "intermediate": 1
+            }
+          },
+          "reward": {
+            "gold": 200,
+            "reputation": 40,
+            "vouchers": {
+              "intermediate": 1
+            }
+          },
+          "rewardKind": "first-clear"
+        },
+        {
+          "id": "chapter-1-2",
+          "result": "victory",
+          "rounds": 4,
+          "standing": 3,
+          "actions": 15,
+          "attacks": 10,
+          "hits": 11,
+          "damageDealt": 97,
+          "damageTaken": 24,
+          "failedPlans": 0,
+          "classXpGained": [
+            28,
+            39,
+            34,
+            39
+          ],
+          "durabilityConsumed": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "masteredCount": 0,
+          "wallet": {
+            "gold": 330,
+            "reputation": 90,
+            "vouchers": {
+              "intermediate": 1
+            }
+          },
+          "reward": {
+            "gold": 280,
+            "reputation": 50,
+            "vouchers": {
+              "intermediate": 1
+            }
+          },
+          "rewardKind": "first-clear"
+        },
+        {
+          "id": "chapter-1-3",
+          "result": "victory",
+          "rounds": 10,
+          "standing": 2,
+          "actions": 30,
+          "attacks": 17,
+          "hits": 19,
+          "damageDealt": 147,
+          "damageTaken": 31,
+          "failedPlans": 0,
+          "classXpGained": [
+            52,
+            64,
+            12,
+            17
+          ],
+          "durabilityConsumed": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "masteredCount": 2,
+          "wallet": {
+            "gold": 520,
+            "reputation": 150,
+            "vouchers": {
+              "intermediate": 2
+            }
+          },
+          "reward": {
+            "gold": 340,
+            "reputation": 60,
+            "vouchers": {
+              "intermediate": 2
+            }
+          },
+          "rewardKind": "first-clear"
+        },
+        {
+          "id": "chapter-1-4",
+          "result": "victory",
+          "rounds": 5,
+          "standing": 4,
+          "actions": 20,
+          "attacks": 16,
+          "hits": 18,
+          "damageDealt": 141,
+          "damageTaken": 17,
+          "failedPlans": 0,
+          "classXpGained": [
+            40,
+            44,
+            44,
+            50
+          ],
+          "durabilityConsumed": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "masteredCount": 3,
+          "wallet": {
+            "gold": 620,
+            "reputation": 225,
+            "vouchers": {
+              "intermediate": 2
+            }
+          },
+          "reward": {
+            "gold": 400,
+            "reputation": 75,
+            "vouchers": {
+              "intermediate": 2
+            }
+          },
+          "rewardKind": "first-clear"
+        }
+      ],
+      "replays": [],
+      "certifications": [
+        {
+          "id": "a1",
+          "job": "duelist",
+          "cost": 150
+        },
+        {
+          "id": "a2",
+          "job": "sentinel",
+          "cost": 150
+        },
+        {
+          "id": "a3",
+          "job": "eliteMarksman",
+          "cost": 150
+        },
+        {
+          "id": "a4",
+          "job": "arcanist",
+          "cost": 150
+        }
+      ],
+      "blockedAt": null,
+      "cleared": true,
+      "totalRounds": 23,
+      "completedLevels": [
+        "chapter-1-1",
+        "chapter-1-2",
+        "chapter-1-3",
+        "chapter-1-4"
+      ],
+      "wallet": {
+        "gold": 620,
+        "reputation": 225,
+        "vouchers": 2
+      },
+      "classXp": [
+        {
+          "id": "a1",
+          "classId": "duelist",
+          "experience": {
+            "sword": 38,
+            "duelist": 120
+          },
+          "mastered": [
+            "duelistTempo"
+          ]
+        },
+        {
+          "id": "a2",
+          "classId": "sentinel",
+          "experience": {
+            "lancer": 61,
+            "sentinel": 108
+          },
+          "mastered": []
+        },
+        {
+          "id": "a3",
+          "classId": "eliteMarksman",
+          "experience": {
+            "archer": 80,
+            "eliteMarksman": 44
+          },
+          "mastered": [
+            "bowFocus"
+          ]
+        },
+        {
+          "id": "a4",
+          "classId": "arcanist",
+          "experience": {
+            "mage": 80,
+            "arcanist": 50
+          },
+          "mastered": [
+            "mageWard"
+          ]
+        }
+      ]
+    },
+    {
+      "seed": 19,
+      "mode": "promotion",
+      "grind": 2,
+      "stages": [
+        {
+          "id": "chapter-1-1",
+          "result": "victory",
+          "rounds": 4,
+          "standing": 3,
+          "actions": 15,
+          "attacks": 8,
+          "hits": 8,
+          "damageDealt": 72,
+          "damageTaken": 12,
+          "failedPlans": 0,
+          "classXpGained": [
+            38,
+            22,
+            34,
+            24
+          ],
+          "durabilityConsumed": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "masteredCount": 0,
+          "wallet": {
+            "gold": 200,
+            "reputation": 40,
+            "vouchers": {
+              "intermediate": 1
+            }
+          },
+          "reward": {
+            "gold": 200,
+            "reputation": 40,
+            "vouchers": {
+              "intermediate": 1
+            }
+          },
+          "rewardKind": "first-clear"
+        },
+        {
+          "id": "chapter-1-2",
+          "result": "victory",
+          "rounds": 3,
+          "standing": 4,
+          "actions": 12,
+          "attacks": 7,
+          "hits": 8,
+          "damageDealt": 79,
+          "damageTaken": 30,
+          "failedPlans": 0,
+          "classXpGained": [
+            18,
+            24,
+            0,
+            8
+          ],
+          "durabilityConsumed": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "masteredCount": 3,
+          "wallet": {
+            "gold": 480,
+            "reputation": 106,
+            "vouchers": {
+              "intermediate": 1
+            }
+          },
+          "reward": {
+            "gold": 280,
+            "reputation": 50,
+            "vouchers": {
+              "intermediate": 1
+            }
+          },
+          "rewardKind": "first-clear"
+        },
+        {
+          "id": "chapter-1-3",
+          "result": "victory",
+          "rounds": 8,
+          "standing": 4,
+          "actions": 30,
+          "attacks": 15,
+          "hits": 17,
+          "damageDealt": 147,
+          "damageTaken": 29,
+          "failedPlans": 0,
+          "classXpGained": [
+            41,
+            44,
+            0,
+            0
+          ],
+          "durabilityConsumed": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "masteredCount": 4,
+          "wallet": {
+            "gold": 670,
+            "reputation": 166,
+            "vouchers": {
+              "intermediate": 2
+            }
+          },
+          "reward": {
+            "gold": 340,
+            "reputation": 60,
+            "vouchers": {
+              "intermediate": 2
+            }
+          },
+          "rewardKind": "first-clear"
+        },
+        {
+          "id": "chapter-1-4",
+          "result": "victory",
+          "rounds": 5,
+          "standing": 4,
+          "actions": 17,
+          "attacks": 12,
+          "hits": 15,
+          "damageDealt": 136,
+          "damageTaken": 16,
+          "failedPlans": 0,
+          "classXpGained": [
+            0,
+            28,
+            34,
+            45
+          ],
+          "durabilityConsumed": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "masteredCount": 4,
+          "wallet": {
+            "gold": 770,
+            "reputation": 241,
+            "vouchers": {
+              "intermediate": 2
+            }
+          },
+          "reward": {
+            "gold": 400,
+            "reputation": 75,
+            "vouchers": {
+              "intermediate": 2
+            }
+          },
+          "rewardKind": "first-clear"
+        }
+      ],
+      "replays": [
+        {
+          "id": "chapter-1-1",
+          "result": "victory",
+          "rounds": 4,
+          "standing": 4,
+          "actions": 15,
+          "attacks": 8,
+          "hits": 9,
+          "damageDealt": 70,
+          "damageTaken": 11,
+          "failedPlans": 0,
+          "classXpGained": [
+            38,
+            22,
+            34,
+            24
+          ],
+          "durabilityConsumed": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "masteredCount": 0,
+          "wallet": {
+            "gold": 125,
+            "reputation": 48,
+            "vouchers": {
+              "intermediate": 0
+            }
+          },
+          "reward": {
+            "gold": 75,
+            "reputation": 8,
+            "vouchers": {
+              "intermediate": 0
+            }
+          },
+          "rewardKind": "replay"
+        },
+        {
+          "id": "chapter-1-1",
+          "result": "victory",
+          "rounds": 3,
+          "standing": 4,
+          "actions": 12,
+          "attacks": 5,
+          "hits": 6,
+          "damageDealt": 59,
+          "damageTaken": 5,
+          "failedPlans": 0,
+          "classXpGained": [
+            23,
+            12,
+            12,
+            24
+          ],
+          "durabilityConsumed": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "masteredCount": 1,
+          "wallet": {
+            "gold": 200,
+            "reputation": 56,
+            "vouchers": {
+              "intermediate": 0
+            }
+          },
+          "reward": {
+            "gold": 75,
+            "reputation": 8,
+            "vouchers": {
+              "intermediate": 0
+            }
+          },
+          "rewardKind": "replay"
+        }
+      ],
+      "certifications": [
+        {
+          "id": "a1",
+          "job": "duelist",
+          "cost": 150
+        },
+        {
+          "id": "a2",
+          "job": "sentinel",
+          "cost": 150
+        },
+        {
+          "id": "a3",
+          "job": "eliteMarksman",
+          "cost": 150
+        },
+        {
+          "id": "a4",
+          "job": "arcanist",
+          "cost": 150
+        }
+      ],
+      "blockedAt": null,
+      "cleared": true,
+      "totalRounds": 27,
+      "completedLevels": [
+        "chapter-1-1",
+        "chapter-1-2",
+        "chapter-1-3",
+        "chapter-1-4"
+      ],
+      "wallet": {
+        "gold": 770,
+        "reputation": 241,
+        "vouchers": 2
+      },
+      "classXp": [
+        {
+          "id": "a1",
+          "classId": "duelist",
+          "experience": {
+            "sword": 38,
+            "duelist": 120
+          },
+          "mastered": [
+            "duelistTempo"
+          ]
+        },
+        {
+          "id": "a2",
+          "classId": "sentinel",
+          "experience": {
+            "lancer": 80,
+            "sentinel": 72
+          },
+          "mastered": [
+            "lanceGuard"
+          ]
+        },
+        {
+          "id": "a3",
+          "classId": "eliteMarksman",
+          "experience": {
+            "archer": 80,
+            "eliteMarksman": 34
+          },
+          "mastered": [
+            "bowFocus"
+          ]
+        },
+        {
+          "id": "a4",
+          "classId": "arcanist",
+          "experience": {
+            "mage": 80,
+            "arcanist": 45
+          },
+          "mastered": [
+            "mageWard"
+          ]
+        }
+      ]
+    },
+    {
+      "seed": 37,
+      "mode": "base",
+      "grind": 0,
+      "stages": [
+        {
+          "id": "chapter-1-1",
+          "result": "victory",
+          "rounds": 4,
+          "standing": 3,
+          "actions": 15,
+          "attacks": 8,
+          "hits": 8,
+          "damageDealt": 72,
+          "damageTaken": 12,
+          "failedPlans": 0,
+          "classXpGained": [
+            38,
+            22,
+            34,
+            24
+          ],
+          "durabilityConsumed": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "masteredCount": 0,
+          "wallet": {
+            "gold": 200,
+            "reputation": 40,
+            "vouchers": {
+              "intermediate": 1
+            }
+          },
+          "reward": {
+            "gold": 200,
+            "reputation": 40,
+            "vouchers": {
+              "intermediate": 1
+            }
+          },
+          "rewardKind": "first-clear"
+        },
+        {
+          "id": "chapter-1-2",
+          "result": "victory",
+          "rounds": 4,
+          "standing": 3,
+          "actions": 15,
+          "attacks": 10,
+          "hits": 10,
+          "damageDealt": 98,
+          "damageTaken": 24,
+          "failedPlans": 0,
+          "classXpGained": [
+            28,
+            39,
+            34,
+            39
+          ],
+          "durabilityConsumed": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "masteredCount": 0,
+          "wallet": {
+            "gold": 480,
+            "reputation": 90,
+            "vouchers": {
+              "intermediate": 2
+            }
+          },
+          "reward": {
+            "gold": 280,
+            "reputation": 50,
+            "vouchers": {
+              "intermediate": 1
+            }
+          },
+          "rewardKind": "first-clear"
+        },
+        {
+          "id": "chapter-1-3",
+          "result": "victory",
+          "rounds": 9,
+          "standing": 2,
+          "actions": 28,
+          "attacks": 16,
+          "hits": 16,
+          "damageDealt": 137,
+          "damageTaken": 36,
+          "failedPlans": 0,
+          "classXpGained": [
+            14,
+            19,
+            12,
+            17
+          ],
+          "durabilityConsumed": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "masteredCount": 4,
+          "wallet": {
+            "gold": 820,
+            "reputation": 150,
+            "vouchers": {
+              "intermediate": 4
+            }
+          },
+          "reward": {
+            "gold": 340,
+            "reputation": 60,
+            "vouchers": {
+              "intermediate": 2
+            }
+          },
+          "rewardKind": "first-clear"
+        },
+        {
+          "id": "chapter-1-4",
+          "result": "victory",
+          "rounds": 6,
+          "standing": 4,
+          "actions": 24,
+          "attacks": 18,
+          "hits": 18,
+          "damageDealt": 124,
+          "damageTaken": 28,
+          "failedPlans": 0,
+          "classXpGained": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "durabilityConsumed": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "masteredCount": 4,
+          "wallet": {
+            "gold": 1220,
+            "reputation": 225,
+            "vouchers": {
+              "intermediate": 6
+            }
+          },
+          "reward": {
+            "gold": 400,
+            "reputation": 75,
+            "vouchers": {
+              "intermediate": 2
+            }
+          },
+          "rewardKind": "first-clear"
+        }
+      ],
+      "replays": [],
+      "certifications": [],
+      "blockedAt": null,
+      "cleared": true,
+      "totalRounds": 23,
+      "completedLevels": [
+        "chapter-1-1",
+        "chapter-1-2",
+        "chapter-1-3",
+        "chapter-1-4"
+      ],
+      "wallet": {
+        "gold": 1220,
+        "reputation": 225,
+        "vouchers": 6
+      },
+      "classXp": [
+        {
+          "id": "a1",
+          "classId": "sword",
+          "experience": {
+            "sword": 80
+          },
+          "mastered": [
+            "swordFocus"
+          ]
+        },
+        {
+          "id": "a2",
+          "classId": "lancer",
+          "experience": {
+            "lancer": 80
+          },
+          "mastered": [
+            "lanceGuard"
+          ]
+        },
+        {
+          "id": "a3",
+          "classId": "archer",
+          "experience": {
+            "archer": 80
+          },
+          "mastered": [
+            "bowFocus"
+          ]
+        },
+        {
+          "id": "a4",
+          "classId": "mage",
+          "experience": {
+            "mage": 80
+          },
+          "mastered": [
+            "mageWard"
+          ]
+        }
+      ]
+    },
+    {
+      "seed": 37,
+      "mode": "promotion",
+      "grind": 0,
+      "stages": [
+        {
+          "id": "chapter-1-1",
+          "result": "victory",
+          "rounds": 4,
+          "standing": 3,
+          "actions": 15,
+          "attacks": 8,
+          "hits": 8,
+          "damageDealt": 72,
+          "damageTaken": 12,
+          "failedPlans": 0,
+          "classXpGained": [
+            38,
+            22,
+            34,
+            24
+          ],
+          "durabilityConsumed": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "masteredCount": 0,
+          "wallet": {
+            "gold": 200,
+            "reputation": 40,
+            "vouchers": {
+              "intermediate": 1
+            }
+          },
+          "reward": {
+            "gold": 200,
+            "reputation": 40,
+            "vouchers": {
+              "intermediate": 1
+            }
+          },
+          "rewardKind": "first-clear"
+        },
+        {
+          "id": "chapter-1-2",
+          "result": "victory",
+          "rounds": 4,
+          "standing": 3,
+          "actions": 15,
+          "attacks": 10,
+          "hits": 11,
+          "damageDealt": 98,
+          "damageTaken": 24,
+          "failedPlans": 0,
+          "classXpGained": [
+            28,
+            39,
+            34,
+            39
+          ],
+          "durabilityConsumed": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "masteredCount": 0,
+          "wallet": {
+            "gold": 330,
+            "reputation": 90,
+            "vouchers": {
+              "intermediate": 1
+            }
+          },
+          "reward": {
+            "gold": 280,
+            "reputation": 50,
+            "vouchers": {
+              "intermediate": 1
+            }
+          },
+          "rewardKind": "first-clear"
+        },
+        {
+          "id": "chapter-1-3",
+          "result": "victory",
+          "rounds": 7,
+          "standing": 4,
+          "actions": 28,
+          "attacks": 15,
+          "hits": 18,
+          "damageDealt": 147,
+          "damageTaken": 18,
+          "failedPlans": 0,
+          "classXpGained": [
+            52,
+            40,
+            12,
+            17
+          ],
+          "durabilityConsumed": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "masteredCount": 2,
+          "wallet": {
+            "gold": 520,
+            "reputation": 150,
+            "vouchers": {
+              "intermediate": 2
+            }
+          },
+          "reward": {
+            "gold": 340,
+            "reputation": 60,
+            "vouchers": {
+              "intermediate": 2
+            }
+          },
+          "rewardKind": "first-clear"
+        },
+        {
+          "id": "chapter-1-4",
+          "result": "victory",
+          "rounds": 6,
+          "standing": 4,
+          "actions": 21,
+          "attacks": 17,
+          "hits": 18,
+          "damageDealt": 141,
+          "damageTaken": 17,
+          "failedPlans": 0,
+          "classXpGained": [
+            40,
+            44,
+            44,
+            50
+          ],
+          "durabilityConsumed": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "masteredCount": 3,
+          "wallet": {
+            "gold": 620,
+            "reputation": 225,
+            "vouchers": {
+              "intermediate": 2
+            }
+          },
+          "reward": {
+            "gold": 400,
+            "reputation": 75,
+            "vouchers": {
+              "intermediate": 2
+            }
+          },
+          "rewardKind": "first-clear"
+        }
+      ],
+      "replays": [],
+      "certifications": [
+        {
+          "id": "a1",
+          "job": "duelist",
+          "cost": 150
+        },
+        {
+          "id": "a2",
+          "job": "sentinel",
+          "cost": 150
+        },
+        {
+          "id": "a3",
+          "job": "eliteMarksman",
+          "cost": 150
+        },
+        {
+          "id": "a4",
+          "job": "arcanist",
+          "cost": 150
+        }
+      ],
+      "blockedAt": null,
+      "cleared": true,
+      "totalRounds": 21,
+      "completedLevels": [
+        "chapter-1-1",
+        "chapter-1-2",
+        "chapter-1-3",
+        "chapter-1-4"
+      ],
+      "wallet": {
+        "gold": 620,
+        "reputation": 225,
+        "vouchers": 2
+      },
+      "classXp": [
+        {
+          "id": "a1",
+          "classId": "duelist",
+          "experience": {
+            "sword": 38,
+            "duelist": 120
+          },
+          "mastered": [
+            "duelistTempo"
+          ]
+        },
+        {
+          "id": "a2",
+          "classId": "sentinel",
+          "experience": {
+            "lancer": 61,
+            "sentinel": 84
+          },
+          "mastered": []
+        },
+        {
+          "id": "a3",
+          "classId": "eliteMarksman",
+          "experience": {
+            "archer": 80,
+            "eliteMarksman": 44
+          },
+          "mastered": [
+            "bowFocus"
+          ]
+        },
+        {
+          "id": "a4",
+          "classId": "arcanist",
+          "experience": {
+            "mage": 80,
+            "arcanist": 50
+          },
+          "mastered": [
+            "mageWard"
+          ]
+        }
+      ]
+    },
+    {
+      "seed": 37,
+      "mode": "promotion",
+      "grind": 2,
+      "stages": [
+        {
+          "id": "chapter-1-1",
+          "result": "victory",
+          "rounds": 4,
+          "standing": 3,
+          "actions": 15,
+          "attacks": 8,
+          "hits": 8,
+          "damageDealt": 72,
+          "damageTaken": 12,
+          "failedPlans": 0,
+          "classXpGained": [
+            38,
+            22,
+            34,
+            24
+          ],
+          "durabilityConsumed": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "masteredCount": 0,
+          "wallet": {
+            "gold": 200,
+            "reputation": 40,
+            "vouchers": {
+              "intermediate": 1
+            }
+          },
+          "reward": {
+            "gold": 200,
+            "reputation": 40,
+            "vouchers": {
+              "intermediate": 1
+            }
+          },
+          "rewardKind": "first-clear"
+        },
+        {
+          "id": "chapter-1-2",
+          "result": "victory",
+          "rounds": 3,
+          "standing": 4,
+          "actions": 12,
+          "attacks": 7,
+          "hits": 8,
+          "damageDealt": 79,
+          "damageTaken": 30,
+          "failedPlans": 0,
+          "classXpGained": [
+            18,
+            14,
+            0,
+            8
+          ],
+          "durabilityConsumed": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "masteredCount": 3,
+          "wallet": {
+            "gold": 480,
+            "reputation": 106,
+            "vouchers": {
+              "intermediate": 1
+            }
+          },
+          "reward": {
+            "gold": 280,
+            "reputation": 50,
+            "vouchers": {
+              "intermediate": 1
+            }
+          },
+          "rewardKind": "first-clear"
+        },
+        {
+          "id": "chapter-1-3",
+          "result": "victory",
+          "rounds": 8,
+          "standing": 4,
+          "actions": 29,
+          "attacks": 15,
+          "hits": 17,
+          "damageDealt": 147,
+          "damageTaken": 18,
+          "failedPlans": 0,
+          "classXpGained": [
+            26,
+            34,
+            0,
+            0
+          ],
+          "durabilityConsumed": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "masteredCount": 4,
+          "wallet": {
+            "gold": 670,
+            "reputation": 166,
+            "vouchers": {
+              "intermediate": 2
+            }
+          },
+          "reward": {
+            "gold": 340,
+            "reputation": 60,
+            "vouchers": {
+              "intermediate": 2
+            }
+          },
+          "rewardKind": "first-clear"
+        },
+        {
+          "id": "chapter-1-4",
+          "result": "victory",
+          "rounds": 5,
+          "standing": 4,
+          "actions": 18,
+          "attacks": 13,
+          "hits": 16,
+          "damageDealt": 133,
+          "damageTaken": 19,
+          "failedPlans": 0,
+          "classXpGained": [
+            0,
+            38,
+            34,
+            45
+          ],
+          "durabilityConsumed": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "masteredCount": 4,
+          "wallet": {
+            "gold": 770,
+            "reputation": 241,
+            "vouchers": {
+              "intermediate": 2
+            }
+          },
+          "reward": {
+            "gold": 400,
+            "reputation": 75,
+            "vouchers": {
+              "intermediate": 2
+            }
+          },
+          "rewardKind": "first-clear"
+        }
+      ],
+      "replays": [
+        {
+          "id": "chapter-1-1",
+          "result": "victory",
+          "rounds": 4,
+          "standing": 4,
+          "actions": 15,
+          "attacks": 8,
+          "hits": 9,
+          "damageDealt": 70,
+          "damageTaken": 11,
+          "failedPlans": 0,
+          "classXpGained": [
+            38,
+            22,
+            34,
+            24
+          ],
+          "durabilityConsumed": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "masteredCount": 0,
+          "wallet": {
+            "gold": 125,
+            "reputation": 48,
+            "vouchers": {
+              "intermediate": 0
+            }
+          },
+          "reward": {
+            "gold": 75,
+            "reputation": 8,
+            "vouchers": {
+              "intermediate": 0
+            }
+          },
+          "rewardKind": "replay"
+        },
+        {
+          "id": "chapter-1-1",
+          "result": "victory",
+          "rounds": 4,
+          "standing": 4,
+          "actions": 15,
+          "attacks": 8,
+          "hits": 9,
+          "damageDealt": 81,
+          "damageTaken": 5,
+          "failedPlans": 0,
+          "classXpGained": [
+            38,
+            22,
+            12,
+            24
+          ],
+          "durabilityConsumed": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "masteredCount": 1,
+          "wallet": {
+            "gold": 200,
+            "reputation": 56,
+            "vouchers": {
+              "intermediate": 0
+            }
+          },
+          "reward": {
+            "gold": 75,
+            "reputation": 8,
+            "vouchers": {
+              "intermediate": 0
+            }
+          },
+          "rewardKind": "replay"
+        }
+      ],
+      "certifications": [
+        {
+          "id": "a1",
+          "job": "duelist",
+          "cost": 150
+        },
+        {
+          "id": "a2",
+          "job": "sentinel",
+          "cost": 150
+        },
+        {
+          "id": "a3",
+          "job": "eliteMarksman",
+          "cost": 150
+        },
+        {
+          "id": "a4",
+          "job": "arcanist",
+          "cost": 150
+        }
+      ],
+      "blockedAt": null,
+      "cleared": true,
+      "totalRounds": 28,
+      "completedLevels": [
+        "chapter-1-1",
+        "chapter-1-2",
+        "chapter-1-3",
+        "chapter-1-4"
+      ],
+      "wallet": {
+        "gold": 770,
+        "reputation": 241,
+        "vouchers": 2
+      },
+      "classXp": [
+        {
+          "id": "a1",
+          "classId": "duelist",
+          "experience": {
+            "sword": 38,
+            "duelist": 120
+          },
+          "mastered": [
+            "duelistTempo"
+          ]
+        },
+        {
+          "id": "a2",
+          "classId": "sentinel",
+          "experience": {
+            "lancer": 80,
+            "sentinel": 72
+          },
+          "mastered": [
+            "lanceGuard"
+          ]
+        },
+        {
+          "id": "a3",
+          "classId": "eliteMarksman",
+          "experience": {
+            "archer": 80,
+            "eliteMarksman": 34
+          },
+          "mastered": [
+            "bowFocus"
+          ]
+        },
+        {
+          "id": "a4",
+          "classId": "arcanist",
+          "experience": {
+            "mage": 80,
+            "arcanist": 45
+          },
+          "mastered": [
+            "mageWard"
+          ]
+        }
+      ]
+    },
+    {
+      "seed": 73,
+      "mode": "base",
+      "grind": 0,
+      "stages": [
+        {
+          "id": "chapter-1-1",
+          "result": "victory",
+          "rounds": 4,
+          "standing": 3,
+          "actions": 15,
+          "attacks": 8,
+          "hits": 8,
+          "damageDealt": 72,
+          "damageTaken": 12,
+          "failedPlans": 0,
+          "classXpGained": [
+            38,
+            22,
+            34,
+            24
+          ],
+          "durabilityConsumed": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "masteredCount": 0,
+          "wallet": {
+            "gold": 200,
+            "reputation": 40,
+            "vouchers": {
+              "intermediate": 1
+            }
+          },
+          "reward": {
+            "gold": 200,
+            "reputation": 40,
+            "vouchers": {
+              "intermediate": 1
+            }
+          },
+          "rewardKind": "first-clear"
+        },
+        {
+          "id": "chapter-1-2",
+          "result": "victory",
+          "rounds": 4,
+          "standing": 3,
+          "actions": 15,
+          "attacks": 10,
+          "hits": 10,
+          "damageDealt": 98,
+          "damageTaken": 24,
+          "failedPlans": 0,
+          "classXpGained": [
+            28,
+            39,
+            34,
+            39
+          ],
+          "durabilityConsumed": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "masteredCount": 0,
+          "wallet": {
+            "gold": 480,
+            "reputation": 90,
+            "vouchers": {
+              "intermediate": 2
+            }
+          },
+          "reward": {
+            "gold": 280,
+            "reputation": 50,
+            "vouchers": {
+              "intermediate": 1
+            }
+          },
+          "rewardKind": "first-clear"
+        },
+        {
+          "id": "chapter-1-3",
+          "result": "victory",
+          "rounds": 8,
+          "standing": 3,
+          "actions": 27,
+          "attacks": 15,
+          "hits": 15,
+          "damageDealt": 136,
+          "damageTaken": 33,
+          "failedPlans": 0,
+          "classXpGained": [
+            14,
+            19,
+            12,
+            17
+          ],
+          "durabilityConsumed": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "masteredCount": 4,
+          "wallet": {
+            "gold": 820,
+            "reputation": 150,
+            "vouchers": {
+              "intermediate": 4
+            }
+          },
+          "reward": {
+            "gold": 340,
+            "reputation": 60,
+            "vouchers": {
+              "intermediate": 2
+            }
+          },
+          "rewardKind": "first-clear"
+        },
+        {
+          "id": "chapter-1-4",
+          "result": "victory",
+          "rounds": 6,
+          "standing": 3,
+          "actions": 22,
+          "attacks": 19,
+          "hits": 17,
+          "damageDealt": 141,
+          "damageTaken": 34,
+          "failedPlans": 0,
+          "classXpGained": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "durabilityConsumed": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "masteredCount": 4,
+          "wallet": {
+            "gold": 1220,
+            "reputation": 225,
+            "vouchers": {
+              "intermediate": 6
+            }
+          },
+          "reward": {
+            "gold": 400,
+            "reputation": 75,
+            "vouchers": {
+              "intermediate": 2
+            }
+          },
+          "rewardKind": "first-clear"
+        }
+      ],
+      "replays": [],
+      "certifications": [],
+      "blockedAt": null,
+      "cleared": true,
+      "totalRounds": 22,
+      "completedLevels": [
+        "chapter-1-1",
+        "chapter-1-2",
+        "chapter-1-3",
+        "chapter-1-4"
+      ],
+      "wallet": {
+        "gold": 1220,
+        "reputation": 225,
+        "vouchers": 6
+      },
+      "classXp": [
+        {
+          "id": "a1",
+          "classId": "sword",
+          "experience": {
+            "sword": 80
+          },
+          "mastered": [
+            "swordFocus"
+          ]
+        },
+        {
+          "id": "a2",
+          "classId": "lancer",
+          "experience": {
+            "lancer": 80
+          },
+          "mastered": [
+            "lanceGuard"
+          ]
+        },
+        {
+          "id": "a3",
+          "classId": "archer",
+          "experience": {
+            "archer": 80
+          },
+          "mastered": [
+            "bowFocus"
+          ]
+        },
+        {
+          "id": "a4",
+          "classId": "mage",
+          "experience": {
+            "mage": 80
+          },
+          "mastered": [
+            "mageWard"
+          ]
+        }
+      ]
+    },
+    {
+      "seed": 73,
+      "mode": "promotion",
+      "grind": 0,
+      "stages": [
+        {
+          "id": "chapter-1-1",
+          "result": "victory",
+          "rounds": 4,
+          "standing": 3,
+          "actions": 15,
+          "attacks": 8,
+          "hits": 8,
+          "damageDealt": 72,
+          "damageTaken": 12,
+          "failedPlans": 0,
+          "classXpGained": [
+            38,
+            22,
+            34,
+            24
+          ],
+          "durabilityConsumed": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "masteredCount": 0,
+          "wallet": {
+            "gold": 200,
+            "reputation": 40,
+            "vouchers": {
+              "intermediate": 1
+            }
+          },
+          "reward": {
+            "gold": 200,
+            "reputation": 40,
+            "vouchers": {
+              "intermediate": 1
+            }
+          },
+          "rewardKind": "first-clear"
+        },
+        {
+          "id": "chapter-1-2",
+          "result": "victory",
+          "rounds": 4,
+          "standing": 3,
+          "actions": 15,
+          "attacks": 10,
+          "hits": 11,
+          "damageDealt": 98,
+          "damageTaken": 24,
+          "failedPlans": 0,
+          "classXpGained": [
+            28,
+            39,
+            34,
+            39
+          ],
+          "durabilityConsumed": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "masteredCount": 0,
+          "wallet": {
+            "gold": 330,
+            "reputation": 90,
+            "vouchers": {
+              "intermediate": 1
+            }
+          },
+          "reward": {
+            "gold": 280,
+            "reputation": 50,
+            "vouchers": {
+              "intermediate": 1
+            }
+          },
+          "rewardKind": "first-clear"
+        },
+        {
+          "id": "chapter-1-3",
+          "result": "victory",
+          "rounds": 7,
+          "standing": 4,
+          "actions": 28,
+          "attacks": 15,
+          "hits": 18,
+          "damageDealt": 147,
+          "damageTaken": 19,
+          "failedPlans": 0,
+          "classXpGained": [
+            52,
+            40,
+            12,
+            17
+          ],
+          "durabilityConsumed": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "masteredCount": 2,
+          "wallet": {
+            "gold": 520,
+            "reputation": 150,
+            "vouchers": {
+              "intermediate": 2
+            }
+          },
+          "reward": {
+            "gold": 340,
+            "reputation": 60,
+            "vouchers": {
+              "intermediate": 2
+            }
+          },
+          "rewardKind": "first-clear"
+        },
+        {
+          "id": "chapter-1-4",
+          "result": "victory",
+          "rounds": 6,
+          "standing": 4,
+          "actions": 21,
+          "attacks": 16,
+          "hits": 17,
+          "damageDealt": 141,
+          "damageTaken": 12,
+          "failedPlans": 0,
+          "classXpGained": [
+            40,
+            38,
+            44,
+            50
+          ],
+          "durabilityConsumed": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "masteredCount": 3,
+          "wallet": {
+            "gold": 620,
+            "reputation": 225,
+            "vouchers": {
+              "intermediate": 2
+            }
+          },
+          "reward": {
+            "gold": 400,
+            "reputation": 75,
+            "vouchers": {
+              "intermediate": 2
+            }
+          },
+          "rewardKind": "first-clear"
+        }
+      ],
+      "replays": [],
+      "certifications": [
+        {
+          "id": "a1",
+          "job": "duelist",
+          "cost": 150
+        },
+        {
+          "id": "a2",
+          "job": "sentinel",
+          "cost": 150
+        },
+        {
+          "id": "a3",
+          "job": "eliteMarksman",
+          "cost": 150
+        },
+        {
+          "id": "a4",
+          "job": "arcanist",
+          "cost": 150
+        }
+      ],
+      "blockedAt": null,
+      "cleared": true,
+      "totalRounds": 21,
+      "completedLevels": [
+        "chapter-1-1",
+        "chapter-1-2",
+        "chapter-1-3",
+        "chapter-1-4"
+      ],
+      "wallet": {
+        "gold": 620,
+        "reputation": 225,
+        "vouchers": 2
+      },
+      "classXp": [
+        {
+          "id": "a1",
+          "classId": "duelist",
+          "experience": {
+            "sword": 38,
+            "duelist": 120
+          },
+          "mastered": [
+            "duelistTempo"
+          ]
+        },
+        {
+          "id": "a2",
+          "classId": "sentinel",
+          "experience": {
+            "lancer": 61,
+            "sentinel": 78
+          },
+          "mastered": []
+        },
+        {
+          "id": "a3",
+          "classId": "eliteMarksman",
+          "experience": {
+            "archer": 80,
+            "eliteMarksman": 44
+          },
+          "mastered": [
+            "bowFocus"
+          ]
+        },
+        {
+          "id": "a4",
+          "classId": "arcanist",
+          "experience": {
+            "mage": 80,
+            "arcanist": 50
+          },
+          "mastered": [
+            "mageWard"
+          ]
+        }
+      ]
+    },
+    {
+      "seed": 73,
+      "mode": "promotion",
+      "grind": 2,
+      "stages": [
+        {
+          "id": "chapter-1-1",
+          "result": "victory",
+          "rounds": 4,
+          "standing": 3,
+          "actions": 15,
+          "attacks": 8,
+          "hits": 8,
+          "damageDealt": 72,
+          "damageTaken": 12,
+          "failedPlans": 0,
+          "classXpGained": [
+            38,
+            22,
+            34,
+            24
+          ],
+          "durabilityConsumed": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "masteredCount": 0,
+          "wallet": {
+            "gold": 200,
+            "reputation": 40,
+            "vouchers": {
+              "intermediate": 1
+            }
+          },
+          "reward": {
+            "gold": 200,
+            "reputation": 40,
+            "vouchers": {
+              "intermediate": 1
+            }
+          },
+          "rewardKind": "first-clear"
+        },
+        {
+          "id": "chapter-1-2",
+          "result": "victory",
+          "rounds": 3,
+          "standing": 4,
+          "actions": 12,
+          "attacks": 7,
+          "hits": 9,
+          "damageDealt": 79,
+          "damageTaken": 28,
+          "failedPlans": 0,
+          "classXpGained": [
+            18,
+            14,
+            0,
+            8
+          ],
+          "durabilityConsumed": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "masteredCount": 3,
+          "wallet": {
+            "gold": 480,
+            "reputation": 106,
+            "vouchers": {
+              "intermediate": 1
+            }
+          },
+          "reward": {
+            "gold": 280,
+            "reputation": 50,
+            "vouchers": {
+              "intermediate": 1
+            }
+          },
+          "rewardKind": "first-clear"
+        },
+        {
+          "id": "chapter-1-3",
+          "result": "victory",
+          "rounds": 7,
+          "standing": 4,
+          "actions": 28,
+          "attacks": 13,
+          "hits": 17,
+          "damageDealt": 147,
+          "damageTaken": 4,
+          "failedPlans": 0,
+          "classXpGained": [
+            26,
+            34,
+            0,
+            0
+          ],
+          "durabilityConsumed": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "masteredCount": 4,
+          "wallet": {
+            "gold": 670,
+            "reputation": 166,
+            "vouchers": {
+              "intermediate": 2
+            }
+          },
+          "reward": {
+            "gold": 340,
+            "reputation": 60,
+            "vouchers": {
+              "intermediate": 2
+            }
+          },
+          "rewardKind": "first-clear"
+        },
+        {
+          "id": "chapter-1-4",
+          "result": "victory",
+          "rounds": 6,
+          "standing": 4,
+          "actions": 21,
+          "attacks": 16,
+          "hits": 17,
+          "damageDealt": 141,
+          "damageTaken": 6,
+          "failedPlans": 0,
+          "classXpGained": [
+            0,
+            38,
+            44,
+            50
+          ],
+          "durabilityConsumed": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "masteredCount": 4,
+          "wallet": {
+            "gold": 770,
+            "reputation": 241,
+            "vouchers": {
+              "intermediate": 2
+            }
+          },
+          "reward": {
+            "gold": 400,
+            "reputation": 75,
+            "vouchers": {
+              "intermediate": 2
+            }
+          },
+          "rewardKind": "first-clear"
+        }
+      ],
+      "replays": [
+        {
+          "id": "chapter-1-1",
+          "result": "victory",
+          "rounds": 4,
+          "standing": 4,
+          "actions": 15,
+          "attacks": 8,
+          "hits": 9,
+          "damageDealt": 70,
+          "damageTaken": 11,
+          "failedPlans": 0,
+          "classXpGained": [
+            38,
+            22,
+            34,
+            24
+          ],
+          "durabilityConsumed": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "masteredCount": 0,
+          "wallet": {
+            "gold": 125,
+            "reputation": 48,
+            "vouchers": {
+              "intermediate": 0
+            }
+          },
+          "reward": {
+            "gold": 75,
+            "reputation": 8,
+            "vouchers": {
+              "intermediate": 0
+            }
+          },
+          "rewardKind": "replay"
+        },
+        {
+          "id": "chapter-1-1",
+          "result": "victory",
+          "rounds": 4,
+          "standing": 4,
+          "actions": 15,
+          "attacks": 8,
+          "hits": 10,
+          "damageDealt": 81,
+          "damageTaken": 9,
+          "failedPlans": 0,
+          "classXpGained": [
+            38,
+            22,
+            12,
+            24
+          ],
+          "durabilityConsumed": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "masteredCount": 1,
+          "wallet": {
+            "gold": 200,
+            "reputation": 56,
+            "vouchers": {
+              "intermediate": 0
+            }
+          },
+          "reward": {
+            "gold": 75,
+            "reputation": 8,
+            "vouchers": {
+              "intermediate": 0
+            }
+          },
+          "rewardKind": "replay"
+        }
+      ],
+      "certifications": [
+        {
+          "id": "a1",
+          "job": "duelist",
+          "cost": 150
+        },
+        {
+          "id": "a2",
+          "job": "sentinel",
+          "cost": 150
+        },
+        {
+          "id": "a3",
+          "job": "eliteMarksman",
+          "cost": 150
+        },
+        {
+          "id": "a4",
+          "job": "arcanist",
+          "cost": 150
+        }
+      ],
+      "blockedAt": null,
+      "cleared": true,
+      "totalRounds": 28,
+      "completedLevels": [
+        "chapter-1-1",
+        "chapter-1-2",
+        "chapter-1-3",
+        "chapter-1-4"
+      ],
+      "wallet": {
+        "gold": 770,
+        "reputation": 241,
+        "vouchers": 2
+      },
+      "classXp": [
+        {
+          "id": "a1",
+          "classId": "duelist",
+          "experience": {
+            "sword": 38,
+            "duelist": 120
+          },
+          "mastered": [
+            "duelistTempo"
+          ]
+        },
+        {
+          "id": "a2",
+          "classId": "sentinel",
+          "experience": {
+            "lancer": 80,
+            "sentinel": 72
+          },
+          "mastered": [
+            "lanceGuard"
+          ]
+        },
+        {
+          "id": "a3",
+          "classId": "eliteMarksman",
+          "experience": {
+            "archer": 80,
+            "eliteMarksman": 44
+          },
+          "mastered": [
+            "bowFocus"
+          ]
+        },
+        {
+          "id": "a4",
+          "classId": "arcanist",
+          "experience": {
+            "mage": 80,
+            "arcanist": 50
+          },
+          "mastered": [
+            "mageWard"
+          ]
+        }
+      ]
+    }
+  ]
+}
