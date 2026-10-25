@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 480" role="img" aria-label="原创奇幻战术角色肖像 guardian">
+<defs>
+ <linearGradient id="steel" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#acbec7"/><stop offset=".45" stop-color="#17364b"/><stop offset="1" stop-color="#5689a0"/></linearGradient>
+ <linearGradient id="iron" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#acbec7"/><stop offset=".57" stop-color="#365365"/><stop offset="1" stop-color="#17364b"/></linearGradient>
+ <linearGradient id="armor" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#17364b"/><stop offset=".55" stop-color="#365365"/><stop offset="1" stop-color="#5689a0"/></linearGradient>
+ <linearGradient id="cloak" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#183748"/><stop offset=".5" stop-color="#17364b"/><stop offset="1" stop-color="#091522"/></linearGradient>
+ <linearGradient id="hair" x1="0" y1="0" x2=".5" y2="1"><stop stop-color="#b4a49a"/><stop offset="1" stop-color="#17364b"/></linearGradient>
+ <linearGradient id="skin" x1="0" y1="0" x2=".8" y2="1"><stop stop-color="#d5bba8"/><stop offset=".6" stop-color="#caa59b"/><stop offset="1" stop-color="#947a81"/></linearGradient>
+ <radialGradient id="glow"><stop stop-color="#5689a0" stop-opacity=".48"/><stop offset="1" stop-color="#17364b" stop-opacity="0"/></radialGradient>
+</defs>
+<ellipse cx="181" cy="232" rx="155" ry="210" fill="url(#glow)"/>
+<path d="M87 247 Q42 302 6 466 L15 479 344 479 352 460 Q316 290 258 254Z" fill="url(#cloak)" stroke="#c0a987" stroke-width="4"/>
+<path d="M297 102 L323 452" stroke="#ac9c83" stroke-width="10"/><path d="M297 95 L284 165 310 156 Z" fill="url(#steel)" stroke="#f3e6c7" stroke-width="3"/>
+
+
+<path d="M92 177 Q85 93 171 69 Q266 59 274 175 L254 270 111 274Z" fill="url(#steel)" stroke="#c3b9a3" stroke-width="5"/>
+<path d="M90 166 L271 155 256 215 104 226Z" fill="#191923" opacity=".95"/>
+<path d="M98 149 Q125 71 177 78 Q235 66 273 150 L252 162 Q171 132 98 169Z" fill="url(#iron)" stroke="#e2c8aa" stroke-width="5"/>
+<path d="M104 219 L114 296 Q179 328 243 287 L260 209 233 218 220 275 147 279 130 222Z" fill="url(#iron)" stroke="#ad9686" stroke-width="4"/>
+<path d="M170 74 L166 147 185 162 198 77" fill="#e5c59e" opacity=".6"/>
+<path d="M123 185 L159 191 M209 188 L239 183" stroke="#6bcce0" stroke-width="4"/>
+<path d="M157 258 L159 320 212 330 213 258" fill="#d5bba8" stroke="#ac8379" stroke-width="4"/>
+<path d="M94 292 Q171 332 255 288 L308 477 55 477Z" fill="url(#iron)" stroke="#c6b7a1" stroke-width="5"/><path d="M110 340 Q175 355 244 338 L222 463 126 463Z" fill="url(#armor)" stroke="#c5ab85" stroke-width="4"/><path d="M175 330 L179 466" stroke="#6bcce0" stroke-width="5" opacity=".65"/>
+<path d="M116 290 Q55 282 9 391 L0 478 121 475 140 358Z" fill="url(#steel)" stroke="#deceb2" stroke-width="4"/><path d="M243 292 Q305 282 352 393 L360 480 235 477 214 353Z" fill="url(#steel)" stroke="#deceb2" stroke-width="4"/>
+<path d="M125 274 Q175 301 243 277 L210 322 173 347 140 325Z" fill="#183748" stroke="#c4ab85" stroke-width="3"/>
+<path d="M274 335 L298 390 261 426 244 371Z" fill="#6bcce0" opacity=".34" stroke="#d4c19b" stroke-width="3"/>
+<path d="M65 412 L126 434 M228 435 L299 406" fill="none" stroke="#e1d5bd" stroke-width="2" opacity=".52"/>
+<path d="M90 461 Q171 488 287 462" fill="none" stroke="#6bcce0" stroke-width="5" opacity=".7"/>
+</svg>

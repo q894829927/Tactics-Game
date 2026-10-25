@@ -40,6 +40,8 @@ jobs:
         run: node tests/browserE12Inventory.mjs
       - name: Verify four forecast layers and optional follow-up on desktop and phone
         run: node tests/browserForecastAnatomy.mjs
+      - name: Verify illustrated cinematic forecast on desktop and phones
+        run: node tests/browserForecastVisual.mjs
       - name: Upload map screenshot evidence
         if: always()
         uses: actions/upload-artifact@v4

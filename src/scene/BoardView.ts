@@ -1,5 +1,6 @@
 import { Battle, MAP_HEIGHT, MAP_WIDTH, key, type Point, type Unit, type AttackForecast, type EnemyActionPlan, type CombatEvent, type SupportEffect, type SupportPreview } from "../engine/battle.ts";
 import { combatPreviewView } from "./combatPreviewView.ts";
+import {forecastPortraitFor} from "./forecastPortrait.ts";
 import {flatBattleCommands,skillSubmenuCommands,inventorySubmenuCommands,type FlatCommand} from "./flatBattleCommands.ts";
 import {WEAPON_LIBRARY,weaponRange,canWield} from "../engine/weapons.ts";
 import {weaponRankForExp,weaponExperienceText} from "../engine/proficiency.ts";
@@ -903,7 +904,20 @@ export class BoardView {
     document.getElementById(side==="ally"?"forecast-attacker":"forecast-defender")!.textContent=unit.name;
     document.getElementById(prefix+"role")!.textContent=definition.name;
     document.getElementById(prefix+"emblem")!.textContent=definition.emblem;
-    document.getElementById(prefix+"portrait")!.textContent=definition.portrait;
+    const portrait=document.getElementById(prefix+"art") as HTMLImageElement;
+    const fallback=document.getElementById(prefix+"fallback")!;
+    const asset=import.meta.env.BASE_URL+"assets/ui/portraits/"+forecastPortraitFor(unit.classId,unit.team);
+    if(portrait.getAttribute("src")!==asset){
+      portrait.hidden=false;
+      fallback.hidden=true;
+      portrait.onerror=()=>{
+        portrait.hidden=true;
+        fallback.hidden=false;
+        fallback.textContent=definition.portrait;
+      };
+      portrait.src=asset;
+    }
+    fallback.textContent=definition.portrait;
     document.getElementById(prefix+"weapon")!.textContent=unit.weapon.name;
   }
 
