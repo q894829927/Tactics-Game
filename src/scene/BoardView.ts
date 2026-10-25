@@ -925,6 +925,12 @@ export class BoardView {
   private paintStrikeRows(rows:readonly ForecastStrikeRow[]):void{
     const list=document.getElementById("forecast-strike-list")!;
     list.replaceChildren();
+    const head=document.getElementById("forecast-strike-head")!;
+    head.hidden=rows.length===0;
+    document.getElementById("forecast-strike-head-ally")!.hidden=
+      !rows.some(strike=>strike.from==="ally");
+    document.getElementById("forecast-strike-head-enemy")!.hidden=
+      !rows.some(strike=>strike.from==="enemy");
     for(const strike of rows){
       const row=document.createElement("div");
       row.className="forecast-strike-entry forecast-strike-entry-"+strike.kind;
@@ -943,11 +949,13 @@ export class BoardView {
       odds.className="forecast-strike-chances";
       const crit=document.createElement("span");
       crit.className="forecast-strike-crit";
-      crit.textContent="必杀 "+strike.crit+"%";
+      crit.textContent=String(strike.crit);
       const hit=document.createElement("span");
       hit.className="forecast-strike-hit";
-      hit.textContent="命中 "+strike.hit+"%";
-      odds.append(crit,hit);
+      hit.textContent=strike.hit+"%";
+      // Fixed columns: left 必杀/命中; mirrored right 命中/必杀.
+      if(strike.from==="ally")odds.append(crit,hit);
+      else odds.append(hit,crit);
       const damage=document.createElement("strong");
       damage.className="forecast-strike-damage forecast-strike-damage-"+
         (strike.from==="ally"?"enemy":"ally");
@@ -1008,6 +1016,7 @@ export class BoardView {
     const healing=preview.effect==="heal"&&preview.value>0;
     const rows=elem("forecast-strike-list");
     rows.replaceChildren();
+    elem("forecast-strike-head").hidden=true;
     if(preview.value>0){
       const row=document.createElement("div");
       row.className="forecast-strike-entry forecast-strike-entry-support";

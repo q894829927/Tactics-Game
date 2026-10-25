@@ -17,9 +17,12 @@ try{
    s("forecast-ally-hp","24");s("forecast-enemy-hp","15");
    const list=document.getElementById("forecast-strike-list");
    list.replaceChildren();
+   document.getElementById("forecast-strike-head").hidden=false;
+   document.getElementById("forecast-strike-head-ally").hidden=false;
+   document.getElementById("forecast-strike-head-enemy").hidden=true;
    const row=document.createElement("div");
    row.className="forecast-strike-entry forecast-strike-entry-attack";
-   row.innerHTML='<div class="forecast-strike-side forecast-strike-left"><span class="forecast-strike-chances"><span class="forecast-strike-crit">必杀 4%</span><span class="forecast-strike-hit">命中 100%</span></span></div><span class="forecast-strike-kind"></span><div class="forecast-strike-side forecast-strike-right"><strong class="forecast-strike-damage forecast-strike-damage-enemy">−6</strong></div>';
+   row.innerHTML='<div class="forecast-strike-side forecast-strike-left"><span class="forecast-strike-chances"><span class="forecast-strike-crit">4</span><span class="forecast-strike-hit">100%</span></span></div><span class="forecast-strike-kind"></span><div class="forecast-strike-side forecast-strike-right"><strong class="forecast-strike-damage forecast-strike-damage-enemy">−6</strong></div>';
    list.append(row);
   });
   const initial=await page.evaluate(()=>{
@@ -36,7 +39,7 @@ try{
    const old=list.firstElementChild;
    const second=old.cloneNode(true);second.dataset.kind="follow-up";
    second.querySelector(".forecast-strike-kind").textContent="追击";
-   second.querySelector(".forecast-strike-hit").textContent="命中 63%";
+   second.querySelector(".forecast-strike-hit").textContent="63%";
    second.querySelector(".forecast-strike-damage").textContent="−9";
    list.append(second);
   });

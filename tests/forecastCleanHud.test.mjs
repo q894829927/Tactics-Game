@@ -9,7 +9,8 @@ test("Forecast has no extra resource or unable-counter prose",()=>{
  assert.match(board,/cost\.textContent="";\s*cost\.hidden=true/);
  assert.match(board,/elem\("forecast-action-cost"\)\.textContent="";\s*elem\("forecast-action-cost"\)\.hidden=true/);
  assert.match(board,/forecast\.canCounter\?"后攻":""/);
- assert.match(board,/odds\.append\(crit,hit\)/);
+ assert.match(board,/if\(strike\.from==="ally"\)odds\.append\(crit,hit\)/);
+ assert.match(board,/else odds\.append\(hit,crit\)/);
  assert.match(board,/damage\.hidden=strike\.damage<=0/);
 });
 test("Each strike owns its own hit, crit and damage rather than one combatant-wide row",()=>{

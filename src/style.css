@@ -2629,3 +2629,81 @@ button:disabled { cursor: not-allowed; }
  .duel-v3 .forecast-strike-damage{font-size:17px}
  .duel-v3 .forecast-strike-kind{font-size:9px}
 }
+
+
+/* v0.1.45.1 — fixed column HEADINGS with numeric entries per strike.
+   Header text appears once: 必杀 | 命中, then 30 | 99%, 50 | 100%.
+   The enemy's right-side columns mirror the Fire Emblem reference. */
+.duel-v3 .forecast-v2-content {
+  --forecast-crit-column: clamp(26px,3.1vw,48px);
+  --forecast-hit-column: clamp(38px,4.1vw,62px);
+  --forecast-odds-gap: clamp(9px,1.1vw,20px);
+}
+.duel-v3 .forecast-strike-head {
+  display:grid;
+  grid-template-columns:minmax(0,1fr) clamp(25px,3.5vw,50px) minmax(0,1fr);
+  gap:clamp(4px,1vw,15px);
+  box-sizing:border-box;
+  align-items:center;
+  padding:4px clamp(9px,1vw,18px) 2px;
+  border-top:1px solid #b7a472bd;
+  background:linear-gradient(90deg,#0d1d2bec,#111b25e8 48%,#27161de9);
+  font:600 clamp(10px,1.08vw,14px)/1.3 "Noto Serif SC",serif;
+  color:#c8b99b;
+}
+.duel-v3 .forecast-strike-head[hidden],
+.duel-v3 .forecast-strike-head-side[hidden] {display:none!important}
+.duel-v3 .forecast-strike-head-side,
+.duel-v3 .forecast-strike-chances {
+  display:grid;
+  flex:0 0 auto;
+  gap:var(--forecast-odds-gap);
+  font-variant-numeric:tabular-nums;
+  white-space:nowrap;
+  text-align:center;
+  align-items:center;
+}
+.duel-v3 .forecast-strike-head-ally,
+.duel-v3 .forecast-strike-entry[data-attacker="ally"] .forecast-strike-chances {
+  grid-template-columns:var(--forecast-crit-column) var(--forecast-hit-column);
+}
+.duel-v3 .forecast-strike-head-enemy,
+.duel-v3 .forecast-strike-entry[data-attacker="enemy"] .forecast-strike-chances {
+  grid-template-columns:var(--forecast-hit-column) var(--forecast-crit-column);
+}
+.duel-v3 .forecast-strike-head-ally {justify-self:end}
+.duel-v3 .forecast-strike-head-enemy {justify-self:start}
+.duel-v3 .forecast-strike-chances {
+  font-size:clamp(13px,1.6vw,20px);
+  line-height:1.2;
+  letter-spacing:0;
+}
+.duel-v3 .forecast-strike-crit,
+.duel-v3 .forecast-strike-hit {min-width:0;text-align:center}
+@media(max-width:900px) {
+  .duel-v3 .forecast-v2-content {
+    --forecast-crit-column:34px;
+    --forecast-hit-column:45px;
+    --forecast-odds-gap:6px;
+  }
+  .duel-v3 .forecast-strike-head {
+    grid-template-columns:minmax(0,1fr) 31px minmax(0,1fr);
+    padding:3px 7px 1px;
+    gap:4px;
+  }
+  .duel-v3 .forecast-strike-chances {font-size:12px}
+}
+@media(max-width:540px) {
+  .duel-v3 .forecast-v2-content {
+    --forecast-crit-column:28px;
+    --forecast-hit-column:36px;
+    --forecast-odds-gap:3px;
+  }
+  .duel-v3 .forecast-strike-head {
+    grid-template-columns:minmax(0,1fr) 25px minmax(0,1fr);
+    padding:2px 4px 1px;
+    gap:2px;
+    font-size:9px;
+  }
+  .duel-v3 .forecast-strike-chances {font-size:11px}
+}

@@ -46,6 +46,10 @@ try{
   const setRows=async values=>page.evaluate(rows=>{
    const list=document.getElementById("forecast-strike-list");
    list.replaceChildren();
+   const head=document.getElementById("forecast-strike-head");
+   head.hidden=rows.length===0;
+   document.getElementById("forecast-strike-head-ally").hidden=!rows.some(r=>r.from==="ally");
+   document.getElementById("forecast-strike-head-enemy").hidden=!rows.some(r=>r.from==="enemy");
    for(const entry of rows){
     const row=document.createElement("div");
     row.className="forecast-strike-entry forecast-strike-entry-"+entry.kind;
@@ -59,12 +63,11 @@ try{
     const defence=entry.from==="ally"?right:left;
     const odds=document.createElement("span");
     odds.className="forecast-strike-chances";
-    for(const [cl,value] of [
-      ["forecast-strike-crit","必杀 "+entry.crit+"%"],
-      ["forecast-strike-hit","命中 "+entry.hit+"%"]]){
-      const elem=document.createElement("span");elem.className=cl;
-      elem.textContent=value;odds.append(elem);
-    }
+    const crit=document.createElement("span");crit.className="forecast-strike-crit";
+    crit.textContent=String(entry.crit);
+    const hit=document.createElement("span");hit.className="forecast-strike-hit";
+    hit.textContent=entry.hit+"%";
+    if(entry.from==="ally")odds.append(crit,hit);else odds.append(hit,crit);
     offence.append(odds);
     const damage=document.createElement("strong");
     damage.className="forecast-strike-damage forecast-strike-damage-"+(entry.from==="ally"?"enemy":"ally");
@@ -76,9 +79,9 @@ try{
   },values);
   const id=viewport.width+"x"+viewport.height;
   await setRows([
-    {kind:"attack",from:"ally",hit:93,crit:8,damage:6},
-    {kind:"counter",from:"enemy",hit:75,crit:3,damage:5},
-    {kind:"follow-up",from:"ally",hit:64,crit:8,damage:8}
+    {kind:"attack",from:"ally",hit:99,crit:30,damage:6},
+    {kind:"counter",from:"enemy",hit:85,crit:10,damage:5},
+    {kind:"follow-up",from:"ally",hit:100,crit:50,damage:8}
   ]);
   const metrics=await page.evaluate(()=>{
    const rect=e=>{const r=e.getBoundingClientRect();return {x:r.x,y:r.y,
@@ -91,9 +94,21 @@ try{
     root:rect(document.getElementById("attack-forecast")),
     portrait:rect(document.getElementById("forecast-ally-art")),
     button:rect(document.getElementById("forecast-confirm")),
+    headers:{
+      ally:{crit:rect(document.querySelector("#forecast-strike-head-ally span:first-child")),
+        hit:rect(document.querySelector("#forecast-strike-head-ally span:last-child")),
+        titles:document.getElementById("forecast-strike-head-ally").textContent.trim().replace(/\s+/g," ")},
+      enemy:{hit:rect(document.querySelector("#forecast-strike-head-enemy span:first-child")),
+        crit:rect(document.querySelector("#forecast-strike-head-enemy span:last-child")),
+        titles:document.getElementById("forecast-strike-head-enemy").textContent.trim().replace(/\s+/g," ")}
+    },
     rows:rows.map(row=>({
      kind:row.dataset.kind,from:row.dataset.attacker,
      rect:rect(row),odds:rect(row.querySelector(".forecast-strike-chances")),
+     crit:rect(row.querySelector(".forecast-strike-crit")),
+     hit:rect(row.querySelector(".forecast-strike-hit")),
+     critText:row.querySelector(".forecast-strike-crit").textContent,
+     hitText:row.querySelector(".forecast-strike-hit").textContent,
      damage:rect(row.querySelector(".forecast-strike-damage")),
      scroll:row.querySelector(".forecast-strike-chances").scrollWidth,
      client:row.querySelector(".forecast-strike-chances").clientWidth,
@@ -108,8 +123,20 @@ try{
   assert.ok(metrics.rows[0].odds.center<metrics.rows[0].damage.center,id+" ally first");
   assert.ok(metrics.rows[1].damage.center<metrics.rows[1].odds.center,id+" enemy counter");
   assert.ok(metrics.rows[2].odds.center<metrics.rows[2].damage.center,id+" ally follow-up");
-  assert.match(metrics.rows[0].oddsText,/必杀 8%命中 93%/);
-  assert.match(metrics.rows[2].oddsText,/必杀 8%命中 64%/);
+  assert.equal(metrics.headers.ally.titles,"必杀 命中",id+" allied header once");
+  assert.equal(metrics.headers.enemy.titles,"命中 必杀",id+" enemy header mirrored once");
+  assert.deepEqual(metrics.rows.map(r=>[r.critText,r.hitText]),
+    [["30","99%"],["10","85%"],["50","100%"]],
+    id+" numeric rows exactly under their column headings");
+  for(const row of metrics.rows){
+    const headings=metrics.headers[row.from];
+    assert.ok(Math.abs(row.crit.center-headings.crit.center)<=1,
+      id+" "+row.kind+" critical aligned to column");
+    assert.ok(Math.abs(row.hit.center-headings.hit.center)<=1,
+      id+" "+row.kind+" hit aligned to column");
+    assert.doesNotMatch(row.oddsText,/必杀|命中/,
+      id+" no repeated headings on individual strikes");
+  }
   assert.ok(metrics.root.y>viewport.height*.15,id+" map still visible");
   assert.ok(metrics.root.width<=viewport.width+3,id+" within viewport");
   assert.ok(metrics.button.height>=(viewport.width<=900?40:30),id+" confirm tappable");
@@ -123,10 +150,14 @@ try{
     const damage=row.querySelector(".forecast-strike-damage").getBoundingClientRect();
     return {count:rows.length,kind:row.dataset.kind,
       enemyOddsRight:odds.x>damage.x,
+      allyHeaderHidden:getComputedStyle(document.getElementById("forecast-strike-head-ally")).display==="none",
+      enemyHeaderVisible:getComputedStyle(document.getElementById("forecast-strike-head-enemy")).display!=="none",
       contents:row.textContent,visible:row.getBoundingClientRect().height>0};
   });
   assert.equal(enemyFirst.count,1,id+" no-counter only one attack");
   assert.ok(enemyFirst.enemyOddsRight,id+" enemy first odds on right, damage left");
+  assert.ok(enemyFirst.allyHeaderHidden,id+" inactive ally headings are hidden");
+  assert.ok(enemyFirst.enemyHeaderVisible,id+" enemy header shown");
   assert.ok(enemyFirst.visible);
   assert.doesNotMatch(enemyFirst.contents,/无法反击|保底|魔法伤害|耐久不消耗/);
   await page.screenshot({path:"browser-artifacts/forecast-strikes-enemy-"+id+".png"});
