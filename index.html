@@ -6,8 +6,8 @@
   <meta name="description" content="Wildfield Tactics：原创奇幻战棋，可缩放的战场地图与回合制战斗。"/>
   <meta name="theme-color" content="#071522"/>
   <title>Wildfield Tactics · 赤旗要塞</title>
-  <script type="module" crossorigin src="/games/tactics/assets/index-ChL6u82X.js"></script>
-  <link rel="stylesheet" crossorigin href="/games/tactics/assets/index-CCiWnOOb.css">
+  <script type="module" crossorigin src="/games/tactics/assets/index-gFXKJ7xA.js"></script>
+  <link rel="stylesheet" crossorigin href="/games/tactics/assets/index-DHXZCMwS.css">
 </head>
 <body>
   <div id="app" class="battle-shell">
@@ -70,7 +70,16 @@
                 <div class="forecast-portrait forecast-portrait-enemy" id="forecast-enemy-portrait" aria-hidden="true"><img class="forecast-portrait-art" id="forecast-enemy-art" alt="" draggable="false"/><span class="forecast-portrait-fallback" id="forecast-enemy-fallback" hidden>✦</span></div>
               </section>
             </div>
-            <!-- An entry for each potential strike: first hit, counter, follow-up. -->
+            <!-- Shared two-column headers. Values beneath are aligned across every attack. -->
+            <div id="forecast-strike-head" class="forecast-strike-head" aria-label="必杀与命中列标题" hidden>
+              <div id="forecast-strike-head-ally" class="forecast-strike-head-side forecast-strike-head-ally">
+                <span>必杀</span><span>命中</span>
+              </div>
+              <span class="forecast-strike-head-spacer" aria-hidden="true"></span>
+              <div id="forecast-strike-head-enemy" class="forecast-strike-head-side forecast-strike-head-enemy">
+                <span>命中</span><span>必杀</span>
+              </div>
+            </div>
             <div id="forecast-strike-list" class="forecast-strike-list" aria-label="逐次攻击预测" aria-live="polite"></div>
             <div id="forecast-action-cost" class="forecast-action-cost" hidden></div>
             <div class="forecast-health">
