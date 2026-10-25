@@ -2555,3 +2555,77 @@ button:disabled { cursor: not-allowed; }
   grid-column: 3;
   grid-row: 1;
 }
+
+
+/* v0.1.45.0: each forecast strike owns its hit, crit and inflicted damage.
+   Reference-style left/right sides are fixed; rows follow actual combat order. */
+.duel-v3 .forecast-strike-list {
+  display:flex;
+  flex-direction:column;
+  padding:0 clamp(9px,1vw,18px);
+  width:100%;
+  box-sizing:border-box;
+  border-top:1px solid #b7a472bd;
+  border-bottom:1px solid #a68d627f;
+  background:linear-gradient(90deg,#081623ec,#101923ed 48%,#241218e9);
+}
+.duel-v3 .forecast-strike-entry {
+  display:grid;
+  grid-template-columns:minmax(0,1fr) clamp(25px,3.5vw,50px) minmax(0,1fr);
+  align-items:center;
+  min-height:35px;
+  gap:clamp(4px,1vw,15px);
+  box-sizing:border-box;
+  border-bottom:1px solid #b7a8853f;
+}
+.duel-v3 .forecast-strike-entry:last-child {border-bottom:0}
+.duel-v3 .forecast-strike-side {
+  min-width:0;display:flex;align-items:center;gap:8px;
+}
+.duel-v3 .forecast-strike-left {justify-content:flex-end}
+.duel-v3 .forecast-strike-right {justify-content:flex-start}
+.duel-v3 .forecast-strike-kind {
+  font:550 clamp(10px,1vw,13px)/1 "Noto Serif SC",serif;
+  white-space:nowrap;text-align:center;color:#bdad87;
+}
+.duel-v3 .forecast-strike-chances {
+  display:inline-flex;align-items:center;gap:clamp(12px,2vw,32px);
+  color:#f5e8ce;
+  font:600 clamp(11px,1.45vw,19px)/1.1 "Noto Serif SC",serif;
+  font-variant-numeric:tabular-nums;
+  white-space:nowrap;
+}
+.duel-v3 .forecast-strike-damage {
+  font:italic 800 clamp(22px,2.55vw,34px)/1 Georgia,serif;
+  font-variant-numeric:tabular-nums;
+  white-space:nowrap;
+}
+.duel-v3 .forecast-strike-damage-enemy {color:#ff7a88}
+.duel-v3 .forecast-strike-damage-ally {color:#82dbf9}
+.duel-v3 .forecast-strike-heal {color:#a2f4bd}
+.duel-v3 .forecast-strike-entry-follow-up{
+  background:linear-gradient(90deg,#11283b36,transparent,#3a1c2436);
+}
+.duel-v3 .forecast-strike-list:empty {display:none}
+@media(max-width:900px){
+ .duel-v3 .forecast-strike-list{padding:0 7px}
+ .duel-v3 .forecast-strike-entry{
+   min-height:30px;
+   grid-template-columns:minmax(0,1fr) 31px minmax(0,1fr);
+   gap:4px;
+ }
+ .duel-v3 .forecast-strike-chances{font-size:clamp(10px,1.4vw,13px);gap:9px}
+ .duel-v3 .forecast-strike-damage{font-size:22px}
+ .duel-v3 .forecast-strike-kind{font-size:10px}
+}
+@media(max-width:540px){
+ .duel-v3 .forecast-strike-list{padding:0 4px}
+ .duel-v3 .forecast-strike-entry{
+   min-height:27px;
+   grid-template-columns:minmax(0,1fr) 25px minmax(0,1fr);
+   gap:2px;
+ }
+ .duel-v3 .forecast-strike-chances{font-size:9px;gap:4px;letter-spacing:-.025em}
+ .duel-v3 .forecast-strike-damage{font-size:17px}
+ .duel-v3 .forecast-strike-kind{font-size:9px}
+}

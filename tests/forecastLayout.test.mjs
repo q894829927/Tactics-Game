@@ -16,8 +16,8 @@ test("forecast is a balanced duel overlay without tutorial copy", () => {
   assert.match(html, /forecast-combatant-enemy/);
   assert.match(html, /id="forecast-ally-hp"/);
   assert.match(html, /id="forecast-enemy-hp"/);
-  assert.match(html, /id="forecast-damage"/);
-  assert.match(html, /id="forecast-counter"/);
+  assert.match(html, /id="forecast-strike-list"/);
+  assert.match(board, /this\.paintStrikeRows\(forecastStrikeRows\(attacker,forecast\)\)/);
   assert.match(html, /id="forecast-ally-bar"/);
   assert.match(html, /id="forecast-enemy-after"/);
   assert.doesNotMatch(html, /确认后才会结算|预计伤害|反击伤害|无法反击/);

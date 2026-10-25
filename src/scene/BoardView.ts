@@ -1,5 +1,5 @@
 import { Battle, MAP_HEIGHT, MAP_WIDTH, key, type Point, type Unit, type AttackForecast, type EnemyActionPlan, type CombatEvent, type SupportEffect, type SupportPreview } from "../engine/battle.ts";
-import { combatPreviewView } from "./combatPreviewView.ts";
+import { combatPreviewView, forecastStrikeRows, type ForecastStrikeRow } from "./combatPreviewView.ts";
 import {forecastPortraitFor} from "./forecastPortrait.ts";
 import {flatBattleCommands,skillSubmenuCommands,inventorySubmenuCommands,type FlatCommand} from "./flatBattleCommands.ts";
 import {WEAPON_LIBRARY,weaponRange,canWield} from "../engine/weapons.ts";
@@ -919,6 +919,47 @@ export class BoardView {
     document.getElementById(prefix+"weapon")!.textContent=unit.weapon.name;
   }
 
+  /** Hit, critical and damage belong to a specific strike, not a combatant.
+   * The actual player/enemy ordering follows the combat engine's strike sequence.
+   */
+  private paintStrikeRows(rows:readonly ForecastStrikeRow[]):void{
+    const list=document.getElementById("forecast-strike-list")!;
+    list.replaceChildren();
+    for(const strike of rows){
+      const row=document.createElement("div");
+      row.className="forecast-strike-entry forecast-strike-entry-"+strike.kind;
+      row.dataset.kind=strike.kind;
+      row.dataset.attacker=strike.from;
+      const left=document.createElement("div");
+      left.className="forecast-strike-side forecast-strike-left";
+      const middle=document.createElement("span");
+      middle.className="forecast-strike-kind";
+      middle.textContent=strike.kind==="follow-up"?"追击":"";
+      const right=document.createElement("div");
+      right.className="forecast-strike-side forecast-strike-right";
+      const offence=strike.from==="ally"?left:right;
+      const defence=strike.from==="ally"?right:left;
+      const odds=document.createElement("span");
+      odds.className="forecast-strike-chances";
+      const crit=document.createElement("span");
+      crit.className="forecast-strike-crit";
+      crit.textContent="必杀 "+strike.crit+"%";
+      const hit=document.createElement("span");
+      hit.className="forecast-strike-hit";
+      hit.textContent="命中 "+strike.hit+"%";
+      odds.append(crit,hit);
+      const damage=document.createElement("strong");
+      damage.className="forecast-strike-damage forecast-strike-damage-"+
+        (strike.from==="ally"?"enemy":"ally");
+      damage.textContent=strike.damage>0?"−"+strike.damage:"";
+      damage.hidden=strike.damage<=0;
+      offence.append(odds);
+      defence.append(damage);
+      row.append(left,middle,right);
+      list.append(row);
+    }
+  }
+
   private paintForecast(attacker: Unit, defender: Unit, forecast: AttackForecast): void {
     const view = combatPreviewView(attacker, defender, forecast);
     const byId = (id: string): HTMLElement => document.getElementById(id)!;
@@ -936,32 +977,7 @@ export class BoardView {
     byId("forecast-enemy-hp-current").textContent=String(view.enemy.unit.hp);
     byId("forecast-ally-hp").textContent=String(view.ally.hpAfter);
     byId("forecast-enemy-hp").textContent=String(view.enemy.hpAfter);
-    // Only a combatant who can actually attack gets hit/critical odds.
-    byId("forecast-ally-odds").textContent=
-      attacker.team==="ally"||forecast.canCounter?view.ally.hitText:"";
-    byId("forecast-enemy-odds").textContent=
-      attacker.team==="enemy"||forecast.canCounter?view.enemy.hitText:"";
-    const first=(id:string,value:number|null)=>{
-      const el=byId(id);
-      el.textContent=value!==null&&value>0?"−"+value:"";
-      el.hidden=value===null||value<=0;
-    };
-    first("forecast-damage",view.ally.firstDamage);
-    first("forecast-counter",view.enemy.firstDamage);
-    byId("forecast-first-strike-row").hidden=
-      (view.ally.firstDamage===null||view.ally.firstDamage<=0)&&
-      (view.enemy.firstDamage===null||view.enemy.firstDamage<=0);
-    const followUp=byId("forecast-followup-row");
-    const second=(id:string,value:number|null)=>{
-      const el=byId(id);
-      el.textContent=value!==null&&value>0?"−"+value:"";
-      el.hidden=value===null||value<=0;
-    };
-    second("forecast-ally-followup",view.ally.followUpDamage);
-    second("forecast-enemy-followup",view.enemy.followUpDamage);
-    followUp.hidden=!(view.ally.followUpDamage!==null&&view.ally.followUpDamage>0||
-      view.enemy.followUpDamage!==null&&view.enemy.followUpDamage>0);
-    byId("forecast-strike-label").textContent="伤害";
+    this.paintStrikeRows(forecastStrikeRows(attacker,forecast));
     for (const [id, amount] of [
       ["forecast-ally-bar", view.ally.unit.hp / view.ally.unit.maxHp],
       ["forecast-ally-after", view.ally.hpAfter / view.ally.unit.maxHp],
@@ -988,21 +1004,27 @@ export class BoardView {
     elem("forecast-ally-initiative").textContent="支援方";
     elem("forecast-enemy-initiative").textContent="受术方";
     elem("forecast-action-label").textContent="辅助预览";
-    elem("forecast-ally-odds").textContent="";
-    elem("forecast-enemy-odds").textContent="";
-    // Support actions never inherit visible follow-up/counter damage from
-    // the previously inspected attack.
+    // Support has no attack odds; replace the previous combat rows entirely.
     const healing=preview.effect==="heal"&&preview.value>0;
-    elem("forecast-strike-label").textContent=healing?"治疗":"效果";
-    elem("forecast-damage").textContent=preview.value>0?
-      (healing?"+"+preview.value:String(preview.value)):"";
-    elem("forecast-damage").hidden=preview.value<=0;
-    elem("forecast-first-strike-row").hidden=preview.value<=0;
-    elem("forecast-counter").textContent="";
-    elem("forecast-counter").hidden=true;
-    elem("forecast-followup-row").hidden=true;
-    elem("forecast-ally-followup").textContent="";
-    elem("forecast-enemy-followup").textContent="";
+    const rows=elem("forecast-strike-list");
+    rows.replaceChildren();
+    if(preview.value>0){
+      const row=document.createElement("div");
+      row.className="forecast-strike-entry forecast-strike-entry-support";
+      const left=document.createElement("div");
+      left.className="forecast-strike-side forecast-strike-left";
+      const kind=document.createElement("span");
+      kind.className="forecast-strike-kind";
+      kind.textContent=healing?"治疗":"效果";
+      const right=document.createElement("div");
+      right.className="forecast-strike-side forecast-strike-right";
+      const value=document.createElement("strong");
+      value.className="forecast-strike-damage forecast-strike-heal";
+      value.textContent=healing?"+"+preview.value:String(preview.value);
+      right.append(value);
+      row.append(left,kind,right);
+      rows.append(row);
+    }
     const after=healing?Math.min(target.maxHp,target.hp+preview.value):target.hp;
     elem("forecast-ally-hp-current").textContent=String(actor.hp);
     elem("forecast-enemy-hp-current").textContent=String(target.hp);

@@ -37,11 +37,10 @@ test("Portraits render as artwork layers, not oversized weapon emoji",()=>{
 });
 test("Keep existing forecast layers and real battle logic",()=>{
  const original=html.indexOf('id="forecast-ally-hp-current"');
- const odds=html.indexOf('class="forecast-odds-row"');
- const damage=html.indexOf('id="forecast-first-strike-row"');
- const follow=html.indexOf('id="forecast-followup-row"');
+ const strikes=html.indexOf('id="forecast-strike-list"');
  const remaining=html.indexOf('class="forecast-health"');
- assert.ok(original>0&&original<odds&&odds<damage&&damage<follow&&follow<remaining);
+ assert.ok(original>0&&original<strikes&&strikes<remaining);
+ assert.match(board,/this\.paintStrikeRows\(forecastStrikeRows\(attacker,forecast\)\)/);
  for(const id of ["forecast-attacker","forecast-defender","forecast-confirm","forecast-cancel",
    "forecast-ally-weapon","forecast-enemy-weapon","forecast-ally-bar",
    "forecast-enemy-after","forecast-ally-hp","forecast-enemy-hp"]){

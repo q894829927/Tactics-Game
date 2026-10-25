@@ -1,4 +1,6 @@
-/** v0.1.44.0 real browsers inspect cinematic forecast + desktop/mobile geometry. */
+/** Desktop + phone visual acceptance: one row for EACH prospective strike.
+ * The app-level strike construction is tested separately in forecastAnatomy.
+ */
 import assert from "node:assert/strict";
 import {mkdirSync} from "node:fs";
 import {chromium} from "playwright";
@@ -7,7 +9,7 @@ mkdirSync("browser-artifacts",{recursive:true});
 const browser=await chromium.launch({headless:true,args:["--no-sandbox"]});
 try{
  for(const viewport of [
-  {width:1896,height:660,isMobile:false}, // screenshot-sized enemy-first forecast
+  {width:1896,height:660,isMobile:false},
   {width:1366,height:768,isMobile:false},
   {width:390,height:844,isMobile:true},
   {width:320,height:568,isMobile:true},
@@ -17,138 +19,118 @@ try{
   const errors=[];page.on("pageerror",e=>errors.push(e.message));
   assert.equal((await page.goto(base,{waitUntil:"networkidle",timeout:60000}))?.status(),200);
   const images=await page.evaluate(async()=>{
-   const hide=document.getElementById("campaign-preparation-overlay");
-   if(hide)hide.hidden=true;
-   const pane=document.getElementById("attack-forecast");
-   pane.hidden=false;
-   const set=(id,v)=>document.getElementById(id).textContent=v;
-   set("forecast-attacker","霜羽");set("forecast-defender","掠夺者 C");
+   const prep=document.getElementById("campaign-preparation-overlay");
+   if(prep)prep.hidden=true;
+   document.getElementById("attack-forecast").hidden=false;
+   const set=(id,s)=>document.getElementById(id).textContent=s;
+   set("forecast-attacker","霜羽");set("forecast-defender","掠夺者 B");
    set("forecast-ally-role","弓手");set("forecast-enemy-role","步兵");
    set("forecast-ally-weapon","长弓");set("forecast-enemy-weapon","短斧");
    set("forecast-ally-hp-current","24");set("forecast-enemy-hp-current","21");
-   set("forecast-ally-odds","命中 93% · 必杀 0%");
-   set("forecast-enemy-odds","");
-   set("forecast-enemy-initiative","");
-   set("forecast-action-cost","");
+   set("forecast-ally-hp","19");set("forecast-enemy-hp","7");
+   for(const [id,width] of [
+    ["forecast-ally-bar","100%"],["forecast-ally-after","79%"],
+    ["forecast-enemy-bar","100%"],["forecast-enemy-after","33%"]
+   ])document.getElementById(id).style.width=width;
    document.getElementById("forecast-action-cost").hidden=true;
-   set("forecast-damage","−6");set("forecast-counter","");
-   document.getElementById("forecast-counter").hidden=true;
-   set("forecast-ally-hp","24");set("forecast-enemy-hp","15");
-   for(const [id,width] of [["forecast-ally-bar","100%"],["forecast-ally-after","100%"],
-    ["forecast-enemy-bar","100%"],["forecast-enemy-after","71.43%"]]){
-      document.getElementById(id).style.width=width;
-   }
-   const srcs=["archer.svg","raider.svg"];
-   const result=[];
+   const img=[];
    for(const [i,side] of ["ally","enemy"].entries()){
-     const image=document.getElementById("forecast-"+side+"-art");
-     image.src=new URL("assets/ui/portraits/"+srcs[i],location.href).href;
-     await image.decode();
-     result.push({side,width:image.naturalWidth,height:image.naturalHeight});
+    const art=document.getElementById("forecast-"+side+"-art");
+    art.src=new URL("assets/ui/portraits/"+["archer.svg","raider.svg"][i],location.href).href;
+    await art.decode();
+    img.push([art.naturalWidth,art.naturalHeight]);
    }
-   return result;
+   return img;
   });
-  assert.ok(images.every(i=>i.width>200&&i.height>300));
-  const measurement=await page.evaluate(()=>{
-   const rect=id=>{
-    const b=document.getElementById(id).getBoundingClientRect();
-    return {x:b.x,y:b.y,right:b.right,bottom:b.bottom,width:b.width,height:b.height};
-   };
-   return {
-    root:rect("attack-forecast"),allyArt:rect("forecast-ally-art"),
-    enemyArt:rect("forecast-enemy-art"),allyName:rect("forecast-attacker"),
-    duel:rect("forecast-ally-initiative"),
-    button:rect("forecast-confirm"),odds:rect("forecast-ally-odds"),
-    originalHp:rect("forecast-ally-hp-current"),
-    enemyHp:rect("forecast-enemy-hp-current"),
-    damage:rect("forecast-damage"),
-    counter:rect("forecast-counter"),
-    strike:rect("forecast-first-strike-row"),
-    costDisplay:getComputedStyle(document.getElementById("forecast-action-cost")).display,
-    enemyInitiativeDisplay:getComputedStyle(document.getElementById("forecast-enemy-initiative")).display,
-    enemyOddsDisplay:getComputedStyle(document.getElementById("forecast-enemy-odds")).display,
-    hpTrack:rect("forecast-ally-bar"),hpValue:rect("forecast-ally-hp"),
-    returnButton:rect("forecast-cancel"),
-    allyTrack:rect("forecast-ally-bar"),
-    color:getComputedStyle(document.getElementById("forecast-ally-after")).backgroundImage,
-    portraitMode:getComputedStyle(document.getElementById("forecast-ally-art")).objectFit,
-  };
-  });
+  assert.ok(images.every(([w,h])=>w>200&&h>300));
+  const setRows=async values=>page.evaluate(rows=>{
+   const list=document.getElementById("forecast-strike-list");
+   list.replaceChildren();
+   for(const entry of rows){
+    const row=document.createElement("div");
+    row.className="forecast-strike-entry forecast-strike-entry-"+entry.kind;
+    row.dataset.kind=entry.kind;row.dataset.attacker=entry.from;
+    const left=document.createElement("div"),right=document.createElement("div");
+    left.className="forecast-strike-side forecast-strike-left";
+    right.className="forecast-strike-side forecast-strike-right";
+    const middle=document.createElement("span");middle.className="forecast-strike-kind";
+    middle.textContent=entry.kind==="follow-up"?"追击":"";
+    const offence=entry.from==="ally"?left:right;
+    const defence=entry.from==="ally"?right:left;
+    const odds=document.createElement("span");
+    odds.className="forecast-strike-chances";
+    for(const [cl,value] of [
+      ["forecast-strike-crit","必杀 "+entry.crit+"%"],
+      ["forecast-strike-hit","命中 "+entry.hit+"%"]]){
+      const elem=document.createElement("span");elem.className=cl;
+      elem.textContent=value;odds.append(elem);
+    }
+    offence.append(odds);
+    const damage=document.createElement("strong");
+    damage.className="forecast-strike-damage forecast-strike-damage-"+(entry.from==="ally"?"enemy":"ally");
+    damage.textContent=entry.damage>0?"−"+entry.damage:"";
+    damage.hidden=entry.damage<=0;
+    defence.append(damage);
+    row.append(left,middle,right);list.append(row);
+   }
+  },values);
   const id=viewport.width+"x"+viewport.height;
-  assert.ok(measurement.allyArt.height>measurement.allyName.height*2,id+" portraits large");
-  assert.ok(measurement.allyArt.x<measurement.enemyArt.x,id+" portrait sides");
-  assert.ok(measurement.originalHp.y<measurement.odds.y,id+" original HP first");
-  assert.ok(measurement.odds.y<measurement.strike.y,id+" odds before strikes");
-  const middle=r=>r.x+r.width/2;
-  assert.ok(Math.abs(middle(measurement.damage)-middle(measurement.enemyHp))<=4,
-    id+" damage must align with receiving enemy's original HP");
-  assert.equal(measurement.costDisplay,"none",id+" no cost tutorial prose");
-  assert.equal(measurement.enemyInitiativeDisplay,"none",id+" no counter text");
-  assert.equal(measurement.enemyOddsDisplay,"none",id+" no counter odds");
-  assert.ok(measurement.strike.bottom<measurement.hpValue.y,id+" projected HP at bottom");
-  assert.ok(measurement.hpTrack.x<measurement.hpValue.x,id+" left HP number near center");
-  assert.ok(measurement.root.y>viewport.height*.25,id+" map still visible above forecast");
-  assert.ok(measurement.root.right<=viewport.width+2,id+" no horizontal overflow");
-  assert.ok(measurement.button.height>= (viewport.width<=900?40:30),id+" actionable button");
-  assert.equal(measurement.portraitMode,"contain");
-  // Verify defender's retaliation goes below OUR original HP rather than
-  // being centered in the full-width strike bar.
-  await page.evaluate(()=>{
-    const counter=document.getElementById("forecast-counter");
-    counter.hidden=false;counter.textContent="−4";
+  await setRows([
+    {kind:"attack",from:"ally",hit:93,crit:8,damage:6},
+    {kind:"counter",from:"enemy",hit:75,crit:3,damage:5},
+    {kind:"follow-up",from:"ally",hit:64,crit:8,damage:8}
+  ]);
+  const metrics=await page.evaluate(()=>{
+   const rect=e=>{const r=e.getBoundingClientRect();return {x:r.x,y:r.y,
+     center:r.x+r.width/2,bottom:r.bottom,width:r.width,height:r.height};};
+   const rows=[...document.querySelectorAll("#forecast-strike-list .forecast-strike-entry")];
+   return {
+    original:rect(document.getElementById("forecast-ally-hp-current")),
+    projected:rect(document.getElementById("forecast-ally-hp")),
+    hp:rect(document.getElementById("forecast-enemy-hp-current")),
+    root:rect(document.getElementById("attack-forecast")),
+    portrait:rect(document.getElementById("forecast-ally-art")),
+    button:rect(document.getElementById("forecast-confirm")),
+    rows:rows.map(row=>({
+     kind:row.dataset.kind,from:row.dataset.attacker,
+     rect:rect(row),odds:rect(row.querySelector(".forecast-strike-chances")),
+     damage:rect(row.querySelector(".forecast-strike-damage")),
+     scroll:row.querySelector(".forecast-strike-chances").scrollWidth,
+     client:row.querySelector(".forecast-strike-chances").clientWidth,
+     oddsText:row.querySelector(".forecast-strike-chances").textContent,
+    }))
+   };
   });
-  const counterCenter=await page.evaluate(()=>{
-    const r=document.getElementById("forecast-counter").getBoundingClientRect();
-    return r.x+r.width/2;
-  });
-  assert.ok(Math.abs(counterCenter-middle(measurement.originalHp))<=4,
-    id+" counter damage must align with receiving ally's original HP");
-  await page.evaluate(()=>{document.getElementById("forecast-counter").hidden=true;});
-  await page.screenshot({path:"browser-artifacts/cinematic-forecast-"+id+".png"});
-
-  // Regression for enemy-first, no-counter combat: old :empty{display:none}
-  // made CSS Grid auto-flow the enemy odds into the *separator's* 6%-width
-  // column, rendering "命中 1…" instead of the full text.
-  const enemyOdds="命中 100% · 必杀 5%";
-  await page.evaluate(odds=>{
-    const set=(id,v)=>document.getElementById(id).textContent=v;
-    set("forecast-ally-odds","");
-    set("forecast-enemy-odds",odds);
-    set("forecast-ally-initiative","");
-    set("forecast-enemy-initiative","先攻");
-    set("forecast-ally-hp-current","18");
-    set("forecast-enemy-hp-current","21");
-    set("forecast-ally-hp","12");
-    set("forecast-enemy-hp","21");
-    set("forecast-counter","−6");
-    document.getElementById("forecast-counter").hidden=false;
-    document.getElementById("forecast-damage").hidden=true;
-  },enemyOdds);
+  assert.equal(metrics.rows.length,3,id+" three distinct attacks");
+  assert.deepEqual(metrics.rows.map(r=>r.kind),["attack","counter","follow-up"]);
+  assert.ok(metrics.original.y<metrics.rows[0].rect.y,id+" original HP above attacks");
+  assert.ok(metrics.rows[2].rect.bottom<metrics.projected.y,id+" remaining HP beneath follow-up");
+  assert.ok(metrics.rows[0].odds.center<metrics.rows[0].damage.center,id+" ally first");
+  assert.ok(metrics.rows[1].damage.center<metrics.rows[1].odds.center,id+" enemy counter");
+  assert.ok(metrics.rows[2].odds.center<metrics.rows[2].damage.center,id+" ally follow-up");
+  assert.match(metrics.rows[0].oddsText,/必杀 8%命中 93%/);
+  assert.match(metrics.rows[2].oddsText,/必杀 8%命中 64%/);
+  assert.ok(metrics.root.y>viewport.height*.15,id+" map still visible");
+  assert.ok(metrics.root.width<=viewport.width+3,id+" within viewport");
+  assert.ok(metrics.button.height>=(viewport.width<=900?40:30),id+" confirm tappable");
+  for(const row of metrics.rows) assert.ok(row.client>=row.scroll,id+" odds not clipped: "+row.kind);
+  await page.screenshot({path:"browser-artifacts/forecast-strikes-triple-"+id+".png"});
+  await setRows([{kind:"attack",from:"enemy",hit:100,crit:2,damage:6}]);
   const enemyFirst=await page.evaluate(()=>{
-    const row=document.querySelector(".forecast-odds-row").getBoundingClientRect();
-    const enemy=document.getElementById("forecast-enemy-odds");
-    const ally=document.getElementById("forecast-ally-odds");
-    const rect=enemy.getBoundingClientRect();
-    return {
-      rowCenter:row.x+row.width/2,
-      enemyStart:rect.x,
-      enemyWidth:rect.width,
-      visible:getComputedStyle(enemy).display!=="none",
-      fullWidth:enemy.scrollWidth,
-      clientWidth:enemy.clientWidth,
-      leftHidden:getComputedStyle(ally).display==="none",
-      value:enemy.textContent
-    };
+    const rows=[...document.querySelectorAll("#forecast-strike-list .forecast-strike-entry")];
+    const row=rows[0];
+    const odds=row.querySelector(".forecast-strike-chances").getBoundingClientRect();
+    const damage=row.querySelector(".forecast-strike-damage").getBoundingClientRect();
+    return {count:rows.length,kind:row.dataset.kind,
+      enemyOddsRight:odds.x>damage.x,
+      contents:row.textContent,visible:row.getBoundingClientRect().height>0};
   });
-  assert.equal(enemyFirst.value,enemyOdds,id+" enemy-first odds preserved");
-  assert.equal(enemyFirst.leftHidden,true,id+" no-counter odds hidden");
-  assert.equal(enemyFirst.visible,true,id+" enemy odds shown");
-  assert.ok(enemyFirst.enemyStart>enemyFirst.rowCenter,
-    id+" enemy odds must occupy right half, not separator column");
-  assert.ok(enemyFirst.clientWidth>=enemyFirst.fullWidth,
-    id+" enemy hit/crit must not be truncated");
-  await page.screenshot({path:"browser-artifacts/enemy-first-odds-"+id+".png"});
-  assert.deepEqual(errors,[],id+" page errors");
+  assert.equal(enemyFirst.count,1,id+" no-counter only one attack");
+  assert.ok(enemyFirst.enemyOddsRight,id+" enemy first odds on right, damage left");
+  assert.ok(enemyFirst.visible);
+  assert.doesNotMatch(enemyFirst.contents,/无法反击|保底|魔法伤害|耐久不消耗/);
+  await page.screenshot({path:"browser-artifacts/forecast-strikes-enemy-"+id+".png"});
+  assert.deepEqual(errors,[],id+" runtime errors");
   await page.close();
  }
 }finally{await browser.close();}

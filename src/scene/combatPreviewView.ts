@@ -65,3 +65,34 @@ export function combatPreviewView(
     },
   };
 }
+
+/** Each potential strike is its own forecast row, in actual execution order.
+ * Original HP and projected remaining HP remain outside this list.
+ * Zero-damage strikes still keep their odds, because they can miss/crit.
+ */
+export type ForecastStrikeRow={
+  kind:"attack"|"counter"|"follow-up";
+  /** Initiating side of this individual strike, not necessarily the player. */
+  from:"ally"|"enemy";
+  hit:number;crit:number;damage:number;
+};
+export function forecastStrikeRows(attacker:Unit,forecast:AttackForecast):ForecastStrikeRow[]{
+  const first:ForecastStrikeRow={
+    kind:"attack",from:attacker.team,hit:forecast.attackerHit,
+    crit:forecast.attackerCrit,damage:forecast.damage
+  };
+  const rows:ForecastStrikeRow[]=[first];
+  if(forecast.canCounter){
+    rows.push({kind:"counter",from:attacker.team==="ally"?"enemy":"ally",
+      hit:forecast.defenderHit,crit:forecast.defenderCrit,damage:forecast.counterDamage});
+  }
+  if(forecast.followUp){
+    rows.push({kind:"follow-up",
+      from:forecast.followUp==="attacker"?attacker.team:
+        attacker.team==="ally"?"enemy":"ally",
+      hit:forecast.followUpHit??(forecast.followUp==="attacker"?forecast.attackerHit:forecast.defenderHit),
+      crit:forecast.followUpCrit??(forecast.followUp==="attacker"?forecast.attackerCrit:forecast.defenderCrit),
+      damage:forecast.followUpDamage});
+  }
+  return rows;
+}

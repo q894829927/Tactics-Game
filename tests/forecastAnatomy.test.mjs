@@ -2,91 +2,71 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {readFileSync} from "node:fs";
 import {Battle} from "../src/engine/battle.ts";
-import {combatPreviewView} from "../src/scene/combatPreviewView.ts";
+import {combatPreviewView,forecastStrikeRows} from "../src/scene/combatPreviewView.ts";
 
-const read=(p)=>readFileSync(new URL("../"+p,import.meta.url),"utf8");
-const html=read("index.html");
-const board=read("src/scene/BoardView.ts");
-const css=read("src/style.css");
-function combat(){
- const b=new Battle();
- const ally=b.units.find(u=>u.id==="a1");
- const enemy=b.units.find(u=>u.id==="e1");
- ally.x=5;ally.y=1;enemy.x=6;enemy.y=1;
- const f=b.forecastAttack(ally,enemy);
- assert.ok(f);
- return {b,ally,enemy,f};
+const read=p=>readFileSync(new URL("../"+p,import.meta.url),"utf8");
+const html=read("index.html"),css=read("src/style.css"),board=read("src/scene/BoardView.ts");
+function setup(){
+ const b=new Battle(),a=b.units.find(u=>u.id==="a1"),d=b.units.find(u=>u.id==="e1");
+ a.x=5;a.y=1;d.x=6;d.y=1;
+ const f=b.forecastAttack(a,d);assert.ok(f);
+ return {b,a,d,f};
 }
-test("Forecast layers run in exact semantic order: current -> odds -> damage -> remaining",()=>{
+test("Forecast layers keep original HP -> per-strike lines -> remaining HP",()=>{
  const current=html.indexOf('id="forecast-ally-hp-current"');
- const odds=html.indexOf('class="forecast-odds-row"');
- const strike=html.indexOf('id="forecast-first-strike-row"');
- const follow=html.indexOf('id="forecast-followup-row"');
+ const strikes=html.indexOf('id="forecast-strike-list"');
  const health=html.indexOf('class="forecast-health"');
- assert.ok(current>=0&&current<odds&&odds<strike&&strike<follow&&follow<health);
+ assert.ok(current>=0&&current<strikes&&strikes<health);
  assert.match(html,/id="forecast-enemy-hp-current"/);
- assert.match(html,/id="forecast-ally-hp"/);
- assert.match(html,/id="forecast-enemy-hp"/);
- assert.match(html,/id="forecast-ally-bar"/);
- assert.match(html,/id="forecast-enemy-after"/);
- assert.match(css,/\.duel-v2 \.forecast-odds-row\{/);
- assert.match(css,/\.duel-v2 \.forecast-followup-row\{/);
+ assert.match(css,/\.duel-v3 \.forecast-strike-entry \{/);
+ assert.match(board,/list\.replaceChildren\(\)/);
 });
-test("Normal forecast exposes original and projected HP without mutating combatants",()=>{
- const {ally,enemy,f}=combat();
- const hp=[ally.hp,enemy.hp];
- const view=combatPreviewView(ally,enemy,f);
- assert.deepEqual([view.ally.unit.hp,view.enemy.unit.hp],hp);
- assert.equal(view.ally.hpAfter,f.attackerHpAfter);
- assert.equal(view.enemy.hpAfter,f.defenderHpAfter);
- assert.equal(view.ally.firstDamage,f.damage);
- assert.equal(view.enemy.firstDamage,f.canCounter?f.counterDamage:null);
- assert.match(view.ally.hitText,/命中 \d+% · 必杀 \d+%/);
- assert.deepEqual([ally.hp,enemy.hp],hp);
+test("Forecast is read-only and maintains independent existing HP fields",()=>{
+ const {a,d,f}=setup();
+ const before=[a.hp,d.hp];const v=combatPreviewView(a,d,f);
+ assert.deepEqual(before,[a.hp,d.hp]);
+ assert.equal(v.ally.hpAfter,f.attackerHpAfter);
+ assert.equal(v.enemy.hpAfter,f.defenderHpAfter);
+ assert.equal(v.ally.firstDamage,f.damage);
+ assert.equal(v.enemy.firstDamage,f.canCounter?f.counterDamage:null);
 });
-test("No counter does not render an incoming damage amount, either initiative",()=>{
- const {ally,enemy,f}=combat();
- const noCounter={...f,canCounter:false,counterDamage:0,followUp:null};
- const a=combatPreviewView(ally,enemy,noCounter);
- assert.equal(a.enemy.firstDamage,null);
- assert.equal(a.enemy.followUpDamage,null);
- assert.equal(a.enemy.damageText,"—");
- const b=combatPreviewView(enemy,ally,noCounter);
- assert.equal(b.ally.firstDamage,null);
- assert.equal(b.ally.followUpDamage,null);
+test("First, counter, follow-up rows follow actual strike order and sides",()=>{
+ const {a,d,f}=setup();
+ const specimen={...f,damage:11,canCounter:true,counterDamage:3,followUp:"attacker",
+  attackerHit:91,attackerCrit:13,defenderHit:58,defenderCrit:2,
+  followUpHit:69,followUpCrit:7,followUpDamage:12};
+ const got=forecastStrikeRows(a,specimen);
+ assert.deepEqual(got,[
+  {kind:"attack",from:"ally",hit:91,crit:13,damage:11},
+  {kind:"counter",from:"enemy",hit:58,crit:2,damage:3},
+  {kind:"follow-up",from:"ally",hit:69,crit:7,damage:12}
+ ]);
+ const enemyFirst=forecastStrikeRows(d,{...specimen,followUp:"defender"});
+ assert.deepEqual(enemyFirst.map(x=>x.from),["enemy","ally","ally"]);
+ assert.deepEqual(enemyFirst.map(x=>x.kind),["attack","counter","follow-up"]);
+ const enemyAttacker=forecastStrikeRows(d,{...specimen,followUp:"attacker"});
+ assert.deepEqual(enemyAttacker.map(x=>x.from),["enemy","ally","enemy"]);
 });
-test("Follow-up damage is independent and stays on the proper receiving side",()=>{
- const {ally,enemy,f}=combat();
- const attacker={...f,followUp:"attacker",followUpDamage:7};
- const a=combatPreviewView(ally,enemy,attacker);
- assert.equal(a.ally.firstDamage,f.damage);
- assert.equal(a.ally.followUpDamage,7);
- assert.equal(a.enemy.followUpDamage,null);
- const enemyFirst=combatPreviewView(enemy,ally,attacker);
- assert.equal(enemyFirst.enemy.firstDamage,f.damage);
- assert.equal(enemyFirst.enemy.followUpDamage,7);
- assert.equal(enemyFirst.ally.followUpDamage,null);
- const counter={...f,canCounter:true,followUp:"defender",followUpDamage:5};
- const b=combatPreviewView(ally,enemy,counter);
- assert.equal(b.enemy.followUpDamage,5);
- assert.equal(b.ally.followUpDamage,null);
+test("No counter and no follow-up produce one entry, including zero-damage attacks",()=>{
+ const {a,f}=setup();
+ const first=forecastStrikeRows(a,{...f,canCounter:false,counterDamage:0,followUp:null,damage:0});
+ assert.equal(first.length,1);
+ assert.equal(first[0].damage,0);
+ assert.equal(first[0].hit,f.attackerHit);
 });
-test("Damage entries are on the RECEIVER side: ally's damage on enemy right",()=>{
- const leftCounter=html.indexOf('id="forecast-counter"');
- const rightAttack=html.indexOf('id="forecast-damage"');
- const leftEnemyFollow=html.indexOf('id="forecast-enemy-followup"');
- const rightAllyFollow=html.indexOf('id="forecast-ally-followup"');
- assert.ok(leftCounter>0&&leftCounter<rightAttack);
- assert.ok(leftEnemyFollow>0&&leftEnemyFollow<rightAllyFollow);
- assert.match(board,/first\("forecast-damage",view\.ally\.firstDamage\)/);
- assert.match(board,/first\("forecast-counter",view\.enemy\.firstDamage\)/);
- assert.match(board,/followUp\.hidden=/);
- assert.match(css,/\.duel-v2 \.forecast-strike\[hidden\]\{display:none!important\}/);
+test("Real follow-up uses non-first-hit bonus odds rather than blindly reusing first",()=>{
+ const {b,a,d}=setup();
+ a.stats.speed=20;d.stats.speed=4;a.build=99;d.build=99;
+ a.weapon.hit=55;
+ const f=b.forecastAttack(a,d);
+ assert.ok(f);assert.equal(f.followUp,"attacker");
+ assert.equal(f.followUpHit,b.hitChance(a,d));
+ assert.equal(f.followUpCrit,b.criticalChance(a,d));
+ const rows=forecastStrikeRows(a,f);
+ assert.equal(rows[rows.length-1].hit,f.followUpHit);
 });
-test("Support clears past attack-only lines and displays healing as a positive effect",()=>{
- assert.match(board,/elem\("forecast-strike-label"\)\.textContent=healing\?"治疗":"效果"/);
- assert.match(board,/elem\("forecast-followup-row"\)\.hidden=true/);
- assert.match(board,/elem\("forecast-counter"\)\.hidden=true/);
- assert.match(board,/elem\("forecast-ally-hp-current"\)\.textContent=String\(actor\.hp\)/);
+test("Support rendering always clears previous attack rows",()=>{
+ assert.match(board,/rows\.replaceChildren\(\)/);
  assert.match(board,/elem\("forecast-enemy-hp"\)\.textContent=String\(after\)/);
+ assert.match(board,/elem\("forecast-strike-list"\)/);
 });

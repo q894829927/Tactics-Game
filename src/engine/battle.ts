@@ -86,6 +86,8 @@ export type AttackForecast = {
   damage:number; counterDamage:number; canCounter:boolean;
   attackerHpAfter:number; defenderHpAfter:number;
   attackerHit:number; defenderHit:number; attackerCrit:number; defenderCrit:number;
+  /** Independent odds for the additional strike; first-hit art/innate bonuses expire. */
+  followUpHit:number|null; followUpCrit:number|null;
   followUp:"attacker"|"defender"|null;
   /** Damage of only the additional attack, computed independently for sword. */
   followUpDamage:number;
@@ -976,7 +978,23 @@ export class Battle {
           expiresAfter:this.phaseSerial[attacker.team]+1}]}:attacker;
     const retreatTo=career?.retreatOnKill&&hpD===0&&hpA>0?
       this.retreatPosition(attacker,defender):null;
+    // The first strike receives action/innate hit bonuses. Each later strike
+    // rolls again with its own chance (and any normal-hit status changes).
+    // A counterattacker's meleeWeaken is consumed by its first melee strike.
+    const defenderAfterCounter=canCounter&&
+      projectedDefender.weapon.kind==="physical"&&distance(attacker,defender)===1
+      ? {...projectedDefender,statuses:projectedDefender.statuses.filter(s=>s.kind!=="meleeWeaken")}
+      : projectedDefender;
+    const followUpHit=followUp==="attacker"
+      ? this.hitChance(attacker,projectedDefender)
+      : followUp==="defender"
+        ? this.hitChance(defenderAfterCounter,projected):null;
+    const followUpCrit=followUp==="attacker"
+      ? this.criticalChance(attacker,projectedDefender)
+      : followUp==="defender"
+        ? this.criticalChance(defenderAfterCounter,projected):null;
     return {damage,counterDamage:canCounter?counterDamage:0,canCounter,attackerHpAfter:hpA,defenderHpAfter:hpD,
+      followUpHit,followUpCrit,
       ...(career?{careerEffect:career.description,retreatTo}:{}),
       attackerHit:this.hitChance(attacker,defender,(formal?.hitBonus??0)+(career?.hitBonus??0)+
         innateHitBonus(attacker,defender,true,artId===undefined)+

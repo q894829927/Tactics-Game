@@ -82,5 +82,5 @@ test("right-click undo and combat forecast retain explicit confirm/cancel", () =
   assert.match(view,/this\.battle\.cancelMove\(\)/);
   assert.match(html,/id="forecast-confirm"/);
   assert.match(html,/id="forecast-cancel"/);
-  assert.match(html,/id="forecast-damage"/);
+  assert.match(html,/id="forecast-strike-list"/);
 });

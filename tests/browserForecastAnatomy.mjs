@@ -1,77 +1,54 @@
-/**
- * Visual geometry smoke at the game's real production viewport.
- * Uses fixture text to isolate CSS geometry; numerical calculations are checked
- * independently by the forecast anatomy and engine tests.
- */
+/** Spot-check the live browser's per-strike HUD geometry and compact support. */
 import assert from "node:assert/strict";
 import {mkdirSync} from "node:fs";
 import {chromium} from "playwright";
-const base=process.env.MAP_ACCEPTANCE_URL||
-  "http://127.0.0.1:4173/games/tactics/";
+const base=process.env.MAP_ACCEPTANCE_URL??"http://127.0.0.1:4173/games/tactics/";
 mkdirSync("browser-artifacts",{recursive:true});
 const browser=await chromium.launch({headless:true,args:["--no-sandbox"]});
 try{
  for(const viewport of [{width:1366,height:768},{width:390,height:844}]){
-  const page=await browser.newPage({viewport,isMobile:viewport.width<500,
-    hasTouch:viewport.width<500});
+  const page=await browser.newPage({viewport,isMobile:viewport.width<500,hasTouch:viewport.width<500});
   const errs=[];page.on("pageerror",e=>errs.push(e.message));
-  const response=await page.goto(base,{waitUntil:"networkidle",timeout:60000});
-  assert.equal(response?.status(),200);
+  assert.equal((await page.goto(base,{waitUntil:"networkidle",timeout:60000}))?.status(),200);
   await page.evaluate(()=>{
-    const root=document.getElementById("attack-forecast");
-    root.hidden=false;
-    const set=(id,text)=>{
-      const e=document.getElementById(id);e.textContent=text;
-    };
-    set("forecast-ally-hp-current","24");
-    set("forecast-enemy-hp-current","21");
-    set("forecast-ally-odds","命中 93% · 必杀 0%");
-    set("forecast-enemy-odds","");
-    set("forecast-enemy-initiative","");
-    set("forecast-action-cost","");
-    document.getElementById("forecast-action-cost").hidden=true;
-    set("forecast-damage","−6");
-    set("forecast-counter","");
-    document.getElementById("forecast-counter").hidden=true;
-    document.getElementById("forecast-followup-row").hidden=true;
-    set("forecast-ally-hp","24");set("forecast-enemy-hp","15");
+   document.getElementById("attack-forecast").hidden=false;
+   const s=(id,t)=>document.getElementById(id).textContent=t;
+   s("forecast-ally-hp-current","24");s("forecast-enemy-hp-current","21");
+   s("forecast-ally-hp","24");s("forecast-enemy-hp","15");
+   const list=document.getElementById("forecast-strike-list");
+   list.replaceChildren();
+   const row=document.createElement("div");
+   row.className="forecast-strike-entry forecast-strike-entry-attack";
+   row.innerHTML='<div class="forecast-strike-side forecast-strike-left"><span class="forecast-strike-chances"><span class="forecast-strike-crit">必杀 4%</span><span class="forecast-strike-hit">命中 100%</span></span></div><span class="forecast-strike-kind"></span><div class="forecast-strike-side forecast-strike-right"><strong class="forecast-strike-damage forecast-strike-damage-enemy">−6</strong></div>';
+   list.append(row);
   });
-  const metrics=await page.evaluate(()=>{
-    const box=id=>{
-      const r=document.getElementById(id).getBoundingClientRect();
-      return {top:r.top,bottom:r.bottom,left:r.left,right:r.right,
-        width:r.width,height:r.height};
-    };
-    return {current:box("forecast-ally-hp-current"),
-      odds:box("forecast-ally-odds"),damage:box("forecast-damage"),
-      projected:box("forecast-ally-hp"),
-      root:box("attack-forecast"),
-      followHidden:getComputedStyle(document.getElementById("forecast-followup-row")).display==="none",
-      counterHidden:getComputedStyle(document.getElementById("forecast-counter")).display==="none"};
+  const initial=await page.evaluate(()=>{
+   const pos=id=>document.getElementById(id).getBoundingClientRect();
+   const r=document.querySelector(".forecast-strike-entry").getBoundingClientRect();
+   const hp=pos("forecast-ally-hp");
+   return {top:r.top,bottom:r.bottom,above:pos("forecast-ally-hp-current").top,below:hp.top};
   });
-  const name=viewport.width+"x"+viewport.height;
-  assert.ok(metrics.current.top<metrics.odds.top,name+" original HP must be above odds");
-  assert.ok(metrics.odds.top<metrics.damage.top,name+" odds must be above damage");
-  assert.ok(metrics.damage.top<metrics.projected.top,name+" damage before projected HP");
-  assert.equal(metrics.followHidden,true,name+" unused follow-up hidden");
-  assert.equal(metrics.counterHidden,true,name+" no counter damage hidden");
-  assert.ok(metrics.root.width<=viewport.width+3,name+" overlay fits viewport");
+  const label=viewport.width+"x"+viewport.height;
+  assert.ok(initial.above<initial.top,label+" original HP first");
+  assert.ok(initial.bottom<initial.below,label+" remaining HP last");
   await page.evaluate(()=>{
-    document.getElementById("forecast-followup-row").hidden=false;
-    document.getElementById("forecast-ally-followup").textContent="−3";
-    document.getElementById("forecast-ally-followup").hidden=false;
-    document.getElementById("forecast-enemy-followup").hidden=true;
+   const list=document.getElementById("forecast-strike-list");
+   const old=list.firstElementChild;
+   const second=old.cloneNode(true);second.dataset.kind="follow-up";
+   second.querySelector(".forecast-strike-kind").textContent="追击";
+   second.querySelector(".forecast-strike-hit").textContent="命中 63%";
+   second.querySelector(".forecast-strike-damage").textContent="−9";
+   list.append(second);
   });
-  const more=await page.evaluate(()=>{
-    const f=document.getElementById("forecast-followup-row").getBoundingClientRect();
-    const hp=document.getElementById("forecast-ally-hp").getBoundingClientRect();
-    return {visible:getComputedStyle(document.getElementById("forecast-followup-row")).display!=="none",
-      top:f.top,bottom:f.bottom,hpTop:hp.top};
+  const added=await page.evaluate(()=>{
+   const list=document.getElementById("forecast-strike-list"),r=list.lastElementChild;
+   return {n:list.children.length,bottom:r.getBoundingClientRect().bottom,
+     hpTop:document.getElementById("forecast-ally-hp").getBoundingClientRect().top};
   });
-  assert.equal(more.visible,true,name+" extra follow-up row visible");
-  assert.ok(more.bottom<more.hpTop,name+" follow-up remains before projected HP");
-  await page.screenshot({path:"browser-artifacts/forecast-layers-"+name+".png"});
-  assert.deepEqual(errs,[],name+" runtime errors");
+  assert.equal(added.n,2,label+" follow-up adds separate row");
+  assert.ok(added.bottom<added.hpTop,label+" no overlap after expansion");
+  await page.screenshot({path:"browser-artifacts/forecast-strikes-layout-"+label+".png"});
+  assert.deepEqual(errs,[],label+" page errors");
   await page.close();
  }
 }finally{await browser.close();}
