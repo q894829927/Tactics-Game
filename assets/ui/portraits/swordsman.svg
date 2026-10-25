@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 480" role="img" aria-label="原创奇幻战术角色肖像 swordsman">
+<svg xmlns="http://www.w3.org/2000/svg" width="360" height="480" viewBox="0 0 360 480" role="img" aria-label="原创奇幻战术角色肖像 swordsman">
 <defs>
  <linearGradient id="steel" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#b1c8cb"/><stop offset=".45" stop-color="#0b3650"/><stop offset="1" stop-color="#2f8399"/></linearGradient>
  <linearGradient id="iron" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#b1c8cb"/><stop offset=".57" stop-color="#193f58"/><stop offset="1" stop-color="#0b3650"/></linearGradient>
