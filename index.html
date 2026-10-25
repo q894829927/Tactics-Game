@@ -6,8 +6,8 @@
   <meta name="description" content="Wildfield Tactics：原创奇幻战棋，可缩放的战场地图与回合制战斗。"/>
   <meta name="theme-color" content="#071522"/>
   <title>Wildfield Tactics · 赤旗要塞</title>
-  <script type="module" crossorigin src="/games/tactics/assets/index-xPa_vDEq.js"></script>
-  <link rel="stylesheet" crossorigin href="/games/tactics/assets/index-C5YVK11G.css">
+  <script type="module" crossorigin src="/games/tactics/assets/index-ChL6u82X.js"></script>
+  <link rel="stylesheet" crossorigin href="/games/tactics/assets/index-CCiWnOOb.css">
 </head>
 <body>
   <div id="app" class="battle-shell">
@@ -70,24 +70,9 @@
                 <div class="forecast-portrait forecast-portrait-enemy" id="forecast-enemy-portrait" aria-hidden="true"><img class="forecast-portrait-art" id="forecast-enemy-art" alt="" draggable="false"/><span class="forecast-portrait-fallback" id="forecast-enemy-fallback" hidden>✦</span></div>
               </section>
             </div>
-            <div class="forecast-odds-row" aria-label="双方命中率与必杀率">
-              <span id="forecast-ally-odds" class="forecast-odds">命中 — · 必杀 —</span>
-              <span class="forecast-odds-divider" aria-hidden="true"></span>
-              <span id="forecast-enemy-odds" class="forecast-odds">命中 — · 必杀 —</span>
-            </div>
-            <div class="forecast-strikes" aria-label="本次战斗伤害预测">
-              <div class="forecast-strike-row" id="forecast-first-strike-row">
-                <span id="forecast-counter" class="forecast-strike forecast-strike-ally"></span>
-                <span id="forecast-strike-label" class="forecast-strike-label">伤害</span>
-                <span id="forecast-damage" class="forecast-strike forecast-strike-enemy"></span>
-              </div>
-              <div class="forecast-strike-row forecast-followup-row" id="forecast-followup-row" hidden>
-                <span id="forecast-enemy-followup" class="forecast-strike forecast-strike-ally"></span>
-                <span class="forecast-strike-label">追击</span>
-                <span id="forecast-ally-followup" class="forecast-strike forecast-strike-enemy"></span>
-              </div>
-              <div id="forecast-action-cost" class="forecast-action-cost" aria-live="polite"></div>
-            </div>
+            <!-- An entry for each potential strike: first hit, counter, follow-up. -->
+            <div id="forecast-strike-list" class="forecast-strike-list" aria-label="逐次攻击预测" aria-live="polite"></div>
+            <div id="forecast-action-cost" class="forecast-action-cost" hidden></div>
             <div class="forecast-health">
               <div class="forecast-health-side forecast-health-ally">
                 <span class="forecast-hp-value" id="forecast-ally-hp">—</span>
