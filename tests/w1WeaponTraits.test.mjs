@@ -149,7 +149,12 @@ test("W1: sword follow-up ×1.2 is only on extra hit; forecast, UI and actual ma
  assert.equal(forecast.defenderHpAfter,d.hp-22);
  const view=combatPreviewView(a,d,forecast);
  assert.equal(view.ally.damageText,"10＋12");
- assert.match(view.ally.hitText,/剑追击伤害 ×1\.2/);
+ assert.equal(view.ally.hitText,
+   "命中 "+forecast.attackerHit+"% · 必杀 "+forecast.attackerCrit+"%");
+ assert.match(forecast.attackerTrait,/剑追击伤害 ×1\.2/,
+   "Underlying weapon trait remains present in the engine forecast");
+ assert.equal(view.ally.followUpDamage,12,
+   "Follow-up still appears as its own damage value without extra odds prose");
  const events=commit(game,a,d);
  assert.deepEqual(events.map(x=>x.kind),["attack","counter","follow-up"]);
  assert.equal(events[0].damage,10);
