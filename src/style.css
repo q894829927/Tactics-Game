@@ -2484,3 +2484,56 @@ button:disabled { cursor: not-allowed; }
  .attack-forecast.duel-v3{animation:none}
  .duel-v3 .forecast-hp-track span{transition:none}
 }
+
+
+/* v0.1.44.3 — exact horizontal HP/damage alignment and a clean forecast HUD.
+   Damage is shown beneath the HP of the character receiving that damage. */
+.duel-v3 .forecast-v2-content {
+  --forecast-core-width: clamp(150px, 18%, 255px);
+}
+.duel-v3 .forecast-duel {
+  grid-template-columns: minmax(0, 1fr) var(--forecast-core-width) minmax(0, 1fr);
+}
+.duel-v3 .forecast-strikes {
+  padding-left: 0;
+  padding-right: 0;
+}
+.duel-v3 .forecast-strike-row {
+  box-sizing: border-box;
+  width: var(--forecast-core-width);
+  margin-inline: auto;
+  padding: 1px 0;
+  grid-template-columns: minmax(0, 1fr) 34px minmax(0, 1fr);
+  gap: 5px;
+  justify-items: center;
+}
+.duel-v3 .forecast-strike-row .forecast-strike {
+  padding: 0;
+  justify-self: center;
+  text-align: center;
+}
+.duel-v3 #forecast-counter,
+.duel-v3 #forecast-enemy-followup { grid-column: 1; }
+.duel-v3 .forecast-strike-row .forecast-strike-label { grid-column: 2; }
+.duel-v3 #forecast-damage,
+.duel-v3 #forecast-ally-followup { grid-column: 3; }
+.duel-v3 .forecast-action-cost,
+.duel-v3 .forecast-action-cost[hidden],
+.duel-v3 .forecast-initiative:empty,
+.duel-v3 .forecast-odds:empty {
+  display: none !important;
+}
+@media (max-width: 900px) {
+  .duel-v3 .forecast-v2-content { --forecast-core-width: clamp(100px, 18%, 160px); }
+  .duel-v3 .forecast-strike-row {
+    grid-template-columns: minmax(0, 1fr) 25px minmax(0, 1fr);
+    gap: 2px;
+  }
+}
+@media (max-width: 540px) {
+  .duel-v3 .forecast-v2-content { --forecast-core-width: 84px; }
+  .duel-v3 .forecast-strike-row {
+    grid-template-columns: minmax(0, 1fr) 21px minmax(0, 1fr);
+    gap: 1px;
+  }
+}

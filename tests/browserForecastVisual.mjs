@@ -26,7 +26,10 @@ try{
    set("forecast-ally-weapon","长弓");set("forecast-enemy-weapon","短斧");
    set("forecast-ally-hp-current","24");set("forecast-enemy-hp-current","21");
    set("forecast-ally-odds","命中 93% · 必杀 0%");
-   set("forecast-enemy-odds","无法反击");
+   set("forecast-enemy-odds","");
+   set("forecast-enemy-initiative","");
+   set("forecast-action-cost","");
+   document.getElementById("forecast-action-cost").hidden=true;
    set("forecast-damage","−6");set("forecast-counter","");
    document.getElementById("forecast-counter").hidden=true;
    set("forecast-ally-hp","24");set("forecast-enemy-hp","15");
@@ -56,7 +59,13 @@ try{
     duel:rect("forecast-ally-initiative"),
     button:rect("forecast-confirm"),odds:rect("forecast-ally-odds"),
     originalHp:rect("forecast-ally-hp-current"),
+    enemyHp:rect("forecast-enemy-hp-current"),
+    damage:rect("forecast-damage"),
+    counter:rect("forecast-counter"),
     strike:rect("forecast-first-strike-row"),
+    costDisplay:getComputedStyle(document.getElementById("forecast-action-cost")).display,
+    enemyInitiativeDisplay:getComputedStyle(document.getElementById("forecast-enemy-initiative")).display,
+    enemyOddsDisplay:getComputedStyle(document.getElementById("forecast-enemy-odds")).display,
     hpTrack:rect("forecast-ally-bar"),hpValue:rect("forecast-ally-hp"),
     returnButton:rect("forecast-cancel"),
     allyTrack:rect("forecast-ally-bar"),
@@ -69,12 +78,31 @@ try{
   assert.ok(measurement.allyArt.x<measurement.enemyArt.x,id+" portrait sides");
   assert.ok(measurement.originalHp.y<measurement.odds.y,id+" original HP first");
   assert.ok(measurement.odds.y<measurement.strike.y,id+" odds before strikes");
+  const middle=r=>r.x+r.width/2;
+  assert.ok(Math.abs(middle(measurement.damage)-middle(measurement.enemyHp))<=4,
+    id+" damage must align with receiving enemy's original HP");
+  assert.equal(measurement.costDisplay,"none",id+" no cost tutorial prose");
+  assert.equal(measurement.enemyInitiativeDisplay,"none",id+" no counter text");
+  assert.equal(measurement.enemyOddsDisplay,"none",id+" no counter odds");
   assert.ok(measurement.strike.bottom<measurement.hpValue.y,id+" projected HP at bottom");
   assert.ok(measurement.hpTrack.x<measurement.hpValue.x,id+" left HP number near center");
   assert.ok(measurement.root.y>viewport.height*.25,id+" map still visible above forecast");
   assert.ok(measurement.root.right<=viewport.width+2,id+" no horizontal overflow");
   assert.ok(measurement.button.height>= (viewport.width<=900?40:30),id+" actionable button");
   assert.equal(measurement.portraitMode,"contain");
+  // Verify defender's retaliation goes below OUR original HP rather than
+  // being centered in the full-width strike bar.
+  await page.evaluate(()=>{
+    const counter=document.getElementById("forecast-counter");
+    counter.hidden=false;counter.textContent="−4";
+  });
+  const counterCenter=await page.evaluate(()=>{
+    const r=document.getElementById("forecast-counter").getBoundingClientRect();
+    return r.x+r.width/2;
+  });
+  assert.ok(Math.abs(counterCenter-middle(measurement.originalHp))<=4,
+    id+" counter damage must align with receiving ally's original HP");
+  await page.evaluate(()=>{document.getElementById("forecast-counter").hidden=true;});
   await page.screenshot({path:"browser-artifacts/cinematic-forecast-"+id+".png"});
   assert.deepEqual(errors,[],id+" page errors");
   await page.close();

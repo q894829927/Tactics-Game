@@ -26,7 +26,10 @@ try{
     set("forecast-ally-hp-current","24");
     set("forecast-enemy-hp-current","21");
     set("forecast-ally-odds","命中 93% · 必杀 0%");
-    set("forecast-enemy-odds","无法反击");
+    set("forecast-enemy-odds","");
+    set("forecast-enemy-initiative","");
+    set("forecast-action-cost","");
+    document.getElementById("forecast-action-cost").hidden=true;
     set("forecast-damage","−6");
     set("forecast-counter","");
     document.getElementById("forecast-counter").hidden=true;

@@ -926,9 +926,11 @@ export class BoardView {
     const byId = (id: string): HTMLElement => document.getElementById(id)!;
     this.setForecastIdentity(view.ally.unit,"ally");
     this.setForecastIdentity(view.enemy.unit,"enemy");
-    byId("forecast-ally-initiative").textContent=attacker.team==="ally"?"先攻":"后攻";
+    // The side unable to counter has no initiative badge, not a filler sentence.
+    byId("forecast-ally-initiative").textContent=attacker.team==="ally"?"先攻":
+      forecast.canCounter?"后攻":"";
     byId("forecast-enemy-initiative").textContent=attacker.team==="enemy"?"先攻":
-      forecast.canCounter?"后攻":"无法反击";
+      forecast.canCounter?"后攻":"";
     byId("forecast-action-label").textContent=attacker.team==="enemy"?"敌军进攻":"攻击预览";
     // Four ordered forecast layers: current HP, hit/crit odds, individual strikes,
     // then the HP remaining after the full normal-hit forecast.
@@ -936,8 +938,11 @@ export class BoardView {
     byId("forecast-enemy-hp-current").textContent=String(view.enemy.unit.hp);
     byId("forecast-ally-hp").textContent=String(view.ally.hpAfter);
     byId("forecast-enemy-hp").textContent=String(view.enemy.hpAfter);
-    byId("forecast-ally-odds").textContent=view.ally.hitText;
-    byId("forecast-enemy-odds").textContent=view.enemy.hitText;
+    // Only a combatant who can actually attack gets hit/critical odds.
+    byId("forecast-ally-odds").textContent=
+      attacker.team==="ally"||forecast.canCounter?view.ally.hitText:"";
+    byId("forecast-enemy-odds").textContent=
+      attacker.team==="enemy"||forecast.canCounter?view.enemy.hitText:"";
     const first=(id:string,value:number|null)=>{
       const el=byId(id);
       el.textContent=value!==null&&value>0?"−"+value:"";
@@ -967,19 +972,15 @@ export class BoardView {
     ] as const) {
       byId(id).style.width = Math.max(0, Math.min(100, amount * 100)) + "%";
     }
-    const cost=document.getElementById("forecast-action-cost")!;
+    // Durability/spell cost is calculated by combat logic, but the forecast
+    // surface shows only relevant hit, damage and HP numbers.
+    const cost=byId("forecast-action-cost");
+    cost.textContent="";
+    cost.hidden=true;
     const isArt=!!this.attackArtId&&!this.enemyForecast;
     const art=this.attackArtId&&Object.hasOwn(COMBAT_ARTS,this.attackArtId)?
       COMBAT_ARTS[this.attackArtId as keyof typeof COMBAT_ARTS]:null;
     const career=isCareerArtId(this.attackArtId)?CAREER_ARTS[this.attackArtId]:null;
-    cost.textContent=career?career.name+" · "+career.description+" · "+
-      (attacker.weapon.kind==="magical"?"次数 -":"耐久 -")+career.cost+
-      (forecast.retreatTo?" · 击败后预计回退到("+forecast.retreatTo.x+","+forecast.retreatTo.y+")":""):
-      art?art.name+" · "+art.description+" · "+
-      (attacker.weapon.kind==="magical"?"次数 -":"耐久 -")+art.cost:
-      isArt?"试验战技 · 耐久 -"+this.battle.basicArt.durabilityCost+
-      " · 本次伤害 +"+this.battle.basicArt.damageBonus:
-      (attacker.weapon.kind==="magical"?"法术交战 · 次数 -1":"普通攻击 · 耐久不消耗");
     document.getElementById("forecast-confirm")!.textContent=career?"确认"+career.name:
       art?"确认"+art.name:
       isArt?"确认试验战技":"攻击";
@@ -995,8 +996,8 @@ export class BoardView {
     elem("forecast-ally-initiative").textContent="支援方";
     elem("forecast-enemy-initiative").textContent="受术方";
     elem("forecast-action-label").textContent="辅助预览";
-    elem("forecast-ally-odds").textContent="本次支援行动 · 无反击";
-    elem("forecast-enemy-odds").textContent=label[preview.effect];
+    elem("forecast-ally-odds").textContent="";
+    elem("forecast-enemy-odds").textContent="";
     // Support actions never inherit visible follow-up/counter damage from
     // the previously inspected attack.
     const healing=preview.effect==="heal"&&preview.value>0;
@@ -1020,8 +1021,8 @@ export class BoardView {
       ["forecast-enemy-after",after/target.maxHp]] as const)
       elem(id).style.width=Math.max(0,Math.min(100,100*value))+"%";
     const title=this.careerSupportId==="life-gift"?"生命赐福":label[preview.effect];
-    elem("forecast-action-cost").textContent=title+" · 次数 -"+
-      preview.cost+" · 剩余 "+preview.remaining;
+    elem("forecast-action-cost").textContent="";
+    elem("forecast-action-cost").hidden=true;
     elem("forecast-confirm").textContent="确认"+title;
     this.forecastPanel.hidden=false;
   }
