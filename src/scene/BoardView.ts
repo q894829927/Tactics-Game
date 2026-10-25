@@ -944,6 +944,7 @@ export class BoardView {
       const right=document.createElement("div");
       right.className="forecast-strike-side forecast-strike-right";
       const offence=strike.from==="ally"?left:right;
+      const defence=strike.from==="ally"?right:left;
       const odds=document.createElement("span");
       odds.className="forecast-strike-chances";
       const crit=document.createElement("span");
@@ -958,10 +959,11 @@ export class BoardView {
       const damage=document.createElement("strong");
       damage.className="forecast-strike-damage forecast-strike-damage-"+
         (strike.from==="ally"?"enemy":"ally");
-      damage.textContent=strike.damage>0?String(strike.damage):"";
+      damage.textContent=strike.damage>0?"−"+strike.damage:"";
       damage.hidden=strike.damage<=0;
-      // Damage is the third value of this same strike; mirror its placement for enemy attacks.
-      offence.append(odds,damage);
+      // Hit/crit belong to the attacker; negative damage belongs to the target.
+      offence.append(odds);
+      defence.append(damage);
       row.append(left,middle,right);
       list.append(row);
     }

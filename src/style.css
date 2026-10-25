@@ -2708,49 +2708,6 @@ button:disabled { cursor: not-allowed; }
   .duel-v3 .forecast-strike-chances {font-size:11px}
 }
 
-/* v0.1.45.4: one strike = three values on ONE line.
-   Ally: 必杀 命中 [damage], enemy mirrored: [damage] 命中 必杀.
-   Probability headings only. */
-.duel-v3 .forecast-v2-content {
-  --forecast-damage-column:clamp(34px,4.2vw,64px);
-}
-.duel-v3 .forecast-strike-head-ally {
-  grid-template-columns:var(--forecast-crit-column) var(--forecast-hit-column) var(--forecast-damage-column);
-}
-.duel-v3 .forecast-strike-head-enemy {
-  grid-template-columns:var(--forecast-damage-column) var(--forecast-hit-column) var(--forecast-crit-column);
-}
-.duel-v3 .forecast-strike-head-enemy > :first-child {grid-column:2}
-.duel-v3 .forecast-strike-head-enemy > :last-child {grid-column:3}
-.duel-v3 .forecast-strike-entry[data-attacker] .forecast-strike-side {
-  display:grid;
-  align-items:center;
-  gap:var(--forecast-odds-gap);
-  grid-template-rows:auto;
-  min-width:0;
-}
-.duel-v3 .forecast-strike-entry[data-attacker="ally"] .forecast-strike-left {
-  grid-template-columns:calc(var(--forecast-crit-column) + var(--forecast-odds-gap) + var(--forecast-hit-column)) var(--forecast-damage-column);
-  justify-content:end;
-}
-.duel-v3 .forecast-strike-entry[data-attacker="enemy"] .forecast-strike-right {
-  grid-template-columns:var(--forecast-damage-column) calc(var(--forecast-hit-column) + var(--forecast-odds-gap) + var(--forecast-crit-column));
-  justify-content:start;
-}
-.duel-v3 .forecast-strike-entry[data-attacker="ally"] .forecast-strike-chances {grid-column:1;grid-row:1}
-.duel-v3 .forecast-strike-entry[data-attacker="ally"] .forecast-strike-damage {grid-column:2;grid-row:1}
-.duel-v3 .forecast-strike-entry[data-attacker="enemy"] .forecast-strike-chances {grid-column:2;grid-row:1}
-.duel-v3 .forecast-strike-entry[data-attacker="enemy"] .forecast-strike-damage {grid-column:1;grid-row:1}
-.duel-v3 .forecast-strike-entry[data-attacker] .forecast-strike-damage {
-  justify-self:stretch;
-  text-align:center;
-  font-size:clamp(18px,2.2vw,30px);
-}
-@media(max-width:900px){
-  .duel-v3 .forecast-v2-content {--forecast-damage-column:38px}
-  .duel-v3 .forecast-strike-entry[data-attacker] .forecast-strike-damage {font-size:20px}
-}
-@media(max-width:540px){
-  .duel-v3 .forecast-v2-content {--forecast-damage-column:30px}
-  .duel-v3 .forecast-strike-entry[data-attacker] .forecast-strike-damage {font-size:16px}
-}
+/* v0.1.45.5: attacking side owns odds; receiving side owns negative damage.
+   One horizontal row per strike. The original two-column odds headers are
+   intentionally unchanged; the extra attacker-side damage column is removed. */

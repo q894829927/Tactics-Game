@@ -60,6 +60,7 @@ try{
     const middle=document.createElement("span");middle.className="forecast-strike-kind";
     middle.textContent=entry.kind==="follow-up"?"追击":"";
     const offence=entry.from==="ally"?left:right;
+    const defence=entry.from==="ally"?right:left;
     const odds=document.createElement("span");
     odds.className="forecast-strike-chances";
     const crit=document.createElement("span");crit.className="forecast-strike-crit";
@@ -69,9 +70,10 @@ try{
     if(entry.from==="ally")odds.append(crit,hit);else odds.append(hit,crit);
     const damage=document.createElement("strong");
     damage.className="forecast-strike-damage forecast-strike-damage-"+(entry.from==="ally"?"enemy":"ally");
-    damage.textContent=entry.damage>0?String(entry.damage):"";
+    damage.textContent=entry.damage>0?"−"+entry.damage:"";
     damage.hidden=entry.damage<=0;
-    offence.append(odds,damage);
+    offence.append(odds);
+    defence.append(damage);
     row.append(left,middle,right);list.append(row);
    }
   },values);
@@ -124,12 +126,12 @@ try{
   assert.ok(metrics.rows[1].damage.center<metrics.rows[1].odds.center,id+" enemy counter");
   assert.ok(metrics.rows[2].odds.center<metrics.rows[2].damage.center,id+" ally follow-up");
   assert.equal(metrics.rows[0].critText+" "+metrics.rows[0].hitText+" "+metrics.rows[0].damageText,
-    "30 100% 40",id+" exact requested three-value row");
+    "30 100% −40",id+" attack odds and opponent damage in the same row");
   assert.equal(metrics.headers.ally.titles,"必杀 命中",id+" allied header once");
   assert.equal(metrics.headers.enemy.titles,"命中 必杀",id+" enemy header mirrored once");
-  assert.deepEqual(metrics.rows.map(r=>[r.critText,r.hitText]),
-    [["30","100%"],["10","85%"],["50","100%"]],
-    id+" numeric rows exactly under their column headings");
+  assert.deepEqual(metrics.rows.map(r=>[r.critText,r.hitText,r.damageText]),
+    [["30","100%","−40"],["10","85%","−5"],["50","100%","−8"]],
+    id+" each attack shows a negative amount on its victim");
   for(const row of metrics.rows){
     const headings=metrics.headers[row.from];
     assert.ok(Math.abs(row.crit.center-headings.crit.center)<=1,
@@ -142,8 +144,8 @@ try{
       id+" "+row.kind+" all three numbers share a horizontal row");
     assert.ok(row.damage.bottom<=row.rect.bottom+1,
       id+" "+row.kind+" damage stays inside the strike block");
-    assert.ok(row.damageParentClass.includes(row.from==="ally"?"forecast-strike-left":"forecast-strike-right"),
-      id+" "+row.kind+" damage stays with the attacker");
+    assert.ok(row.damageParentClass.includes(row.from==="ally"?"forecast-strike-right":"forecast-strike-left"),
+      id+" "+row.kind+" damage is on the receiving side");
     assert.doesNotMatch(row.oddsText,/必杀|命中/,
       id+" no repeated headings on individual strikes");
   }
@@ -159,6 +161,8 @@ try{
     const odds=row.querySelector(".forecast-strike-chances").getBoundingClientRect();
     const damage=row.querySelector(".forecast-strike-damage").getBoundingClientRect();
     return {count:rows.length,kind:row.dataset.kind,
+      damageText:row.querySelector(".forecast-strike-damage").textContent,
+      damageParent:row.querySelector(".forecast-strike-damage").parentElement.className,
       enemyOddsRight:odds.x>damage.x,
       allyHeaderHidden:getComputedStyle(document.getElementById("forecast-strike-head-ally")).display==="none",
       enemyHeaderVisible:getComputedStyle(document.getElementById("forecast-strike-head-enemy")).display!=="none",
@@ -166,11 +170,22 @@ try{
   });
   assert.equal(enemyFirst.count,1,id+" no-counter only one attack");
   assert.ok(enemyFirst.enemyOddsRight,id+" enemy first odds on right, damage left in the same row");
+  assert.equal(enemyFirst.damageText,"−6",id+" enemy attack subtracts HP");
+  assert.match(enemyFirst.damageParent,/forecast-strike-left/,id+" enemy damage on player side");
   assert.ok(enemyFirst.allyHeaderHidden,id+" inactive ally headings are hidden");
   assert.ok(enemyFirst.enemyHeaderVisible,id+" enemy header shown");
   assert.ok(enemyFirst.visible);
   assert.doesNotMatch(enemyFirst.contents,/无法反击|保底|魔法伤害|耐久不消耗/);
   await page.screenshot({path:"browser-artifacts/forecast-strikes-enemy-"+id+".png"});
+  await setRows([{kind:"attack",from:"ally",hit:99,crit:0,damage:0}]);
+  const zero=await page.evaluate(()=>({
+    text:document.querySelector("#forecast-strike-list .forecast-strike-damage").textContent,
+    hidden:document.querySelector("#forecast-strike-list .forecast-strike-damage").hidden,
+    odds:document.querySelector("#forecast-strike-list .forecast-strike-chances").textContent,
+  }));
+  assert.equal(zero.text,"",id+" zero-damage does not show a negative zero");
+  assert.ok(zero.hidden,id+" zero-damage value hidden");
+  assert.equal(zero.odds,"099%",id+" zero-damage still displays odds");
   assert.deepEqual(errors,[],id+" runtime errors");
   await page.close();
  }

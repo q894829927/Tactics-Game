@@ -70,10 +70,16 @@ test("Support rendering always clears previous attack rows",()=>{
  assert.match(board,/elem\("forecast-enemy-hp"\)\.textContent=String\(after\)/);
  assert.match(board,/elem\("forecast-strike-list"\)/);
 });
-test("Each attack keeps crit, hit and damage in one side-by-side row",()=>{
- assert.match(board,/offence\.append\(odds,damage\)/);
- assert.match(board,/damage\.textContent=strike\.damage>0\?String\(strike\.damage\):""/);
- assert.match(css,/\.duel-v3 \.forecast-strike-entry\[data-attacker="ally"\] \.forecast-strike-damage \{grid-column:2;grid-row:1\}/);
- assert.match(css,/\.duel-v3 \.forecast-strike-entry\[data-attacker="enemy"\] \.forecast-strike-damage \{grid-column:1;grid-row:1\}/);
- assert.match(css,/\.duel-v3 \.forecast-strike-head-enemy > :first-child \{grid-column:2\}/);
+test("Hit and crit belong to the attacking side; negative damage to its victim",()=>{
+ assert.match(board,/const defence=strike.from==="ally"\?right:left/);
+ assert.match(board,/offence\.append\(odds\);\s*defence\.append\(damage\)/);
+ assert.match(board,/damage\.textContent=strike\.damage>0\?"−"\+strike\.damage:""/);
+ assert.match(board,/damage\.hidden=strike\.damage<=0/);
+ assert.doesNotMatch(css,/--forecast-damage-column/);
+ assert.match(css,/\.duel-v3 \.forecast-strike-left \{justify-content:flex-end\}/);
+ assert.match(css,/\.duel-v3 \.forecast-strike-right \{justify-content:flex-start\}/);
+});
+test("Healing keeps its positive sign instead of imitating attack damage",()=>{
+ assert.match(board,/value\.textContent=healing\?"\+"\+preview\.value:String\(preview\.value\)/);
+ assert.match(board,/value\.className="forecast-strike-damage forecast-strike-heal"/);
 });
