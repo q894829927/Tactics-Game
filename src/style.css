@@ -2707,3 +2707,51 @@ button:disabled { cursor: not-allowed; }
   }
   .duel-v3 .forecast-strike-chances {font-size:11px}
 }
+
+/* v0.1.45.3: keep the hit/crit probability cells on the FIRST line of each
+   strike and the inflicted damage on a SECOND line beneath them. Both sides
+   share exactly the same vertical tracks even when only one side attacks.
+   Do not change the fixed horizontal header/number alignment. */
+.duel-v3 .forecast-strike-entry[data-attacker] {
+  min-height:0;
+}
+.duel-v3 .forecast-strike-entry[data-attacker] .forecast-strike-side {
+  display:grid;
+  grid-template-columns:minmax(0,1fr);
+  grid-template-rows:26px 34px;
+  align-items:center;
+  width:100%;
+  min-width:0;
+  gap:0;
+}
+.duel-v3 .forecast-strike-entry[data-attacker] .forecast-strike-left {
+  justify-items:end;
+}
+.duel-v3 .forecast-strike-entry[data-attacker] .forecast-strike-right {
+  justify-items:start;
+}
+.duel-v3 .forecast-strike-entry[data-attacker] .forecast-strike-chances {
+  grid-column:1;
+  grid-row:1;
+}
+.duel-v3 .forecast-strike-entry[data-attacker] .forecast-strike-damage {
+  grid-column:1;
+  grid-row:2;
+}
+.duel-v3 .forecast-strike-entry[data-attacker] .forecast-strike-kind {
+  align-self:start;
+  margin-top:8px;
+}
+@media(max-width:900px){
+  .duel-v3 .forecast-strike-entry[data-attacker] .forecast-strike-side {
+    grid-template-rows:22px 25px;
+  }
+  .duel-v3 .forecast-strike-entry[data-attacker] .forecast-strike-kind {
+    margin-top:5px;
+  }
+}
+@media(max-width:540px){
+  .duel-v3 .forecast-strike-entry[data-attacker] .forecast-strike-side {
+    grid-template-rows:19px 22px;
+  }
+}

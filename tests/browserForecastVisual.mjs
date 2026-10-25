@@ -134,6 +134,10 @@ try{
       id+" "+row.kind+" critical aligned to column");
     assert.ok(Math.abs(row.hit.center-headings.hit.center)<=1,
       id+" "+row.kind+" hit aligned to column");
+    assert.ok(row.damage.y>=Math.max(row.hit.bottom,row.crit.bottom)+1,
+      id+" "+row.kind+" damage must be on a distinct lower line from hit/crit");
+    assert.ok(row.damage.bottom<=row.rect.bottom+1,
+      id+" "+row.kind+" damage stays inside the strike block");
     assert.doesNotMatch(row.oddsText,/必杀|命中/,
       id+" no repeated headings on individual strikes");
   }
