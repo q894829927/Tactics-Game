@@ -60,7 +60,6 @@ try{
     const middle=document.createElement("span");middle.className="forecast-strike-kind";
     middle.textContent=entry.kind==="follow-up"?"追击":"";
     const offence=entry.from==="ally"?left:right;
-    const defence=entry.from==="ally"?right:left;
     const odds=document.createElement("span");
     odds.className="forecast-strike-chances";
     const crit=document.createElement("span");crit.className="forecast-strike-crit";
@@ -68,18 +67,17 @@ try{
     const hit=document.createElement("span");hit.className="forecast-strike-hit";
     hit.textContent=entry.hit+"%";
     if(entry.from==="ally")odds.append(crit,hit);else odds.append(hit,crit);
-    offence.append(odds);
     const damage=document.createElement("strong");
     damage.className="forecast-strike-damage forecast-strike-damage-"+(entry.from==="ally"?"enemy":"ally");
-    damage.textContent=entry.damage>0?"−"+entry.damage:"";
+    damage.textContent=entry.damage>0?String(entry.damage):"";
     damage.hidden=entry.damage<=0;
-    defence.append(damage);
+    offence.append(odds,damage);
     row.append(left,middle,right);list.append(row);
    }
   },values);
   const id=viewport.width+"x"+viewport.height;
   await setRows([
-    {kind:"attack",from:"ally",hit:99,crit:30,damage:6},
+    {kind:"attack",from:"ally",hit:100,crit:30,damage:40},
     {kind:"counter",from:"enemy",hit:85,crit:10,damage:5},
     {kind:"follow-up",from:"ally",hit:100,crit:50,damage:8}
   ]);
@@ -109,6 +107,8 @@ try{
      hit:rect(row.querySelector(".forecast-strike-hit")),
      critText:row.querySelector(".forecast-strike-crit").textContent,
      hitText:row.querySelector(".forecast-strike-hit").textContent,
+     damageText:row.querySelector(".forecast-strike-damage").textContent,
+     damageParentClass:row.querySelector(".forecast-strike-damage").parentElement.className,
      damage:rect(row.querySelector(".forecast-strike-damage")),
      scroll:row.querySelector(".forecast-strike-chances").scrollWidth,
      client:row.querySelector(".forecast-strike-chances").clientWidth,
@@ -123,10 +123,12 @@ try{
   assert.ok(metrics.rows[0].odds.center<metrics.rows[0].damage.center,id+" ally first");
   assert.ok(metrics.rows[1].damage.center<metrics.rows[1].odds.center,id+" enemy counter");
   assert.ok(metrics.rows[2].odds.center<metrics.rows[2].damage.center,id+" ally follow-up");
+  assert.equal(metrics.rows[0].critText+" "+metrics.rows[0].hitText+" "+metrics.rows[0].damageText,
+    "30 100% 40",id+" exact requested three-value row");
   assert.equal(metrics.headers.ally.titles,"必杀 命中",id+" allied header once");
   assert.equal(metrics.headers.enemy.titles,"命中 必杀",id+" enemy header mirrored once");
   assert.deepEqual(metrics.rows.map(r=>[r.critText,r.hitText]),
-    [["30","99%"],["10","85%"],["50","100%"]],
+    [["30","100%"],["10","85%"],["50","100%"]],
     id+" numeric rows exactly under their column headings");
   for(const row of metrics.rows){
     const headings=metrics.headers[row.from];
@@ -134,10 +136,14 @@ try{
       id+" "+row.kind+" critical aligned to column");
     assert.ok(Math.abs(row.hit.center-headings.hit.center)<=1,
       id+" "+row.kind+" hit aligned to column");
-    assert.ok(row.damage.y>=Math.max(row.hit.bottom,row.crit.bottom)+1,
-      id+" "+row.kind+" damage must be on a distinct lower line from hit/crit");
+    assert.ok(Math.abs((row.damage.y+row.damage.height/2)-(row.hit.y+row.hit.height/2))<=4,
+      id+" "+row.kind+" damage must share the same line as hit/crit");
+    assert.ok(Math.abs((row.damage.y+row.damage.height/2)-(row.crit.y+row.crit.height/2))<=4,
+      id+" "+row.kind+" all three numbers share a horizontal row");
     assert.ok(row.damage.bottom<=row.rect.bottom+1,
       id+" "+row.kind+" damage stays inside the strike block");
+    assert.ok(row.damageParentClass.includes(row.from==="ally"?"forecast-strike-left":"forecast-strike-right"),
+      id+" "+row.kind+" damage stays with the attacker");
     assert.doesNotMatch(row.oddsText,/必杀|命中/,
       id+" no repeated headings on individual strikes");
   }
@@ -159,7 +165,7 @@ try{
       contents:row.textContent,visible:row.getBoundingClientRect().height>0};
   });
   assert.equal(enemyFirst.count,1,id+" no-counter only one attack");
-  assert.ok(enemyFirst.enemyOddsRight,id+" enemy first odds on right, damage left");
+  assert.ok(enemyFirst.enemyOddsRight,id+" enemy first odds on right, damage left in the same row");
   assert.ok(enemyFirst.allyHeaderHidden,id+" inactive ally headings are hidden");
   assert.ok(enemyFirst.enemyHeaderVisible,id+" enemy header shown");
   assert.ok(enemyFirst.visible);

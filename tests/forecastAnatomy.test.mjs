@@ -70,8 +70,10 @@ test("Support rendering always clears previous attack rows",()=>{
  assert.match(board,/elem\("forecast-enemy-hp"\)\.textContent=String\(after\)/);
  assert.match(board,/elem\("forecast-strike-list"\)/);
 });
-test("Every attacking strike separates odds and damage into vertical tracks",()=>{
- assert.match(css,/\.duel-v3 \.forecast-strike-entry\[data-attacker\] \.forecast-strike-side\s*\{[^}]*display:grid/s);
- assert.match(css,/\.duel-v3 \.forecast-strike-entry\[data-attacker\] \.forecast-strike-chances\s*\{[^}]*grid-row:1/s);
- assert.match(css,/\.duel-v3 \.forecast-strike-entry\[data-attacker\] \.forecast-strike-damage\s*\{[^}]*grid-row:2/s);
+test("Each attack keeps crit, hit and damage in one side-by-side row",()=>{
+ assert.match(board,/offence\.append\(odds,damage\)/);
+ assert.match(board,/damage\.textContent=strike\.damage>0\?String\(strike\.damage\):""/);
+ assert.match(css,/\.duel-v3 \.forecast-strike-entry\[data-attacker="ally"\] \.forecast-strike-damage \{grid-column:2;grid-row:1\}/);
+ assert.match(css,/\.duel-v3 \.forecast-strike-entry\[data-attacker="enemy"\] \.forecast-strike-damage \{grid-column:1;grid-row:1\}/);
+ assert.match(css,/\.duel-v3 \.forecast-strike-head-enemy > :first-child \{grid-column:2\}/);
 });
