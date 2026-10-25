@@ -2537,3 +2537,21 @@ button:disabled { cursor: not-allowed; }
     gap: 1px;
   }
 }
+
+
+/* v0.1.44.4: pin combat odds to semantic left/middle/right grid slots.
+   When either combatant cannot counter, its empty odds element is display:none.
+   Explicit columns prevent the remaining odds from shifting into the narrow
+   middle separator column and being truncated as "命中 1…". */
+.duel-v3 .forecast-odds-row #forecast-ally-odds {
+  grid-column: 1;
+  grid-row: 1;
+}
+.duel-v3 .forecast-odds-row .forecast-odds-divider {
+  grid-column: 2;
+  grid-row: 1;
+}
+.duel-v3 .forecast-odds-row #forecast-enemy-odds {
+  grid-column: 3;
+  grid-row: 1;
+}

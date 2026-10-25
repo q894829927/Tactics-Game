@@ -25,3 +25,11 @@ test("Damage columns are tied to the same width and grid as current HP",()=>{
   const left=html.indexOf('id="forecast-counter"'),right=html.indexOf('id="forecast-damage"');
   assert.ok(left>=0&&right>left);
 });
+
+test("Empty ally odds cannot shift enemy odds into the narrow separator column",()=>{
+  assert.match(css,/\.duel-v3 \.forecast-odds-row #forecast-ally-odds\s*\{\s*grid-column:\s*1;/);
+  assert.match(css,/\.duel-v3 \.forecast-odds-row \.forecast-odds-divider\s*\{\s*grid-column:\s*2;/);
+  assert.match(css,/\.duel-v3 \.forecast-odds-row #forecast-enemy-odds\s*\{\s*grid-column:\s*3;/);
+  assert.match(board,/attacker\.team==="ally"\|\|forecast\.canCounter\?view\.ally\.hitText:""/);
+  assert.match(board,/attacker\.team==="enemy"\|\|forecast\.canCounter\?view\.enemy\.hitText:""/);
+});

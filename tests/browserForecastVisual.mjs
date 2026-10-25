@@ -7,6 +7,7 @@ mkdirSync("browser-artifacts",{recursive:true});
 const browser=await chromium.launch({headless:true,args:["--no-sandbox"]});
 try{
  for(const viewport of [
+  {width:1896,height:660,isMobile:false}, // screenshot-sized enemy-first forecast
   {width:1366,height:768,isMobile:false},
   {width:390,height:844,isMobile:true},
   {width:320,height:568,isMobile:true},
@@ -104,6 +105,49 @@ try{
     id+" counter damage must align with receiving ally's original HP");
   await page.evaluate(()=>{document.getElementById("forecast-counter").hidden=true;});
   await page.screenshot({path:"browser-artifacts/cinematic-forecast-"+id+".png"});
+
+  // Regression for enemy-first, no-counter combat: old :empty{display:none}
+  // made CSS Grid auto-flow the enemy odds into the *separator's* 6%-width
+  // column, rendering "命中 1…" instead of the full text.
+  const enemyOdds="命中 100% · 必杀 5%";
+  await page.evaluate(odds=>{
+    const set=(id,v)=>document.getElementById(id).textContent=v;
+    set("forecast-ally-odds","");
+    set("forecast-enemy-odds",odds);
+    set("forecast-ally-initiative","");
+    set("forecast-enemy-initiative","先攻");
+    set("forecast-ally-hp-current","18");
+    set("forecast-enemy-hp-current","21");
+    set("forecast-ally-hp","12");
+    set("forecast-enemy-hp","21");
+    set("forecast-counter","−6");
+    document.getElementById("forecast-counter").hidden=false;
+    document.getElementById("forecast-damage").hidden=true;
+  },enemyOdds);
+  const enemyFirst=await page.evaluate(()=>{
+    const row=document.querySelector(".forecast-odds-row").getBoundingClientRect();
+    const enemy=document.getElementById("forecast-enemy-odds");
+    const ally=document.getElementById("forecast-ally-odds");
+    const rect=enemy.getBoundingClientRect();
+    return {
+      rowCenter:row.x+row.width/2,
+      enemyStart:rect.x,
+      enemyWidth:rect.width,
+      visible:getComputedStyle(enemy).display!=="none",
+      fullWidth:enemy.scrollWidth,
+      clientWidth:enemy.clientWidth,
+      leftHidden:getComputedStyle(ally).display==="none",
+      value:enemy.textContent
+    };
+  });
+  assert.equal(enemyFirst.value,enemyOdds,id+" enemy-first odds preserved");
+  assert.equal(enemyFirst.leftHidden,true,id+" no-counter odds hidden");
+  assert.equal(enemyFirst.visible,true,id+" enemy odds shown");
+  assert.ok(enemyFirst.enemyStart>enemyFirst.rowCenter,
+    id+" enemy odds must occupy right half, not separator column");
+  assert.ok(enemyFirst.clientWidth>=enemyFirst.fullWidth,
+    id+" enemy hit/crit must not be truncated");
+  await page.screenshot({path:"browser-artifacts/enemy-first-odds-"+id+".png"});
   assert.deepEqual(errors,[],id+" page errors");
   await page.close();
  }
