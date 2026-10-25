@@ -11,6 +11,7 @@ try{
  for(const viewport of [
   {width:1896,height:660,isMobile:false},
   {width:1366,height:768,isMobile:false},
+  {width:1062,height:720,isMobile:false},
   {width:390,height:844,isMobile:true},
   {width:320,height:568,isMobile:true},
  ]){
@@ -146,6 +147,15 @@ try{
       id+" "+row.kind+" damage stays inside the strike block");
     assert.ok(row.damageParentClass.includes(row.from==="ally"?"forecast-strike-right":"forecast-strike-left"),
       id+" "+row.kind+" damage is on the receiving side");
+    // Damage is in a third, independently reserved slot, NOT under the defender's 命中.
+    const defenderHit=metrics.headers[row.from==="ally"?"enemy":"ally"].hit;
+    if(row.from==="ally") {
+      assert.ok(row.damage.x+row.damage.width+1<=defenderHit.x,
+        id+" "+row.kind+" enemy damage separated from enemy hit column");
+    }else{
+      assert.ok(defenderHit.x+defenderHit.width+1<=row.damage.x,
+        id+" "+row.kind+" ally damage separated from ally hit column");
+    }
     assert.doesNotMatch(row.oddsText,/必杀|命中/,
       id+" no repeated headings on individual strikes");
   }
@@ -164,12 +174,14 @@ try{
       damageText:row.querySelector(".forecast-strike-damage").textContent,
       damageParent:row.querySelector(".forecast-strike-damage").parentElement.className,
       enemyOddsRight:odds.x>damage.x,
+      separation:odds.x-(damage.x+damage.width),
       allyHeaderHidden:getComputedStyle(document.getElementById("forecast-strike-head-ally")).display==="none",
       enemyHeaderVisible:getComputedStyle(document.getElementById("forecast-strike-head-enemy")).display!=="none",
       contents:row.textContent,visible:row.getBoundingClientRect().height>0};
   });
   assert.equal(enemyFirst.count,1,id+" no-counter only one attack");
   assert.ok(enemyFirst.enemyOddsRight,id+" enemy first odds on right, damage left in the same row");
+  assert.ok(enemyFirst.separation>=1,id+" enemy-only damage cannot overlap hit/crit");
   assert.equal(enemyFirst.damageText,"−6",id+" enemy attack subtracts HP");
   assert.match(enemyFirst.damageParent,/forecast-strike-left/,id+" enemy damage on player side");
   assert.ok(enemyFirst.allyHeaderHidden,id+" inactive ally headings are hidden");

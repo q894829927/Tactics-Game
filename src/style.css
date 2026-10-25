@@ -2711,3 +2711,61 @@ button:disabled { cursor: not-allowed; }
 /* v0.1.45.5: attacking side owns odds; receiving side owns negative damage.
    One horizontal row per strike. The original two-column odds headers are
    intentionally unchanged; the extra attacker-side damage column is removed. */
+
+/* v0.1.45.6: reserve a THIRD, unlabeled damage slot for each side.
+   Left: 必杀 | 命中 | 受到伤害
+   Right: 受到伤害 | 命中 | 必杀
+   The receiving side alone renders -damage; probability headers remain aligned.
+   Fixed tracks prevent the damage value from appearing under a hit heading. */
+.duel-v3 .forecast-v2-content {
+  --forecast-damage-column:clamp(35px,4.2vw,65px);
+}
+.duel-v3 .forecast-strike-head-ally,
+.duel-v3 .forecast-strike-entry[data-attacker] .forecast-strike-left {
+  grid-template-columns:var(--forecast-crit-column) var(--forecast-hit-column) var(--forecast-damage-column);
+  column-gap:var(--forecast-odds-gap);
+  justify-content:end;
+}
+.duel-v3 .forecast-strike-head-enemy,
+.duel-v3 .forecast-strike-entry[data-attacker] .forecast-strike-right {
+  grid-template-columns:var(--forecast-damage-column) var(--forecast-hit-column) var(--forecast-crit-column);
+  column-gap:var(--forecast-odds-gap);
+  justify-content:start;
+}
+.duel-v3 .forecast-strike-head-ally > :first-child {grid-column:1}
+.duel-v3 .forecast-strike-head-ally > :last-child {grid-column:2}
+.duel-v3 .forecast-strike-head-enemy > :first-child {grid-column:2}
+.duel-v3 .forecast-strike-head-enemy > :last-child {grid-column:3}
+.duel-v3 .forecast-strike-entry[data-attacker] .forecast-strike-side {
+  display:grid;
+  width:100%;
+  min-width:0;
+  grid-template-rows:minmax(0,1fr);
+  align-items:center;
+}
+.duel-v3 .forecast-strike-entry[data-attacker] .forecast-strike-left .forecast-strike-chances {
+  grid-column:1 / span 2;
+  grid-row:1;
+}
+.duel-v3 .forecast-strike-entry[data-attacker] .forecast-strike-right .forecast-strike-chances {
+  grid-column:2 / span 2;
+  grid-row:1;
+}
+.duel-v3 .forecast-strike-entry[data-attacker] .forecast-strike-left .forecast-strike-damage {
+  grid-column:3;
+  grid-row:1;
+}
+.duel-v3 .forecast-strike-entry[data-attacker] .forecast-strike-right .forecast-strike-damage {
+  grid-column:1;
+  grid-row:1;
+}
+.duel-v3 .forecast-strike-entry[data-attacker] .forecast-strike-damage {
+  justify-self:stretch;
+  text-align:center;
+}
+@media(max-width:900px) {
+  .duel-v3 .forecast-v2-content {--forecast-damage-column:37px}
+}
+@media(max-width:540px) {
+  .duel-v3 .forecast-v2-content {--forecast-damage-column:29px}
+}

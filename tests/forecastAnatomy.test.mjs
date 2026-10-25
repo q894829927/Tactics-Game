@@ -75,7 +75,10 @@ test("Hit and crit belong to the attacking side; negative damage to its victim",
  assert.match(board,/offence\.append\(odds\);\s*defence\.append\(damage\)/);
  assert.match(board,/damage\.textContent=strike\.damage>0\?"−"\+strike\.damage:""/);
  assert.match(board,/damage\.hidden=strike\.damage<=0/);
- assert.doesNotMatch(css,/--forecast-damage-column/);
+ assert.match(css,/--forecast-damage-column/);
+ assert.match(css,/\.duel-v3 \.forecast-strike-head-enemy > :first-child \{grid-column:2\}/);
+ assert.match(css,/\.duel-v3 \.forecast-strike-entry\[data-attacker\] \.forecast-strike-right \.forecast-strike-damage \{\s*grid-column:1;\s*grid-row:1;/);
+ assert.match(css,/\.duel-v3 \.forecast-strike-entry\[data-attacker\] \.forecast-strike-left \.forecast-strike-damage \{\s*grid-column:3;\s*grid-row:1;/);
  assert.match(css,/\.duel-v3 \.forecast-strike-left \{justify-content:flex-end\}/);
  assert.match(css,/\.duel-v3 \.forecast-strike-right \{justify-content:flex-start\}/);
 });
