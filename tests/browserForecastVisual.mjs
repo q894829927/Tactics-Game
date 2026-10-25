@@ -97,10 +97,10 @@ try{
     headers:{
       ally:{crit:rect(document.querySelector("#forecast-strike-head-ally span:first-child")),
         hit:rect(document.querySelector("#forecast-strike-head-ally span:last-child")),
-        titles:document.getElementById("forecast-strike-head-ally").textContent.trim().replace(/\s+/g," ")},
+        titles:[...document.getElementById("forecast-strike-head-ally").children].map(e=>e.textContent.trim()).join(" ")},
       enemy:{hit:rect(document.querySelector("#forecast-strike-head-enemy span:first-child")),
         crit:rect(document.querySelector("#forecast-strike-head-enemy span:last-child")),
-        titles:document.getElementById("forecast-strike-head-enemy").textContent.trim().replace(/\s+/g," ")}
+        titles:[...document.getElementById("forecast-strike-head-enemy").children].map(e=>e.textContent.trim()).join(" ")}
     },
     rows:rows.map(row=>({
      kind:row.dataset.kind,from:row.dataset.attacker,
