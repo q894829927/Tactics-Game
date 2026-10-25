@@ -13,8 +13,10 @@ export type SidePreview = {
 };
 export type CombatPreviewView = { ally: SidePreview; enemy: SidePreview };
 
-const odds = (hit: number, crit: number,trait: string) =>
-  "命中 " + hit + "% · 必杀 " + crit + "%" + (trait ? " · " + trait : "");
+// The forecast HUD only shows combat odds. Weapon/art traits still affect
+// engine calculations, but their explanations belong outside this compact row.
+const odds = (hit: number, crit: number) =>
+  "命中 " + hit + "% · 必杀 " + crit + "%";
 const dealt = (damage: number, followUpDamage: number | null) => {
   if(followUpDamage===null)return String(damage);
   return followUpDamage===damage ? damage+"×2" : damage+"＋"+followUpDamage;
@@ -30,14 +32,14 @@ export function combatPreviewView(
     return {
       ally: {
         unit: attacker, hpAfter: forecast.attackerHpAfter,
-        hitText: odds(forecast.attackerHit, forecast.attackerCrit,forecast.attackerTrait),
+        hitText: odds(forecast.attackerHit, forecast.attackerCrit),
         damageText: dealt(forecast.damage, forecast.followUp === "attacker" ? forecast.followUpDamage : null),
         firstDamage:forecast.damage,
         followUpDamage:forecast.followUp==="attacker"?forecast.followUpDamage:null,
       },
       enemy: {
         unit: defender, hpAfter: forecast.defenderHpAfter,
-        hitText: forecast.canCounter ? odds(forecast.defenderHit, forecast.defenderCrit,forecast.defenderTrait) : "无法反击",
+        hitText: forecast.canCounter ? odds(forecast.defenderHit, forecast.defenderCrit) : "无法反击",
         damageText: forecast.canCounter
           ? dealt(forecast.counterDamage, forecast.followUp === "defender" ? forecast.followUpDamage : null) : "—",
         firstDamage:forecast.canCounter?forecast.counterDamage:null,
@@ -48,7 +50,7 @@ export function combatPreviewView(
   return {
     ally: {
       unit: defender, hpAfter: forecast.defenderHpAfter,
-      hitText: forecast.canCounter ? odds(forecast.defenderHit, forecast.defenderCrit,forecast.defenderTrait) : "无法反击",
+      hitText: forecast.canCounter ? odds(forecast.defenderHit, forecast.defenderCrit) : "无法反击",
       damageText: forecast.canCounter
         ? dealt(forecast.counterDamage, forecast.followUp === "defender" ? forecast.followUpDamage : null) : "—",
       firstDamage:forecast.canCounter?forecast.counterDamage:null,
@@ -56,7 +58,7 @@ export function combatPreviewView(
     },
     enemy: {
       unit: attacker, hpAfter: forecast.attackerHpAfter,
-      hitText: odds(forecast.attackerHit, forecast.attackerCrit,forecast.attackerTrait),
+      hitText: odds(forecast.attackerHit, forecast.attackerCrit),
       damageText: dealt(forecast.damage, forecast.followUp === "attacker" ? forecast.followUpDamage : null),
       firstDamage:forecast.damage,
       followUpDamage:forecast.followUp==="attacker"?forecast.followUpDamage:null,
