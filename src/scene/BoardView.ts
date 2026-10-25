@@ -5,8 +5,6 @@ import {flatBattleCommands,skillSubmenuCommands,inventorySubmenuCommands,type Fl
 import {WEAPON_LIBRARY,weaponRange,canWield} from "../engine/weapons.ts";
 import {weaponRankForExp,weaponExperienceText} from "../engine/proficiency.ts";
 import {weaponResourceText} from "../engine/combatResources.ts";
-import {COMBAT_ARTS} from "../engine/combatArts.ts";
-import {CAREER_ARTS,isCareerArtId} from "../engine/careerArts.ts";
 import {CLASS_LIBRARY} from "../engine/classes.ts";
 import { TERRAIN_INFO, movementCostLabel } from "../engine/terrain.ts";
 import { leftClickIntent, rightClickIntent } from "./interactionPolicy.ts";
@@ -977,20 +975,14 @@ export class BoardView {
     const cost=byId("forecast-action-cost");
     cost.textContent="";
     cost.hidden=true;
-    const isArt=!!this.attackArtId&&!this.enemyForecast;
-    const art=this.attackArtId&&Object.hasOwn(COMBAT_ARTS,this.attackArtId)?
-      COMBAT_ARTS[this.attackArtId as keyof typeof COMBAT_ARTS]:null;
-    const career=isCareerArtId(this.attackArtId)?CAREER_ARTS[this.attackArtId]:null;
-    document.getElementById("forecast-confirm")!.textContent=career?"确认"+career.name:
-      art?"确认"+art.name:
-      isArt?"确认试验战技":"攻击";
+    // Uniform caption for all offensive actions; the chosen skill still drives
+    // the unchanged attack confirmation and battle settlement.
+    document.getElementById("forecast-confirm")!.textContent="攻击";
     this.forecastPanel.hidden = false;
   }
 
   private paintSupportForecast(actor:Unit,target:Unit,preview:SupportPreview):void{
     const elem=(id:string):HTMLElement=>document.getElementById(id)!;
-    const label:Record<SupportEffect,string>={heal:"治疗",shield:"护盾",burn:"灼烧",
-      slow:"缓足",weakArmor:"弱甲",weakMagic:"弱咒",mark:"标记",wardArmor:"护壁"};
     this.setForecastIdentity(actor,"ally");
     this.setForecastIdentity(target,"enemy");
     elem("forecast-ally-initiative").textContent="支援方";
@@ -1020,10 +1012,9 @@ export class BoardView {
       ["forecast-ally-after",actor.hp/actor.maxHp],["forecast-enemy-bar",target.hp/target.maxHp],
       ["forecast-enemy-after",after/target.maxHp]] as const)
       elem(id).style.width=Math.max(0,Math.min(100,100*value))+"%";
-    const title=this.careerSupportId==="life-gift"?"生命赐福":label[preview.effect];
     elem("forecast-action-cost").textContent="";
     elem("forecast-action-cost").hidden=true;
-    elem("forecast-confirm").textContent="确认"+title;
+    elem("forecast-confirm").textContent="攻击";
     this.forecastPanel.hidden=false;
   }
 
