@@ -12,6 +12,6 @@ export function forecastPortraitFor(classId:ClassId,team:"ally"|"enemy"):string{
   if(classId==="sentinel"||classId==="lancer"||classId==="rider"||
     classId==="roverCavalry"||classId==="flier")return "guardian.svg";
   if(classId==="raider"&&team==="enemy")return "raider.svg";
-  if(classId==="sword"||classId==="duelist"||classId==="scout")return "swordsman.svg";
+  if(classId==="sword"||classId==="duelist")return "swordsman.svg";
   return team==="enemy"?"raider.svg":"swordsman.svg";
 }
