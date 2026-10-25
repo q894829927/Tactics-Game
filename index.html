@@ -6,8 +6,8 @@
   <meta name="description" content="Wildfield Tactics：原创奇幻战棋，可缩放的战场地图与回合制战斗。"/>
   <meta name="theme-color" content="#071522"/>
   <title>Wildfield Tactics · 赤旗要塞</title>
-  <script type="module" crossorigin src="/games/tactics/assets/index-C741BdX0.js"></script>
-  <link rel="stylesheet" crossorigin href="/games/tactics/assets/index-dZ8BYTpP.css">
+  <script type="module" crossorigin src="/games/tactics/assets/index-Ds9rnjU6.js"></script>
+  <link rel="stylesheet" crossorigin href="/games/tactics/assets/index-CZf9KJOE.css">
 </head>
 <body>
   <div id="app" class="battle-shell">
@@ -34,12 +34,12 @@
           <strong id="phase-label"></strong>
           <span id="phase-caption"></span>
         </div>
-        <div id="attack-forecast" class="attack-forecast duel-v2" role="region" aria-label="战斗预测" hidden>
+        <div id="attack-forecast" class="attack-forecast duel-v2 duel-v3" role="region" aria-label="战斗预测" hidden>
           <div class="forecast-v2-scrim" aria-hidden="true"></div>
           <div class="forecast-v2-content">
             <div class="forecast-duel">
               <section class="forecast-combatant forecast-combatant-ally" aria-label="我方战斗资料">
-                <div class="forecast-portrait forecast-portrait-ally" id="forecast-ally-portrait" aria-hidden="true">⚔</div>
+                <div class="forecast-portrait forecast-portrait-ally" id="forecast-ally-portrait" aria-hidden="true"><img class="forecast-portrait-art" id="forecast-ally-art" alt="" draggable="false"/><span class="forecast-portrait-fallback" id="forecast-ally-fallback" hidden>✦</span></div>
                 <div class="forecast-identity">
                   <span class="forecast-initiative" id="forecast-ally-initiative">先攻</span>
                   <strong id="forecast-attacker">我方单位</strong>
@@ -67,7 +67,7 @@
                   <span class="forecast-class-line"><b class="forecast-class-icon" id="forecast-enemy-emblem">兵</b><span id="forecast-enemy-role">步兵</span></span>
                   <span class="forecast-weapon-line"><span class="forecast-weapon-mark">⚔</span><span id="forecast-enemy-weapon">—</span></span>
                 </div>
-                <div class="forecast-portrait forecast-portrait-enemy" id="forecast-enemy-portrait" aria-hidden="true">⚔</div>
+                <div class="forecast-portrait forecast-portrait-enemy" id="forecast-enemy-portrait" aria-hidden="true"><img class="forecast-portrait-art" id="forecast-enemy-art" alt="" draggable="false"/><span class="forecast-portrait-fallback" id="forecast-enemy-fallback" hidden>✦</span></div>
               </section>
             </div>
             <div class="forecast-odds-row" aria-label="双方命中率与必杀率">
